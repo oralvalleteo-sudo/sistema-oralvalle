@@ -1,0 +1,106 @@
+/* NexoDent 148 — refinamento visual. Somente apresentação; não altera fluxos. */
+html[data-ov-mode] {
+  --nexo-accent:#dc781c;
+  --nexo-accent-soft:rgba(220,120,28,.09);
+}
+html[data-ov-mode="dark"] { --nexo-accent-soft:rgba(255,166,83,.09); }
+/* Superfícies discretas e tipografia mais leve */
+html[data-ov-mode] body { font-family:Figtree,system-ui,Arial,sans-serif; letter-spacing:-.008em; }
+html[data-ov-mode] .card,
+html[data-ov-mode] .ov-panel,
+html[data-ov-mode] .pf-card,
+html[data-ov-mode] .dt-card { box-shadow:0 2px 12px rgba(0,0,0,.035); border-radius:12px; }
+html[data-ov-mode] h1,html[data-ov-mode] h2,html[data-ov-mode] h3 { letter-spacing:-.025em; }
+/* Navegação: destaque sutil apenas na página selecionada */
+html[data-ov-mode] .ov-nav-btn { border-radius:9px; font-weight:500; transition:background-color .15s ease,color .15s ease; }
+html[data-ov-mode="dark"] .ov-nav-btn.on { background:rgba(226,127,38,.13);color:#ffb36c; }
+html[data-ov-mode="light"] .ov-nav-btn.on { background:#fff3e9;color:#b55b12; }
+/* Botões secundários deixam de competir com ações principais.
+   Não modifica .danger, botões de confirmação nem atributos de função. */
+html[data-ov-mode] button:not(.danger):not(.primary):not(.btn-primary):not([type="submit"]):not([style*="background"]):not([style*="background-color"]),
+html[data-ov-mode] .btn:not(.danger):not(.primary):not(.btn-primary):not([style*="background"]) {
+  border-radius:9px;
+}
+html[data-ov-mode] button,html[data-ov-mode] .btn { transition:filter .15s ease,background-color .15s ease,border-color .15s ease; }
+html[data-ov-mode] button:hover:not(:disabled) { filter:brightness(1.045); }
+/* Campos mais organizados, sem alterar dimensões e validações */
+html[data-ov-mode] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+html[data-ov-mode] select,html[data-ov-mode] textarea { border-radius:9px; box-shadow:none; }
+html[data-ov-mode] input:focus-visible,html[data-ov-mode] select:focus-visible,
+html[data-ov-mode] textarea:focus-visible,html[data-ov-mode] button:focus-visible {
+  outline:2px solid var(--nexo-accent);outline-offset:2px;
+}
+/* Separadores e abas visualmente mais tranquilos */
+html[data-ov-mode] .tabs { gap:4px; }
+html[data-ov-mode] .tabs button { border-radius:8px; }
+/* Tabelas: leitura limpa, sem alterar estrutura */
+html[data-ov-mode] table { border-collapse:separate;border-spacing:0; }
+html[data-ov-mode] th { font-weight:600; }
+@media(prefers-reduced-motion:reduce){html[data-ov-mode] button,html[data-ov-mode] .ov-nav-btn{transition:none}}
+@media print {html[data-ov-mode] .card,html[data-ov-mode] .ov-panel {box-shadow:none}}
+
+/* NexoDent: padronizacao visual exclusiva dos botoes de receitas e atestados. */
+button[data-act="rxsign"],
+button[data-act="rxicp"],
+button[data-act="rxpdf"],
+button[data-act="rxprint"],
+button[data-act="rxsave"],
+button[data-act="rxmodel"],
+button[data-act="rxreset"],
+button[data-act="atsign"],
+button[data-act="aticp"],
+button[data-act="atpdf"],
+button[data-act="atprint"],
+button[data-act="atsave"] {
+  background:#17191d !important;
+  color:#f7f7f7 !important;
+  border:1px solid #41454d !important;
+  box-shadow:none !important;
+}
+button[data-act="rxsign"]:hover,
+button[data-act="rxicp"]:hover,
+button[data-act="rxpdf"]:hover,
+button[data-act="rxprint"]:hover,
+button[data-act="rxsave"]:hover,
+button[data-act="rxmodel"]:hover,
+button[data-act="rxreset"]:hover,
+button[data-act="atsign"]:hover,
+button[data-act="aticp"]:hover,
+button[data-act="atpdf"]:hover,
+button[data-act="atprint"]:hover,
+button[data-act="atsave"]:hover {
+  background:#292d33 !important;
+  color:#ffffff !important;
+  border-color:#626873 !important;
+}
+
+
+/* Visual exclusivo das listas Ortodontia, Implantodontia e Prótese. */
+.ov-modern-page{--ov-orange:#f47719;color:#202939}
+.ov-modern-head{margin:0 0 24px}
+.ov-modern-title{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+.ov-modern-symbol{width:54px;height:54px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(135deg,#ff983c,#f26912);color:white;font-size:28px;box-shadow:0 5px 14px #ed75152b}
+.ov-modern-title h1{font-size:28px;margin:0 0 3px;line-height:1.15}
+.ov-modern-title .sub{margin:0;color:#657083}
+.ov-modern-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.ov-modern-stats>div{min-height:76px;display:flex;flex-direction:column;justify-content:center;padding:14px 18px;border:1px solid #e4e8ee;background:#fff;border-radius:14px;box-shadow:0 3px 10px #18283b0b}
+.ov-modern-stats>div:first-child{background:#fff9f4;border-color:#ffdfca}
+.ov-modern-stats strong{font-size:26px;line-height:1.15;color:#1f2937}
+.ov-modern-stats span{font-size:12px;color:#657083;margin-top:5px}
+.ov-modern-list{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.ov-modern-list>h2{font-size:20px;margin:0 0 18px!important;padding-left:13px;border-left:4px solid var(--ov-orange)}
+.ov-modern-row{margin:0 0 8px!important;padding:0 18px!important;background:#fff;border:1px solid #e4e8ee!important;border-radius:13px!important;box-shadow:0 3px 12px #1a283a0b;overflow:hidden}
+.ov-modern-row[open]{border-color:#ffd3b7!important}
+.ov-modern-summary{display:grid!important;grid-template-columns:minmax(170px,1.2fr) minmax(180px,1.4fr) minmax(110px,.8fr) 26px;gap:14px;align-items:center;min-height:65px;padding:8px 0!important;list-style:none;cursor:pointer}
+.ov-modern-summary::-webkit-details-marker{display:none}
+.ov-modern-name{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ov-modern-name strong{font-size:14px;overflow-wrap:anywhere}
+.ov-modern-name small{font-size:11px;color:#788397}
+.ov-modern-date{font-size:12px;color:#465366}
+.ov-modern-status{justify-self:start;max-width:100%;padding:7px 11px;border-radius:20px;background:#fff0e6;color:#d85b0a;font-size:11px;font-weight:700;overflow-wrap:anywhere}
+.ov-modern-status.ov-modern-ok{background:#e8f7ee;color:#217c46}
+.ov-modern-summary .ov-care-arrow{font-size:24px;color:#f47719;justify-self:end}
+.ov-modern-row[open] .ov-care-arrow{transform:rotate(90deg)}
+.ov-modern-row>.ret-i,.ov-modern-row>.ret-act{margin-bottom:12px}
+@media(max-width:800px){.ov-modern-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ov-modern-summary{grid-template-columns:minmax(0,1fr) auto 22px;gap:8px}.ov-modern-date{grid-column:1;grid-row:2}.ov-modern-status{grid-column:2;grid-row:1/3}.ov-modern-summary .ov-care-arrow{grid-column:3;grid-row:1/3}.ov-modern-title h1{font-size:23px}}
+@media(max-width:430px){.ov-modern-stats{gap:8px}.ov-modern-stats>div{padding:10px}.ov-modern-stats strong{font-size:22px}.ov-modern-stats span{font-size:11px}.ov-modern-row{padding:0 11px!important}.ov-modern-date{font-size:11px}}

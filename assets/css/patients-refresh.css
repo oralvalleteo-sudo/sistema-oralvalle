@@ -1,0 +1,78 @@
+/* NexoDent — acabamento visual isolado da listagem de pacientes.
+   Não modifica elementos funcionais, scripts, filtros ou eventos. */
+.ov-patients-page{max-width:1120px!important;width:100%;margin:0 auto!important;padding:8px 16px 28px;box-sizing:border-box}
+.ov-patients-page .ov-page-head{padding:20px 22px 22px;border-radius:22px;background:linear-gradient(115deg,#fff 48%,#fff3e9 100%);border:1px solid #ffebdf;margin-bottom:18px;position:relative}
+.ov-patients-page .ov-page-head h1{font-size:clamp(25px,3vw,34px);font-weight:800;letter-spacing:-.7px;margin:0 0 6px;color:#182338}
+.ov-patients-page .ov-page-head .sub{font-size:14px;color:#64748b;margin:0}
+.ov-patients-page .ov-patients-panel{border-radius:20px!important;border:1px solid #f0e9e3!important;box-shadow:0 7px 28px rgba(39,47,65,.055)!important;padding:22px!important;background:#fff!important;margin-bottom:18px}
+.ov-patients-page .ov-patients-head{gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.ov-patients-page .ov-patients-count{font-size:21px;font-weight:800;color:#ec6c00;letter-spacing:-.35px}
+.ov-patients-page .ov-patients-actions{gap:9px}
+.ov-patients-page .ov-new-patient{border-radius:12px!important;background:#ff7900!important;box-shadow:0 4px 12px rgba(255,121,0,.17);font-weight:700}
+.ov-patients-page .ov-archived-patients{border-radius:12px;background:#fff;border-color:#e2e6ec;color:#334155;font-weight:600}
+.ov-patients-page .ov-patient-search input{border-radius:13px!important;background:#fbfcfe!important;height:49px;min-height:49px;font-size:15px;box-shadow:none!important}
+.ov-patients-page .ov-patient-search input:focus{border-color:#ff9d4b!important;outline:2px solid #fff0e4!important}
+.ov-patients-page .ov-patient-filter{font-size:13px;color:#64748b}
+.ov-patients-page .ov-patient-list{max-width:none!important;gap:10px!important}
+.ov-patients-page .ov-patient-row{border-radius:15px!important;min-height:75px!important;padding:15px 19px!important;box-shadow:0 4px 15px rgba(28,38,54,.055)!important;transition:border-color .15s,box-shadow .15s,transform .15s}
+.ov-patients-page .ov-patient-row:hover{border-color:#ffb078!important;box-shadow:0 7px 19px rgba(28,38,54,.09)!important;transform:translateY(-1px)}
+.ov-patients-page .ov-patient-row-name{font-size:15px;font-weight:400;color:#172338}
+.ov-patients-page .ov-patient-row small{margin-top:5px;font-size:12px;color:#7c8796}
+.ov-patients-page .ov-patient-arrow{display:flex;align-items:center;justify-content:center;border:1px solid #ff9a45;border-radius:50%;width:32px;height:32px;flex:0 0 32px;font-size:24px;color:#f47700}
+@media(max-width:700px){.ov-patients-page{padding:5px 8px 18px}.ov-patients-page .ov-page-head{padding:17px}.ov-patients-page .ov-patients-panel{padding:15px!important}.ov-patients-page .ov-patient-row{min-height:66px!important;padding:12px 13px!important}.ov-patients-page .ov-patient-row-name{font-size:14px}.ov-patients-page .ov-patients-actions{flex-wrap:wrap}.ov-patients-page .ov-new-patient,.ov-patients-page .ov-archived-patients{min-height:40px}}
+
+/* NexoDent 90: novo acabamento visual da lista, sem tocar na pesquisa ou eventos. */
+.ov-patients-page{max-width:1320px!important}
+.ov-patients-page .ov-page-head{background:linear-gradient(105deg,#fff 45%,#fff1e6 100%)!important;border:1px solid #f8e9dc!important;padding:26px 28px!important;box-shadow:0 7px 23px rgba(24,37,57,.04)!important}
+.ov-patients-page .ov-page-head h1{font-size:clamp(27px,3vw,38px)!important;font-weight:850!important;color:#101a2e!important}
+.ov-patients-page .ov-page-head .sub{color:#53647b!important;font-size:14px!important}
+.ov-patients-page .ov-patients-panel{background:#fff!important;box-shadow:0 8px 28px rgba(24,37,57,.065)!important;border:1px solid #e8ebf0!important}
+.ov-patients-page .ov-patients-count{color:#172238!important;font-size:23px!important}
+.ov-patients-page .ov-new-patient{background:linear-gradient(110deg,#ff8b08,#f66b00)!important;color:white!important;border:0!important;border-radius:13px!important;padding:12px 18px!important}
+.ov-patients-page .ov-archived-patients{background:#fff!important;border:1px solid #e0e5eb!important;border-radius:13px!important;padding:12px 16px!important}
+.ov-patients-page .ov-patient-search input{border-radius:999px!important;background:#fff!important;border:1px solid #dce2eb!important;padding-left:19px!important}
+.ov-patients-page .ov-patient-row{background:#fff!important;border:1px solid #e6eaf0!important;border-radius:18px!important;min-height:78px!important;box-shadow:0 5px 16px rgba(23,37,58,.065)!important}
+.ov-patients-page .ov-patient-row:hover{background:#fffaf6!important;border-color:#ffb780!important}
+.ov-patients-page .ov-patient-row-name{font-size:16px!important;font-weight:400!important}
+.ov-patients-page .ov-patient-arrow{border:1.5px solid #ff7900!important;color:#f47700!important}
+@media(max-width:700px){.ov-patients-page .ov-page-head{padding:18px!important}.ov-patients-page .ov-patient-row{min-height:66px!important}.ov-patients-page .ov-patient-row-name{font-size:14px!important}}
+
+/* NexoDent — atualização visual isolada da lista de pacientes, v99. Sem alterações em eventos ou banco. */
+.ov-patients-page{max-width:1480px!important;width:100%!important}
+.ov-patients-page .nd-patient-hero{display:flex;align-items:center;gap:22px;overflow:hidden;min-height:112px;background:linear-gradient(108deg,#fff 54%,#fff0e7 100%)!important;border:0!important;box-shadow:none!important;padding:20px 18px!important}
+.nd-patient-hero-icon{width:70px;height:70px;border-radius:18px;background:linear-gradient(135deg,#ff9b2d,#f56600);color:#fff;display:grid;place-items:center;font-size:42px;flex:none;box-shadow:0 8px 16px #ef780028}
+.ov-patients-page .nd-patient-hero .sub{font-size:15px!important;color:#44546b!important}
+.nd-patient-hero-decoration{margin-left:auto;font-size:72px;color:#ffd7bd;opacity:.55}
+.nd-patient-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:12px 0 24px}
+.nd-patient-stat{display:flex;align-items:center;gap:18px;min-width:0;min-height:98px;border:1px solid #e7eaf0;border-radius:18px;background:#fff;padding:18px 22px;box-shadow:0 5px 16px #15233912;box-sizing:border-box}
+.nd-patient-stat-main{background:#fff4ec;border-color:#ffe3d2}
+.nd-stat-icon{font-size:34px;color:#f97316;flex:none}
+.nd-patient-stat>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.nd-patient-stat strong{font-size:28px;line-height:1.1;color:#10192c}
+.nd-patient-stat div span{font-size:13px;color:#48566d}
+.ov-patients-page .ov-patients-panel{box-shadow:none!important;border:0!important;padding:0 0 16px!important;background:transparent!important}
+.ov-patients-page .ov-patient-list{gap:9px!important}
+.ov-patients-page .ov-patient-row{display:flex!important;align-items:center!important;gap:17px!important;min-height:84px!important;padding:13px 20px!important;border-radius:20px!important;background:#fff!important;box-shadow:0 6px 18px #17233b12!important;text-align:left!important}
+.nd-patient-avatar{width:52px;height:52px;display:grid;place-items:center;flex:none;border-radius:50%;background:#fff0e6;color:#ef7200;font-size:29px}
+.nd-patient-identity{display:flex;flex-direction:column;min-width:0;flex:1.5}
+.nd-patient-identity small{color:#56657a!important}
+.nd-patient-info{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1;border-left:1px solid #e1e6ed;padding-left:20px;color:#64748b;font-size:12px}
+.nd-patient-info strong{color:#1e293b;font-size:13px;font-weight:650;white-space:normal}
+.nd-patient-info .nd-status-pending{color:#c05b00}
+.nd-patient-info .nd-status-clear{color:#18804a}
+.ov-patients-page .ov-patient-arrow{margin-left:auto}
+@media(max-width:1000px){.nd-patient-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.nd-patient-info{display:none}}
+@media(max-width:600px){.nd-patient-stats{gap:9px}.nd-patient-stat{min-height:78px;padding:12px;gap:9px}.nd-stat-icon{font-size:23px}.nd-patient-stat strong{font-size:22px}.nd-patient-stat div span{font-size:11px}.nd-patient-hero-icon{width:50px;height:50px;font-size:30px}.nd-patient-hero-decoration{display:none}.ov-patients-page .nd-patient-hero{gap:12px;padding:12px!important}.ov-patients-page .ov-patient-row{padding:12px!important;gap:10px!important}.nd-patient-avatar{width:40px;height:40px;font-size:23px}}
+
+/* Patient detail: consistent card widths regardless of browser zoom. */
+.nexo-patient-data-card,.nexo-patient-extra-card{width:100%;max-width:100%;min-width:0;box-sizing:border-box;display:block}
+.nexo-patient-data-card *, .nexo-patient-extra-card *{box-sizing:border-box}
+.nexo-patient-data-card input,.nexo-patient-data-card textarea,.nexo-patient-extra-card select,.nexo-patient-extra-card textarea{max-width:100%;min-width:0}
+.nexo-patient-data-card>.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}
+.nexo-patient-data-card>.row>div{min-width:0;width:100%}
+@media(max-width:600px){.nexo-patient-data-card>.row{grid-template-columns:minmax(0,1fr)}}
+
+/* NexoDent 150: search icon and typed text must never overlap. */
+.ov-patients-page .ov-patient-search{position:relative!important}
+.ov-patients-page .ov-patient-search input#q{box-sizing:border-box!important;width:100%!important;padding-left:52px!important;padding-right:42px!important;text-indent:0!important}
+.ov-patients-page .ov-patient-search::before{left:17px!important;pointer-events:none!important;z-index:2!important}

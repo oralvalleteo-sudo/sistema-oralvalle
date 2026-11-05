@@ -1,0 +1,145 @@
+/* ===== agenda ===== */
+// Bloqueios são gravados em appointments (db.ag), igual às consultas.
+// O formato antigo em db.alugueis permanece visível para compatibilidade.
+function agRentals(date, chair){
+  const fromAgenda=(db.ag||[]).filter(a=>a.tipoRegistro==='aluguel'&&a.data===date&&(!chair||String(a.cadeira)===String(chair)))
+    .map(a=>({id:a.id,data:a.data,cadeira:a.cadeira,inicio:a.hora,fim:hm(mins(a.hora)+Number(a.dur||0)),cloud:true}));
+  const legacy=(db.alugueis||[]).filter(a=>a.data===date&&(!chair||String(a.cadeira)===String(chair)));
+  return fromAgenda.concat(legacy);
+}
+function agRental(date,chair){return agRentals(date,chair)[0]}
+function agRentalOverlaps(date,chair,start,end){
+  return agRentals(date,chair).some(r=>mins(r.inicio)<end&&start<mins(r.fim));
+}
+function confl(n){
+  if(agRentalOverlaps(n.data,n.cadeira,mins(n.hora),mins(n.hora)+Number(n.dur||30)))return {aluguel:true};
+  return db.ag.find(a=>a.id!==n.id&&a.data===n.data&&['Cancelado','Faltou'].indexOf(a.st)<0&&((a.cadeira||'1')===String(n.cadeira||'1')||(a.dt&&n.dt&&a.dt===n.dt))&&mins(a.hora)<mins(n.hora)+n.dur&&mins(n.hora)<mins(a.hora)+(a.dur||30));
+}
+function agDefaults(date){
+  const now=new Date(),isToday=date===tdy();
+  let m=isToday?Math.ceil((now.getHours()*60+now.getMinutes())/30)*30:8*60;
+  if(m>23*60+30)m=23*60+30;
+  const hora=hm(m);
+  const busy=c=>agRentalOverlaps(date,c,m,m+30)||db.ag.some(a=>a.data===date&&['Cancelado','Faltou'].indexOf(a.st)<0&&String(a.cadeira||'1')===c&&mins(a.hora)<m+30&&m<mins(a.hora)+(a.dur||30));
+  return {hora,cad:busy('1')&&!busy('2')?'2':'1'};
+}
+const agNorm=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+function agSug(){
+  const i=$('apn'),box=$('apsug');if(!i||!box)return;
+  const q=agNorm(i.value),pts=db.p.filter(p=>!p.arq);
+  const hit=pts.find(p=>agNorm(p.nome)===q);
+  $('ap').value=hit&&q?hit.id:'';
+  if(!q){box.hidden=true;box.innerHTML='';return}
+  const list=pts.filter(p=>agNorm(p.nome).includes(q)).sort((a,b)=>{const sa=agNorm(a.nome).startsWith(q)?0:1,sb=agNorm(b.nome).startsWith(q)?0:1;return sa-sb||a.nome.localeCompare(b.nome)}).slice(0,8);
+  box.innerHTML=list.length?list.map(p=>`<button type="button" class="ag-sug-i" data-act="agpick" data-id="${p.id}">${esc(p.nome)}</button>`).join(''):'<div class="ag-sug-n">Nenhum paciente encontrado</div>';
+  box.hidden=false;
+  if(hit)agAuto(hit.id);
+}
+function agAuto(pid){
+  const t=$('atp');if(!t||(t.value&&t.dataset.auto!=='1'))return;
+  const p=db.p.find(x=>x.id===pid);
+  const ja=db.ag.some(a=>a.pid===pid&&a.st!=='Cancelado')||(p&&((p.evol||[]).length||0)>0);
+  t.value=ja?'Retorno':'Primeira consulta';t.dataset.auto='1';
+}
+document.addEventListener('input',e=>{const t=e.target;
+  if(t.id==='apn')agSug();
+  else if(t.id==='atp')delete t.dataset.auto;
+  else if(t.id==='ah'||t.id==='acadeira'||t.id==='ad')t.dataset.touched='1';
+});
+document.addEventListener('change',e=>{const t=e.target;if(t.id==='ah'||t.id==='acadeira'||t.id==='ad')t.dataset.touched='1'});
+document.addEventListener('focusin',e=>{const t=e.target;
+  if(t.id==='apn'){
+    const h=$('ah'),c=$('acadeira'),d=$('ad');
+    if(h&&c&&d&&!h.dataset.touched&&!c.dataset.touched&&!d.dataset.touched){const f=agDefaults(d.value);h.value=f.hora;c.value=f.cad}
+    if(t.value)agSug();
+  }
+});
+document.addEventListener('click',e=>{const box=$('apsug');if(box&&!box.hidden&&!e.target.closest('#apsug')&&e.target.id!=='apn')box.hidden=true});
+document.addEventListener('input',e=>{const t=e.target;
+  if(t.id==='nc'||(t.dataset&&t.dataset.k==='cpf'))pvApplyMask(t,pvMaskCpf);
+  if(t.id==='nt'||(t.dataset&&t.dataset.k==='tel'))pvApplyMask(t,pvMaskTel);
+  if(t.id==='nn'||t.id==='nc'||t.id==='nt')pvRender();
+});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.pv-hit');if(b)view.novoPac=false},true);
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='rxTexto'&&view.rx){view.rx.texto=t.value;view.rx.edited=true}});
+document.addEventListener('change',e=>{const t=e.target,p=cur();
+  if(!p||!view.rx)return;
+  if(t.id==='rxModelo'){view.rx.model=t.value;view.rx.texto=t.value?rxGen(p,t.value):'';view.rx.edited=false;render()}
+  else if(t.id==='rxDent'){view.rx.dt=t.value;render()}
+  else if(t.id==='rxData'){view.rx.data=t.value||tdy()}
+});
+/* nome do paciente na agenda: clicável (abre o prontuário) quando o usuário pode ver pacientes */
+function agPatient(a){
+  const nome=esc(pName(a.pid));
+  const pode=(typeof pmLvl!=='function'||pmLvl('pac')>=1)&&db.p.some(p=>String(p.id)===String(a.pid));
+  return pode?`<button type="button" class="ag-patient ag-patient-link" data-act="open" data-id="${a.pid}" title="Abrir prontuário">${nome}</button>`:`<span class="ag-patient">${nome}</span>`;
+}
+function agHtml(){
+  const today=tdy(),pts=db.p.filter(p=>!p.arq),dts=db.dt.filter(d=>d.ativo!==false);
+  const date=view.agDate||today, dent=view.agDent||'todos';
+  const agDef=agDefaults(date);
+  const form=pts.length?`<div class="card ag-new-form"><h2>Nova consulta</h2><div class="row"><div style="flex:2;position:relative"><label for="apn">Paciente</label><input id="apn" type="search" autocomplete="off" autocapitalize="words" placeholder="Digite o nome do paciente"><input type="hidden" id="ap" value=""><div id="apsug" class="ag-sug" hidden></div></div><div><label for="adn">Dentista</label><select id="adn">${dentOpts(defDt(),'Dentista a definir')}</select></div></div><div class="row"><div><label for="ad">Data</label><input id="ad" type="date" value="${date}"></div><div><label for="ah">Hora</label><input id="ah" type="time" value="${agDef.hora}"></div><div><label for="adu">Duração (min)</label><input id="adu" inputmode="numeric" value="30"></div><div><label for="acadeira">Consultório</label><select id="acadeira"><option value="1"${agDef.cad==='1'?' selected':''}>Consultório 1</option><option value="2"${agDef.cad==='2'?' selected':''}>Consultório 2</option></select></div></div><div class="row"><div><label for="apr">Procedimento</label><input id="apr" list="prl" placeholder="Ex.: limpeza, canal" autocomplete="off">${prList()}</div><div><label for="atp">Tipo de consulta</label><input id="atp" list="atpl" placeholder="Primeira consulta, Retorno..." autocomplete="off" maxlength="40"><datalist id="atpl"><option value="Primeira consulta"><option value="Retorno"><option value="Avaliação"><option value="Manutenção"><option value="Urgência"></datalist></div></div><div style="margin-top:12px"><button data-act="addag" style="width:100%">Agendar consulta</button></div></div>`:'<div class="empty">Cadastre um paciente para agendar consultas.</div>';
+  const list=db.ag.filter(a=>a.tipoRegistro!=='aluguel'&&a.data===date&&(dent==='todos'||a.dt===dent)).slice().sort((a,b)=>mins(a.hora)-mins(b.hora));
+  const rentals=agRentals(date);
+  const rentalPanel=`<div class="card ag-rental-panel"><div class="ag-rental-head"><strong>Aluguel de consultório</strong><span class="note">Bloqueie os horários para não receber agendamentos.</span></div><div class="row" style="align-items:end"><div><label for="agRentChair">Consultório</label><select id="agRentChair"><option value="1">Consultório 1</option><option value="2">Consultório 2</option><option value="ambos">Ambos</option></select></div><div><label for="agRentStart">Início</label><input type="time" id="agRentStart" value="07:00"></div><div><label for="agRentEnd">Fim</label><input type="time" id="agRentEnd" value="20:00"></div><div><button type="button" data-act="agrentadd">Bloquear por aluguel</button></div></div>${rentals.length?`<div class="ag-rental-list">${rentals.map(r=>`<div class="ag-rental-item"><span>🔒 Consultório ${esc(r.cadeira)} · ${esc(r.inicio)}–${esc(r.fim)}</span><button type="button" class="ghost sm" data-act="agrentremove" data-id="${esc(r.id)}">Liberar</button></div>`).join('')}</div>`:''}</div>`;
+  const dateNav=retBanner()+`<div class="card ag-date-panel" style="margin-bottom:12px"><div class="row" style="align-items:center;justify-content:space-between;flex-wrap:wrap"><div><strong>Agenda do dia</strong><div class="note" style="margin:2px 0 0">${fd(date)}</div></div><div class="row" style="margin:0;align-items:center"><button class="ghost sm" data-act="agdate" data-d="-1">‹</button><input id="agDate" type="date" value="${date}" style="width:auto;min-width:145px"><button class="ghost sm" data-act="agdate" data-d="1">›</button><button class="sm" data-act="agtoday">Hoje</button></div></div><div class="row" style="margin-top:12px;align-items:center"><div><label for="agDent">Dentista</label><select id="agDent"><option value="todos">Todos os dentistas</option>${dts.map(d=>`<option value="${d.id}"${dent===d.id?' selected':''}>${esc(d.nome)}</option>`).join('')}</select></div><div class="note ag-help" style="margin:0">Dois consultórios: cada atendimento ocupa um consultório e o dentista não pode ter dois horários sobrepostos.</div></div></div>`;
+  const SLOT0=7*60,SLOT1=20*60,STEP=30;
+  const agClosed=a=>['Faltou','Cancelado','Compareceu'].includes(a.st)||Boolean(a.vid);
+  const agExpanded=a=>String(view.agExpanded||'')===String(a.id);
+  const apCard=a=>{
+    if(agClosed(a)){
+      const cls=a.st==='Faltou'?'ag-compact-red':a.st==='Cancelado'?'ag-compact-yellow':'ag-compact-orange';
+      const label=a.st==='Faltou'?'Faltou':a.st==='Cancelado'?'Desmarcou':'Compareceu';
+      return agExpanded(a)
+        ? `<div class="ag-appointment ag-closed-expanded"><div class="ag-appointment-main"><strong>${esc(a.hora)}–${hm(mins(a.hora)+(a.dur||30))}</strong>${agPatient(a)}<span class="ag-status">${esc(label)}</span></div><div class="ag-actions"><button type="button" class="ghost sm" data-act="agedit" data-id="${esc(a.id)}">Editar</button><button type="button" class="ghost sm" data-act="agcollapse" data-id="${esc(a.id)}">Fechar</button><button type="button" class="danger sm" data-act="rmag" data-id="${esc(a.id)}" title="Remover somente este agendamento" aria-label="Remover agendamento">${delArm===a.id?'Confirmar':'✕'}</button></div></div>`
+        : `<div class="ag-appointment ag-compact ${cls}" title="${label}: ${esc(pName(a.pid))}"><span class="ag-compact-identity"><span class="ag-compact-dot" aria-label="${label}" title="${label}"></span>${agPatient(a)}</span><span class="ag-compact-controls"><button type="button" class="ag-compact-expand" data-act="agexpand" data-id="${esc(a.id)}" aria-label="Abrir opções do agendamento" title="Abrir opções">⋯</button><button type="button" class="ag-compact-remove" data-act="rmag" data-id="${esc(a.id)}" title="Remover somente este agendamento" aria-label="Remover agendamento">${delArm===a.id?'Confirmar':'✕'}</button></span></div>`;
+    }
+    const confirmed=a.st==='Confirmado';const sub=[dName(a.dt),a.proc].filter(Boolean).join(' · ');
+    return `<div class="ag-appointment ${confirmed?'is-confirmed':''}"><div class="ag-appointment-main"><div class="ag-l1"><strong>${esc(a.hora)}–${hm(mins(a.hora)+(a.dur||30))}</strong><span>·</span>${agPatient(a)}${a.tipo?`<span class="ag-tipo t1">${esc(a.tipo)}</span>`:''}</div><span class="ag-status">${esc(a.st||'Agendado')}</span></div><div class="ag-meta ag-l2">${a.tipo?`<span class="ag-tipo t2">${esc(a.tipo)}</span> `:''}${esc(sub)}</div><div class="ag-actions">${!confirmed?`<button class="sm ag-confirm" data-act="agstatus" data-id="${a.id}">Confirmar</button>`:''}<button class="ghost sm" data-act="agedit" data-id="${esc(a.id)}">Editar</button><button class="ghost sm" data-act="agencerrar" data-id="${a.id}">Dar baixa</button><button class="danger sm" data-act="rmag" data-id="${a.id}" title="Remover" aria-label="Remover">✕</button></div></div>`;
+  };
+  // Cada consultório possui sua própria sequência de linhas. Consultas em horários
+  // intermediários entram como linhas reais, sem criar lacunas artificiais.
+  const chairCard=(chair,label)=>{
+    const rows=list.filter(a=>String(a.cadeira||'1')===chair);
+    const rental=agRental(date,chair);
+    const STEP_MIN=30, first=7*60, last=20*60;
+    const events=rows.map(a=>({a,s:mins(a.hora),e:mins(a.hora)+Math.max(1,Number(a.dur)||30)})).sort((a,b)=>a.s-b.s);
+    const groups=[];
+    events.forEach(ev=>{
+      const prev=groups[groups.length-1];
+      if(prev&&ev.s<prev.end){prev.events.push(ev);prev.end=Math.max(prev.end,ev.e)}
+      else groups.push({start:ev.s,end:ev.e,events:[ev]});
+    });
+    const limits=new Set();
+    for(let m=first;m<=last;m+=STEP_MIN)limits.add(m);
+    groups.forEach(g=>{limits.add(g.start);limits.add(g.end)});
+    if(rental){limits.add(mins(rental.inicio));limits.add(mins(rental.fim))}
+    const ticks=[...limits].filter(m=>m>=0&&m<=1440).sort((a,b)=>a-b);
+    const html=[];
+    let groupIdx=0;
+    for(let i=0;i<ticks.length-1;i++){
+      const t=ticks[i],next=ticks[i+1];
+      if(next<=t)continue;
+      while(groupIdx<groups.length&&groups[groupIdx].end<=t)groupIdx++;
+      const g=groups[groupIdx];
+      // Um único cartão por faixa de consulta: sem linhas atravessando o cartão.
+      if(g&&g.start===t){
+        const cards=g.events.map(ev=>`<div class="ag-block ag-flow-block">${apCard(ev.a)}</div>`).join('');
+        html.push(`<div class="ag-flow-row ag-flow-booked"><div class="ag-flow-time">${hm(g.start)}${g.end!==g.start?'–'+hm(g.end):''}</div><div class="ag-flow-content">${cards}</div></div>`);
+        continue;
+      }
+      if(g&&t>g.start&&t<g.end)continue;
+      const rented=rental&&t<mins(rental.fim)&&next>mins(rental.inicio);
+      const regular=t>=first&&t<=last;
+      if(!regular&&!rented)continue;
+      html.push(`<div class="ag-flow-row ag-flow-free"><div class="ag-flow-time">${hm(t)}</div><div class="ag-flow-content">${rented?'<span class="ag-flow-rented">🔒 Consultório alugado</span>':`<button type="button" class="slot-free" data-act="agslot" data-h="${hm(t)}" data-c="${chair}">Livre</button>`}</div></div>`);
+    }
+    return `<section class="card" style="margin:0"><div class="ag"><span><strong>${label}</strong></span><span class="badge">${rows.length} atendimento${rows.length===1?'':'s'}</span></div><div class="ag-flow-list">${html.join('')}</div></section>`;
+  };
+  // Painel visual: indicadores calculados exclusivamente dos agendamentos já carregados.
+  const total=list.length, confirmados=list.filter(a=>a.st==='Confirmado').length;
+  const encerrados=list.filter(a=>['Compareceu','Faltou','Cancelado'].includes(a.st)||Boolean(a.vid)).length;
+  const aguardando=list.filter(a=>!['Compareceu','Faltou','Cancelado'].includes(a.st)&&!a.vid&&a.st!=='Confirmado').length;
+  const visualHead=`<div class="nexo-page-stats"><div class="nexo-stat"><span>Consultas no dia</span><strong>${total}</strong><small>Na data e filtro selecionados</small></div><div class="nexo-stat"><span>Confirmadas</span><strong>${confirmados}</strong><small>Presenças confirmadas</small></div><div class="nexo-stat"><span>Aguardando</span><strong>${aguardando}</strong><small>Ainda sem confirmação</small></div><div class="nexo-stat"><span>Encerradas</span><strong>${encerrados}</strong><small>Finalizadas, faltas ou cancelamentos</small></div></div>`;
+  return `<div class="nexo-page-shell nexo-agenda-page">${visualHead}${avsCardHtml()}${dateNav}<div class="nexo-agenda-tools">${form}${rentalPanel}</div><div class="nexo-section-title"><h2>Horários dos consultórios</h2><p>Selecione um horário livre para agendar ou abra um atendimento existente.</p></div><div class="ov-agenda-chairs">${chairCard('1','Consultório 1')}${chairCard('2','Consultório 2')}</div></div>`;
+}

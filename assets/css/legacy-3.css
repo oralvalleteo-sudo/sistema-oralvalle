@@ -1,0 +1,662 @@
+@charset "UTF-8";
+.ov-logo-img{height:56px;max-width:96px;object-fit:contain;background:transparent!important;border-radius:0;padding:0;box-sizing:border-box;flex:none}
+.ov-icon-img{width:56px;height:64px;max-width:96px;object-fit:contain;background:transparent!important;border-radius:0;padding:0;box-sizing:border-box;flex:none}
+@media(max-width:760px){.ov-icon-img{width:44px;height:48px;max-width:72px}}
+@media(max-width:760px){.ov-logo-img{height:44px;max-width:72px}}
+.cfg-page{width:100%;max-width:none;min-width:0;box-sizing:border-box}.cfg-page>.cfg-card,.cfg-page>.ov-page-head,.cfg-page>.tabs{width:100%;max-width:none;box-sizing:border-box}
+.cfg-logo{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.cfg-logo-prev{width:150px;height:110px;border:1px dashed #cfd4d8;border-radius:12px;background:transparent;display:flex;align-items:center;justify-content:center;padding:8px;box-sizing:border-box}
+.cfg-logo-prev img{max-width:100%;max-height:100%;object-fit:contain}
+.rx-dados{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;background:#f5f6f7;border-radius:10px;padding:10px 12px;margin-top:12px}
+.rx-dados small{display:block;font-size:11px;color:#7b8580}.rx-dados b{font-size:14px;overflow-wrap:anywhere}
+.rx-aviso{margin-top:10px;background:#fff4e5;border:1px solid #ff980e;color:#6b3a00;border-radius:10px;padding:8px 10px;font-size:13px;display:grid;gap:4px}
+#rxTexto{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.45;min-height:260px}
+.ag-sug{position:absolute;left:0;right:0;top:100%;z-index:20;background:#fff;border:1px solid #e5e8e7;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:240px;overflow:auto;margin-top:2px}
+.ag-sug[hidden]{display:none}
+.ag-sug-i{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #f1f3f5;border-radius:0;color:#3f4650;font-size:15px;font-weight:500;padding:11px 12px;min-height:44px}
+.ag-sug-i:last-child{border-bottom:0}.ag-sug-i:hover,.ag-sug-i:active{background:#fff1e2;color:#b85c00}
+.ag-sug-n{padding:11px 12px;font-size:14px;color:#7b8580}
+/* Agendamento compacto: tudo visível sem rolar */
+.ag-block .ag-appointment{padding:3px 8px!important;overflow:hidden!important;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.ag-block .ag-appointment-main{gap:8px;line-height:16px;font-size:13px}
+.ag-block .ag-l1{flex:1;min-width:0;display:flex;align-items:center;gap:4px;white-space:nowrap}.ag-block .ag-l1>*{flex:none}.ag-block .ag-l1 .ag-patient{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ag-block .ag-meta{margin:0;line-height:13px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-block .ag-actions{margin:1px 0 0;gap:4px;flex-wrap:nowrap;overflow:hidden}
+.ag-block .ag-actions button{min-height:22px;height:22px;padding:0 7px;font-size:11px;line-height:1;white-space:nowrap;flex:none}
+.ag-block .ag-actions button.danger{padding:0 7px;margin-left:auto}
+.ag-tipo{display:inline-block;font-size:10px;font-weight:700;line-height:14px;padding:0 6px;border-radius:99px;border:1px solid currentColor;color:#b85c00;background:rgba(255,255,255,.7);vertical-align:1px}
+.ag-appointment:not(.is-confirmed) .ag-tipo{color:#697177}
+.ag-tipo.t2,.ag-block .ag-actions .sh{display:none}
+@media(max-width:480px){.ag-tipo.t1{display:none}.ag-tipo.t2{display:inline-block}.ag-block .ag-actions .lg{display:none}.ag-block .ag-actions .sh{display:inline}.ag-block .ag-actions{gap:3px}.ag-block .ag-actions button{padding:0 5px;font-size:10.5px}.ag-block .ag-actions button.danger{padding:0 6px}.ag-block .ag-appointment{padding:3px 6px!important}}
+.ag-narrow .ag-tipo.t1{display:none}.ag-narrow .ag-tipo.t2{display:inline-block}.ag-narrow .ag-actions .lg{display:none}.ag-narrow .ag-actions .sh{display:inline}.ag-narrow .ag-actions{gap:2px}.ag-narrow .ag-actions button{padding:0 3px;font-size:10px}.ag-narrow .ag-actions button.danger{padding:0 5px}.ag-narrow .ag-appointment{padding:3px 6px!important}
+@media(max-width:340px){.ag-block .ag-actions button{padding:0 3px;font-size:10px}.ag-block .ag-actions{gap:2px}}
+
+/* Oral Valle — agenda legível, sem caixas laranja nem rolagem interna. */
+.ag-block .ag-appointment, .ag-block .ag-appointment.is-confirmed {
+  background:var(--card,#fff)!important;color:var(--text,#3f4650)!important;
+  border:1px solid var(--ln,#e5e8e7)!important;border-left:1px solid var(--ln,#e5e8e7)!important;
+  border-radius:9px;box-shadow:none;overflow:visible!important;
+  padding:8px 9px!important;justify-content:flex-start;gap:5px;
+}
+.ag-block .ag-appointment-main{display:flex;flex-wrap:wrap;align-items:flex-start;gap:4px 8px;line-height:1.4}
+.ag-block .ag-l1{flex:1 1 100%;display:flex;flex-wrap:wrap;white-space:normal;align-items:baseline;gap:4px 7px;min-width:0}
+.ag-block .ag-l1>*{flex:0 0 auto}
+.ag-block .ag-l1 .ag-patient{flex:1 1 110px;min-width:0;overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere}
+.ag-block .ag-patient-link{appearance:none;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0!important;color:inherit!important;font:inherit;font-weight:700;line-height:1.35;text-align:left;cursor:pointer}
+.ag-block .ag-patient-link:hover{text-decoration:underline;text-underline-offset:3px;color:var(--ac,#f28c28)!important}
+.ag-block .ag-patient-link:focus-visible{outline:2px solid var(--ac,#f28c28);outline-offset:3px}
+.ag-block .ag-status{font-size:10px;font-weight:650;white-space:normal;overflow-wrap:anywhere;color:var(--mut,#697177)}
+.ag-block .ag-meta{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.35;font-size:11px;margin:0;color:var(--mut,#7b8580)}
+.ag-block .ag-actions,.ag-narrow .ag-actions{display:flex;flex-wrap:wrap;overflow:visible;gap:4px;margin-top:auto;align-items:center}
+.ag-block .ag-actions button,.ag-narrow .ag-actions button{height:auto;min-height:24px;white-space:normal;line-height:1.2;padding:4px 6px;font-size:10px}
+.ag-block .ag-actions button.danger{margin-left:auto}
+.ag-block .ag-tipo.t1{display:inline-block}.ag-block .ag-tipo.t2{display:none}
+.ag-block .ag-actions .lg{display:none}.ag-block .ag-actions .sh{display:inline}
+.ag-block .ag-confirm{background:transparent!important;color:var(--ac,#f28c28)!important;border:1px solid currentColor}
+.ag-block .ag-appointment.is-confirmed .ag-status{color:var(--ac,#f28c28)}
+@media(max-width:480px){.ag-block .ag-appointment{padding:6px!important}.ag-block .ag-l1{gap:3px 5px}.ag-block .ag-actions button{font-size:10px}}
+
+/* Ajuste solicitado: cartões mais slim, sem esconder informações. */
+.ag-block .ag-appointment,.ag-block .ag-appointment.is-confirmed{padding:3px 7px!important;gap:2px!important;border-radius:6px!important}
+.ag-block .ag-appointment-main{gap:2px 6px!important;line-height:1.15!important;font-size:12px!important}
+.ag-block .ag-l1{gap:2px 5px!important;line-height:1.15!important}
+.ag-block .ag-patient-link{line-height:1.15!important;font-size:12px!important}
+.ag-block .ag-meta{font-size:10px!important;line-height:1.15!important}
+.ag-block .ag-actions,.ag-narrow .ag-actions{gap:3px!important;margin-top:1px!important}
+.ag-block .ag-actions button,.ag-narrow .ag-actions button{min-height:19px!important;padding:2px 5px!important;font-size:10px!important;line-height:1.1!important}
+.ag-block .ag-tipo{font-size:9px!important;line-height:12px!important;padding:0 4px!important}
+@media(max-width:480px){.ag-block .ag-appointment{padding:3px 5px!important}}
+
+
+/* Oral Valle — navegação e formulários adaptados a celulares */
+.ov-mobile-menu,.ov-mobile-nav{display:none}
+@media(max-width:760px){
+  .ov-shell{display:block!important;min-width:0!important}
+  .ov-top{display:flex!important;align-items:center!important;gap:8px!important;min-height:74px;height:auto!important;padding:10px 12px!important}
+  .ov-mobile-menu{display:flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;border:1px solid rgba(255,255,255,.6);border-radius:10px;background:rgba(255,255,255,.12);color:white;font-weight:700;font-size:14px;padding:10px 8px;min-height:40px}
+  .ov-brand{min-width:0;flex:1;gap:7px!important}
+  .ov-brand-name{font-size:clamp(13px,4vw,19px)!important;overflow-wrap:anywhere}
+  .ov-brand-sub{font-size:10px!important}
+  .ov-logo,.ov-logo-img,.ov-icon-img{max-width:36px!important;flex-shrink:0}
+  .ov-user{flex:0 0 auto;margin-left:0!important}
+  .ov-sair{font-size:12px!important;padding:8px 10px!important;min-width:0!important}
+  .ov-mobile-nav{display:none;position:fixed;z-index:10010;top:75px;left:0;bottom:0;width:min(310px,88vw);background:#fff;box-shadow:6px 10px 24px #0004;overflow-y:auto;overscroll-behavior:contain}
+  .ov-mobile-nav.is-open{display:block}
+  .ov-mobile-nav .ov-sidebar{display:block!important;position:static!important;height:auto!important;min-height:100%;width:100%;overflow:visible!important;padding-bottom:30px}
+  .ov-content{padding:12px!important;min-width:0!important;overflow-x:hidden!important}
+  .ov-content-inner,.ov-content .card{min-width:0!important;max-width:100%!important}
+  .ag-date-panel{padding:14px!important}
+  .ag-date-panel>.row{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px!important}
+  .ag-date-panel>.row>.row{display:grid!important;grid-template-columns:36px minmax(0,1fr) 36px auto;gap:6px!important;width:100%;align-items:center}
+  .ag-date-panel #agDate{min-width:0!important;width:100%!important;padding-left:5px!important;padding-right:5px!important;font-size:14px!important}
+  .ag-date-panel [data-act="agdate"]{padding:5px!important;min-width:0!important}
+  .ag-date-panel #agDent{width:100%!important;min-width:0!important}
+  .ag-date-panel .ag-help{font-size:12px!important;line-height:1.4!important;overflow-wrap:anywhere}
+  .ag-new-form{padding:14px!important}
+  .ag-new-form>.row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;align-items:end!important}
+  .ag-new-form>.row>div{min-width:0!important;width:100%!important;flex:none!important}
+  .ag-new-form input,.ag-new-form select{width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+  .ag-new-form label{font-size:13px!important;line-height:1.3!important}
+  .ag-new-form #ad{font-size:13px!important}
+}
+@media(max-width:390px){
+ .ov-mobile-menu span{display:none}
+ .ag-new-form>.row:nth-of-type(2){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .ag-date-panel>.row>.row{grid-template-columns:30px minmax(0,1fr) 30px auto}
+}
+
+/* Menu desktop independente do menu móvel: evita ocultar a navegação no PC. */
+@media (min-width:761px){
+ .ov-shell > .ov-sidebar{display:block;grid-column:1;grid-row:2;min-width:0}
+ .ov-shell > .ov-mobile-nav{display:none!important}
+ .ov-shell > .ov-content{grid-column:2;grid-row:2;min-width:0}
+}
+@media (max-width:760px){
+ .ov-shell > .ov-sidebar{display:none!important}
+}
+
+/* Ajuste fino: controles inteiramente dentro dos 96px do agendamento. */
+.ag-block .ag-appointment,.ag-block .ag-appointment.is-confirmed{
+  height:100%!important;min-height:0!important;max-height:100%!important;
+  box-sizing:border-box!important;overflow:hidden!important;
+  display:grid!important;grid-template-rows:minmax(0,auto) minmax(0,1fr) 20px!important;
+  align-content:stretch!important;gap:2px!important;padding:4px 7px!important;
+}
+.ag-block .ag-appointment-main{min-width:0;min-height:0;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:5px!important}
+.ag-block .ag-l1{flex:1 1 auto!important;min-width:0!important;flex-wrap:nowrap!important;white-space:nowrap!important;overflow:hidden!important}
+.ag-block .ag-l1 .ag-patient{flex:1 1 auto!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.ag-block .ag-status{flex:0 0 auto;max-width:30%;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
+.ag-block .ag-meta{min-height:0;align-self:center;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.ag-block .ag-actions,.ag-narrow .ag-actions{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;min-width:0!important;min-height:20px!important;height:20px!important;gap:4px!important;margin:0!important;overflow:hidden!important}
+.ag-block .ag-actions button,.ag-narrow .ag-actions button{flex:0 1 auto!important;min-width:0!important;height:19px!important;min-height:19px!important;padding:1px 5px!important;font-size:10px!important;line-height:1!important;white-space:nowrap!important;border-radius:5px!important}
+.ag-block .ag-actions button.danger{flex:0 0 20px!important;width:20px!important;margin-left:auto!important;padding:0!important}
+.ag-block .ag-actions .badge{font-size:10px;white-space:nowrap;min-width:0}
+@media(max-width:480px){.ag-block .ag-appointment{padding:3px 4px!important}.ag-block .ag-actions{gap:2px!important}.ag-block .ag-actions button{padding:1px 3px!important;font-size:9px!important}}
+
+/* Oral Valle — abas do prontuário: rolagem horizontal APENAS no celular.
+   Não altera a disposição das abas no desktop. */
+@media screen and (max-width:760px){
+  .ov-content .tabs{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    justify-content:flex-start!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    touch-action:pan-x pan-y;
+    scrollbar-width:thin;
+    gap:5px!important;
+    padding-bottom:5px!important;
+  }
+  .ov-content .tabs > button{
+    flex:0 0 auto!important;
+    width:auto!important;
+    min-width:max-content!important;
+    white-space:nowrap!important;
+    padding:10px 12px!important;
+    min-height:44px;
+  }
+}
+
+/* Agenda: baixas em uma única linha, sem horário ou texto adicional. */
+.ag-block .ag-appointment.ag-compact{
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;
+ height:100%!important;min-height:0!important;max-height:100%!important;
+ padding:3px 9px!important;gap:0!important;overflow:hidden!important;
+ border-radius:6px!important;grid-template-rows:none!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-patient{
+ flex:1 1 auto!important;min-width:0!important;white-space:nowrap!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;font-size:12px!important;
+ line-height:20px!important;color:inherit!important;
+}
+.ag-block .ag-appointment.ag-compact.ag-compact-red{background:#4b1d20!important;border:1px solid #d85a62!important;color:#ffe0e0!important}
+.ag-block .ag-appointment.ag-compact.ag-compact-green{background:#163c2a!important;border:1px solid #349967!important;color:#d7ffea!important}
+.ag-block .ag-appointment.ag-compact .ag-patient-link:hover{color:inherit!important;text-decoration:underline}
+
+/* Agenda: nome perfeitamente centralizado, com indicador discreto de situação. */
+.ag-block .ag-appointment.ag-compact{
+ position:relative!important;justify-content:center!important;
+ background:#1b1e1f!important;border:1px solid #3a4142!important;
+ color:#f2f2f2!important;padding:3px 28px!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-patient{
+ flex:0 1 auto!important;max-width:100%!important;
+ text-align:center!important;margin:0 auto!important;
+ font-weight:600!important;color:#f2f2f2!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-compact-dot{
+ position:absolute;left:11px;top:50%;transform:translateY(-50%);
+ width:9px;height:9px;border-radius:50%;flex:none;
+}
+.ag-block .ag-appointment.ag-compact.ag-compact-red .ag-compact-dot{background:#ed5961;}
+.ag-block .ag-appointment.ag-compact.ag-compact-green .ag-compact-dot{background:#38bd77;}
+
+/* Agenda: somente a bolinha indica o status; cartão neutro, sem tarja colorida. */
+.ag-block .ag-appointment.ag-compact.ag-compact-red,
+.ag-block .ag-appointment.ag-compact.ag-compact-green{
+  background:transparent!important;
+  border:1px solid #3a4142!important;
+  color:#f2f2f2!important;
+  box-shadow:none!important;
+}
+.ag-block .ag-appointment.ag-compact.ag-compact-red .ag-patient,
+.ag-block .ag-appointment.ag-compact.ag-compact-green .ag-patient{
+  color:#f2f2f2!important;
+}
+
+/* Dentistas: resumo compacto, detalhes sob demanda */
+.dt-collapsible > summary.dt-head { cursor:pointer; list-style:none; padding:12px 14px; margin:0; border-bottom:0; }
+.dt-collapsible > summary.dt-head::-webkit-details-marker { display:none; }
+.dt-collapsible > summary.dt-head:focus-visible { outline:2px solid var(--ac); outline-offset:-2px; }
+.dt-collapsible[open] > summary.dt-head { border-bottom:1.5px solid var(--ln); margin-bottom:10px; }
+.dt-collapsible .dt-chevron { font-size:20px; color:var(--ac); transition:transform .15s; margin-left:4px; }
+.dt-collapsible[open] .dt-chevron { transform:rotate(180deg); }
+.dt-collapsible > :not(summary) { margin-left:14px; margin-right:14px; }
+.dt-collapsible > :last-child { margin-bottom:14px; }
+
+/* Cadastro de dentistas recolhido por padrao */
+.dt-new-collapsible{margin-bottom:18px}
+.dt-new-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none;background:var(--ac,#d86a00);color:#fff;font-weight:700;border-radius:12px;padding:13px 18px;min-height:44px;box-sizing:border-box}
+.dt-new-toggle::-webkit-details-marker{display:none}
+.dt-new-toggle:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.dt-new-toggle span{transition:transform .15s ease}
+.dt-new-collapsible[open]>.dt-new-toggle span{transform:rotate(180deg)}
+.dt-new-collapsible>.dt-novo{margin-top:12px}
+
+/* Correção: nomes legíveis na agenda clara do celular. Mantém apenas a bolinha colorida. */
+@media (max-width:760px){
+  .ag-block .ag-appointment.ag-compact,
+  .ag-block .ag-appointment.ag-compact.ag-compact-red,
+  .ag-block .ag-appointment.ag-compact.ag-compact-green{
+    background:transparent!important;
+    border:1px solid #a8adb3!important;
+    color:#25303b!important;
+  }
+  .ag-block .ag-appointment.ag-compact .ag-patient,
+  .ag-block .ag-appointment.ag-compact .ag-patient-link,
+  .ag-block .ag-appointment.ag-compact.ag-compact-red .ag-patient,
+  .ag-block .ag-appointment.ag-compact.ag-compact-green .ag-patient{
+    color:#25303b!important;
+    -webkit-text-fill-color:#25303b!important;
+    opacity:1!important;
+    text-shadow:none!important;
+  }
+}
+
+/* Comorbidades adicionais da anamnese */
+.ov-anam-custom{margin:16px 0 20px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.ov-anam-extra-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.ov-anam-extra{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--ac);border-radius:999px;padding:6px 9px 6px 13px;background:var(--card);color:inherit;max-width:100%;overflow-wrap:anywhere}
+.ov-anam-extra-remove{border:0;border-radius:50%;width:25px;height:25px;padding:0;line-height:1;background:transparent;color:var(--ac);font-size:19px;cursor:pointer}
+.ov-anam-extra-add{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ov-anam-extra-add input{flex:1 1 230px;min-width:0;margin:0}
+.ov-anam-extra-add button{flex:0 0 auto}
+
+/* Bloqueio de consultório por aluguel */
+.ag-rental-panel{margin-bottom:12px}.ag-rental-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.ag-rental-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.ag-rental-item{display:flex;gap:10px;align-items:center;padding:8px 12px;background:#fff3e9;border:1px solid #efbb91;border-radius:9px;font-size:13px}.ag-rental-block{position:absolute;left:0;right:0;z-index:2;box-sizing:border-box;border:2px solid #c76d22;border-radius:7px;background:repeating-linear-gradient(135deg,#ffe4cc,#ffe4cc 12px,#ffeedf 12px,#ffeedf 24px);color:#803a0a;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:5px;text-align:center;pointer-events:none;font-size:12px}.ag-rental-block span{font-size:11px}
+
+/* Harmoniza o cabeçalho do sistema com a barra de título do aplicativo Windows. */
+.ov-top, .ov-proc-shell .ov-top { background: #c56800 !important; }
+
+/* Oral Valle 034 — cabeçalho móvel com contraste consistente.
+   Evita transparência de botões e textos esmaecidos no iOS/Android. */
+@media screen and (max-width:760px){
+  .ov-top,.ov-proc-shell .ov-top{
+    background:#c56800!important;
+    background-image:none!important;
+    opacity:1!important;
+    filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    color:#fff!important;
+    isolation:isolate;
+  }
+  .ov-top .ov-brand,.ov-top .ov-brand-name,.ov-top .ov-brand-sub,
+  .ov-top .ov-user,.ov-top .ov-user-name,.ov-top .ov-user-name small{
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    opacity:1!important;
+    filter:none!important;
+    text-shadow:0 1px 1px rgba(0,0,0,.12);
+  }
+  .ov-top .ov-logo,.ov-top .ov-logo-img,.ov-top .ov-icon-img,
+  .ov-top .ov-brand svg{opacity:1!important;filter:none!important}
+  .ov-top .ov-mobile-menu,.ov-top .ov-sair{
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    background:rgba(0,0,0,.12)!important;
+    border:1.5px solid rgba(255,255,255,.9)!important;
+    opacity:1!important;
+    filter:none!important;
+    text-shadow:none!important;
+  }
+  .ov-top .ov-mobile-menu:focus-visible,.ov-top .ov-sair:focus-visible{
+    outline:2px solid #fff;outline-offset:2px;
+  }
+}
+
+/* Oral Valle 048 — Dentistas: cartões compactos e visual minimalista */
+.dt-title{font-size:15px;margin:16px 0 10px;font-weight:650}
+.dt-card.dt-collapsible{padding:0;margin:0 0 9px;border:1px solid var(--ln);border-left:1px solid var(--ln);border-radius:10px;box-shadow:none;background:var(--bg)}
+.dt-collapsible > summary.dt-head{gap:9px;padding:9px 12px;min-height:48px;box-sizing:border-box}
+.dt-collapsible .dt-av{width:30px;height:30px;font-size:11px;font-weight:650;background:var(--bg2);color:var(--ink);border:1px solid var(--ln)}
+.dt-collapsible .dt-nm{font-size:13px;font-weight:650;color:var(--ink)}
+.dt-collapsible .dt-nm small{font-size:11px;line-height:1.3;margin-top:2px;color:var(--mut)}
+.dt-collapsible > summary.dt-head .badge{font-size:10px;padding:3px 7px;font-weight:500}
+.dt-collapsible .dt-chevron{font-size:15px;color:var(--mut)}
+.dt-collapsible[open] > summary.dt-head{margin-bottom:8px;border-bottom:1px solid var(--ln)}
+.dt-collapsible > :not(summary){margin-left:12px;margin-right:12px}
+.dt-collapsible > :last-child{margin-bottom:12px}
+.dt-new-toggle{background:var(--bg);color:var(--ink);border:1px solid var(--ln);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;min-height:40px}
+.dt-new-toggle:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.dt-new-collapsible .dt-novo{margin-top:8px}
+.dt-card .dt-pay h3{font-size:14px}
+.dt-card .dt-pay{margin-top:12px;padding-top:10px}
+.dt-card .dt-act{margin-top:10px;padding-top:10px}
+@media(max-width:480px){.dt-collapsible > summary.dt-head{padding:9px 10px;gap:7px}.dt-collapsible .dt-av{width:28px;height:28px}.dt-collapsible .dt-nm{font-size:12px}}
+
+/* Oral Valle 049 — listas de tratamentos e dentistas no padrão de Pacientes.
+   Apenas apresentação; mantém detalhes expansíveis e ações existentes. */
+.ret-card > .ov-care-collapse.ret-it,
+.dt-card.dt-collapsible {
+  width:100%; min-height:64px; margin:0 0 10px;
+  padding:0; box-sizing:border-box;
+  border:1px solid var(--ln,#e7e7e7) !important;
+  border-radius:10px !important;
+  background:var(--sf,#fff) !important;
+  color:var(--ink,#3e4651) !important;
+  box-shadow:0 3px 9px rgba(0,0,0,.06);
+  overflow:hidden;
+}
+.ret-card > .ov-care-collapse.ret-it > summary,
+.dt-collapsible > summary.dt-head {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:5px 12px; min-height:62px;
+  box-sizing:border-box; margin:0 !important;
+  padding:12px 16px !important;
+  font-size:16px !important; font-weight:500 !important;
+  line-height:1.4; color:var(--ink,#3e4651) !important;
+  border:0 !important; cursor:pointer;
+}
+.ret-card > .ov-care-collapse.ret-it > summary {display:block;}
+.ret-card > .ov-care-collapse.ret-it > summary strong,
+.dt-collapsible > summary.dt-head .dt-nm {
+  font-size:16px !important; font-weight:500 !important;
+  color:var(--ink,#3e4651) !important;
+}
+.ret-card > .ov-care-collapse.ret-it > summary small,
+.dt-collapsible > summary.dt-head .dt-nm small {
+  font-size:12px !important; font-weight:400 !important;
+  line-height:1.4; color:var(--mut,#8a9199) !important;
+}
+.ret-card > .ov-care-collapse.ret-it > summary small {margin-left:12px;}
+.ret-card > .ov-care-collapse.ret-it > summary::marker {color:var(--mut,#8a9199);}
+.dt-collapsible .dt-av {width:32px;height:32px;font-size:12px;background:var(--bg2,var(--sf));color:var(--ink);border:1px solid var(--ln);}
+.dt-collapsible .dt-chevron {font-size:20px;color:var(--mut);}
+.ret-card > .ov-care-collapse.ret-it[open] > summary,
+.dt-collapsible[open] > summary.dt-head {
+  border-bottom:1px solid var(--ln) !important;
+  background:transparent !important;
+}
+.ret-card > .ov-care-collapse.ret-it > .ret-i {padding:14px 16px 0;}
+.ret-card > .ov-care-collapse.ret-it > .ret-act {padding:12px 16px 16px;}
+@media (max-width:600px) {
+  .ret-card > .ov-care-collapse.ret-it > summary,
+  .dt-collapsible > summary.dt-head {min-height:60px;padding:12px 14px !important;}
+  .ret-card > .ov-care-collapse.ret-it > summary small {display:block;margin:3px 0 0 22px;}
+}
+
+/* Oral Valle 050 — acompanhamentos: sem moldura externa e alinhamento vertical. */
+/* Restrito às seções que contêm cartões expansíveis de tratamento. */
+section.ret-card:has(> details.ov-care-collapse) {
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  padding:0 !important;
+}
+section.ret-card:has(> details.ov-care-collapse) > h2 {
+  margin:0 0 12px !important;
+}
+.ret-card > details.ov-care-collapse.ret-it > summary {
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  flex-wrap:wrap !important;
+  gap:4px 12px !important;
+  min-height:62px !important;
+  padding:12px 16px !important;
+  line-height:1.4 !important;
+  list-style:none !important;
+}
+.ret-card > details.ov-care-collapse.ret-it > summary::-webkit-details-marker {display:none;}
+.ret-card > details.ov-care-collapse.ret-it > summary strong {
+  margin:0 !important;
+  line-height:1.4 !important;
+}
+.ret-card > details.ov-care-collapse.ret-it > summary small {
+  display:inline !important;
+  margin:0 !important;
+  line-height:1.4 !important;
+}
+@media(max-width:600px){
+  .ret-card > details.ov-care-collapse.ret-it > summary {min-height:60px !important;}
+}
+
+/* Patch 017: setas no padrão da lista de pacientes */
+.ret-card > details.ov-care-collapse.ret-it > summary {position:relative; padding-right:46px !important;}
+.ret-card > details.ov-care-collapse.ret-it > summary .ov-care-arrow {position:absolute;right:17px;top:50%;transform:translateY(-50%);font-size:25px;line-height:1;color:var(--mut);font-weight:400;transition:transform .16s;}
+.ret-card > details.ov-care-collapse.ret-it[open] > summary .ov-care-arrow {transform:translateY(-50%) rotate(90deg);}
+.dt-collapsible > summary.dt-head .dt-chevron.ov-patient-arrow {margin-left:auto;font-size:25px;line-height:1;font-weight:400;color:var(--mut);transform:none;transition:transform .16s;}
+.dt-collapsible[open] > summary.dt-head .dt-chevron.ov-patient-arrow {transform:rotate(90deg);}
+
+/* 057: edição e fechamento de agendamentos com baixa, inclusive no celular */
+.ag-block .ag-appointment.ag-compact .ag-compact-expand{
+ position:absolute!important;right:5px!important;top:50%!important;transform:translateY(-50%)!important;
+ border:0!important;background:transparent!important;color:inherit!important;
+ font-size:20px!important;line-height:1!important;padding:5px 7px!important;cursor:pointer!important;
+}
+.ag-block .ag-appointment.ag-closed-expanded{
+ height:100%!important;min-height:0!important;overflow:auto!important;
+ display:flex!important;flex-direction:column!important;justify-content:center!important;gap:7px!important;
+ padding:6px 9px!important;background:var(--bg2,#242526)!important;
+}
+.ag-block .ag-closed-expanded .ag-appointment-main{flex-wrap:wrap!important;gap:5px!important}
+.ag-block .ag-closed-expanded .ag-actions{display:flex!important;gap:6px!important;flex-wrap:wrap!important}
+.ag-block .ag-closed-expanded .ag-actions button{min-height:27px!important}
+
+/* 059: bolinha ao lado do nome e X no fim do retangulo; exclusao exige confirmacao. */
+.ag-block .ag-appointment.ag-compact{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  padding:3px 74px 3px 8px!important;position:relative!important;min-width:0!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-compact-identity{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  gap:7px!important;min-width:0!important;max-width:100%!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-compact-identity .ag-compact-dot{
+  position:static!important;transform:none!important;display:inline-block!important;
+  flex:0 0 9px!important;width:9px!important;height:9px!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-compact-identity .ag-patient{
+  flex:0 1 auto!important;min-width:0!important;max-width:100%!important;
+  overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+  margin:0!important;text-align:left!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-compact-controls{
+  position:absolute!important;right:4px!important;top:50%!important;transform:translateY(-50%)!important;
+  display:flex!important;align-items:center!important;gap:2px!important;z-index:2!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-compact-controls .ag-compact-expand,
+.ag-block .ag-appointment.ag-compact .ag-compact-controls .ag-compact-remove{
+  position:static!important;transform:none!important;min-height:26px!important;
+  padding:2px 5px!important;line-height:1!important;border:0!important;
+  background:transparent!important;color:inherit!important;cursor:pointer!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-compact-controls .ag-compact-remove{
+  font-size:17px!important;font-weight:700!important;color:#e15b63!important;
+}
+.ag-block .ag-appointment.ag-compact .ag-compact-controls .ag-compact-remove:hover{color:#ff7780!important;}
+.ag-block .ag-appointment.ag-compact .ag-compact-controls .ag-compact-remove:focus-visible{outline:2px solid #e15b63!important;border-radius:4px!important;}
+@media(max-width:480px){
+  .ag-block .ag-appointment.ag-compact{padding-right:72px!important;padding-left:5px!important;}
+  .ag-block .ag-appointment.ag-compact .ag-compact-identity{gap:4px!important;}
+}
+
+/* Modal nativo do Oral Valle: edição e baixa de consultas */
+.ov-ag-modal-backdrop{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.68);display:flex;align-items:center;justify-content:center;padding:16px}
+.ov-ag-modal{width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#202126;color:#f7f7f7;border:1px solid #50525a;border-radius:15px;box-shadow:0 20px 70px #0009;padding:20px}
+.ov-ag-modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.ov-ag-modal-head h3{margin:0;font-size:19px;color:#fff}
+.ov-ag-modal-close{background:transparent!important;border:0!important;color:#ddd!important;padding:5px 8px!important;width:auto!important}
+.ov-ag-modal-form>label{display:block;margin:12px 0;color:#eee;font-size:14px}
+.ov-ag-modal-form>label>input{display:block;width:100%;margin-top:6px;box-sizing:border-box;color:#fff;background:#282a30;border:1px solid #666;border-radius:8px;padding:11px;min-height:43px;color-scheme:dark}
+.ov-ag-modal-note{margin:0 0 12px;color:#ddd}
+.ov-ag-status-options{display:grid;gap:9px}
+.ov-ag-status-options label{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #555;border-radius:9px;cursor:pointer}
+.ov-ag-status-options input{accent-color:#ff7a00;width:18px;height:18px}
+.ov-ag-modal-footer{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}
+.ov-ag-modal-footer button{width:auto!important;min-width:96px}
+@media(max-width:480px){.ov-ag-modal{padding:16px}.ov-ag-modal-footer button{flex:1}}
+
+/* Nexodent: identidade do SOFTWARE; documentos continuam com marca da clínica. */
+.nexo-header-symbol{height:52px;width:58px;object-fit:contain;flex:none}
+.nexo-header-name{display:flex;flex-direction:column;gap:2px;line-height:1.2}
+.nexo-header-name strong{font-size:22px;font-weight:800;letter-spacing:-.6px}
+.nexo-header-name small{font-size:10px;letter-spacing:.05em;opacity:.8}
+.nexo-login-brand .nexo-login-symbol{display:block;width:100px;height:105px;object-fit:contain;margin:0 auto 4px}
+.nexo-login-brand strong{display:block;font-size:29px;letter-spacing:-.7px}
+.nexo-login-brand span{display:block;font-size:12px}
+@media(max-width:760px){.nexo-header-symbol{height:40px;width:43px}.nexo-header-name strong{font-size:18px}.nexo-header-name small{font-size:9px}}
+
+/* Nexodent 068: alinhamento consistente da marca na barra superior. */
+.ov-top .ov-brand{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0}
+.ov-top .nexo-header-symbol{display:block;flex:0 0 54px;width:54px;height:54px;object-fit:contain;object-position:center}
+.ov-top .nexo-header-name{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:3px;min-width:0;line-height:1.1;text-align:left}
+.ov-top .nexo-header-name strong{display:block;margin:0;font-size:21px;line-height:1.15}
+.ov-top .nexo-header-name small{display:block;margin:0;font-size:10px;line-height:1.25;letter-spacing:0}
+@media(max-width:760px){.ov-top .ov-brand{gap:8px}.ov-top .nexo-header-symbol{flex-basis:43px;width:43px;height:43px}.ov-top .nexo-header-name strong{font-size:18px}.ov-top .nexo-header-name small{font-size:9px}}
+
+/* Nexodent 072 — tipografia consistente com a listagem de pacientes.
+   Preserva destaques de botoes, indicadores e titulos; uniformiza texto de listas. */
+:root{font-synthesis:none}
+body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-system,"Segoe UI",sans-serif}
+/* Cartoes de registros: mesmo peso visual da lista de pacientes. */
+.dt-card .dt-nm,.ret-card .ret-nm,.pcx-name,
+.dt-collapsible > summary.dt-head .dt-nm,
+.ret-card > .ov-care-collapse.ret-it > summary strong{
+  font-weight:500!important;
+}
+
+/* Agenda fluida: linhas independentes para cada consultório (v082). */
+.ag-flow-list{display:flex;flex-direction:column;min-width:0}
+.ag-flow-row{display:grid;grid-template-columns:55px minmax(0,1fr);align-items:start;min-width:0;border-bottom:1px solid var(--line,#343a3d)}
+.ag-flow-time{font-size:11px;padding:6px 4px 4px 0;white-space:nowrap;color:inherit}
+.ag-flow-content{min-width:0;padding:3px 0}
+.ag-flow-free{min-height:24px}
+.ag-flow-free .ag-flow-content{padding:2px 0}
+.ag-flow-booked{min-height:0}
+.ag-flow-booked .ag-flow-time{font-weight:700;color:var(--ac,#f28c28)}
+.ag-flow-booked .ag-flow-content{display:flex;flex-direction:column;gap:3px;padding:3px 0}
+.ag-flow-block{position:relative!important;top:auto!important;left:auto!important;width:100%!important;height:auto!important;min-height:0!important;min-width:0}
+.ag-flow-block .ag-appointment{height:auto!important;min-height:64px!important}
+.ag-flow-block .ag-appointment.ag-compact{min-height:30px!important}
+.ag-flow-rented{font-size:11px;opacity:.8}
+
+/* Nexodent 084: nomes das listas clinicas iguais aos nomes em Pacientes.
+   Escopo restrito aos registros; nao altera titulos, botoes ou indicadores. */
+.ov-patients-page .ov-patient-row-name,
+.ret-card > details.ov-care-collapse.ret-it > summary strong,
+.dt-card .dt-nm,
+.dt-collapsible > summary.dt-head .dt-nm,
+.ret-card .ret-nm,
+.pcx-name {
+  font-family:Figtree,system-ui,-apple-system,"Segoe UI",sans-serif !important;
+  font-size:16px !important;
+  font-weight:500 !important;
+  line-height:1.4 !important;
+  letter-spacing:normal !important;
+  text-transform:none !important;
+}
+
+/* Nexodent 100: abas financeiras no padrão dos status das propostas */
+.ov-fin-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
+.ov-fin-tab{appearance:none;background:transparent;color:inherit;border:1px solid #777;border-radius:11px;padding:13px 17px;font:600 14px Figtree,inherit;cursor:pointer;text-decoration:none;min-height:46px}
+.ov-fin-tab.is-active{border-color:#f58200;background:rgba(245,130,0,.12);color:#ff8a18}
+.ov-fin-tab:hover{border-color:#f58200}
+.cfg-financeiro .cfg-card[hidden]{display:none!important}
+
+/* Nexodent 102: categorias financeiras compactas em linha única */
+.cfg-financeiro .ov-fin-tabs{display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;max-width:100%;padding:2px 0 8px;margin:10px 0 12px;scrollbar-width:thin}
+.cfg-financeiro .ov-fin-tab{flex:0 0 auto;white-space:nowrap;padding:8px 10px;min-height:36px;font-family:Figtree,sans-serif;font-size:12px;font-weight:600;border-radius:8px;line-height:1.2}
+.cfg-financeiro .cfg-card[hidden]{display:none!important}
+
+/* Nexodent 111: agenda fluida — cartões no fluxo, sem sobrepor os horários. */
+.ag-flow-list .ag-flow-row{grid-template-columns:55px minmax(0,1fr)!important;column-gap:0;align-items:start}
+.ag-flow-list .ag-flow-time{position:relative;z-index:1;min-width:0;overflow:visible}
+.ag-flow-list .ag-flow-content{min-width:0;overflow:visible}
+.ag-flow-list .ag-flow-block{position:relative!important;inset:auto!important;transform:none!important;box-sizing:border-box!important;padding:0!important;margin:0!important;max-width:100%!important}
+.ag-flow-list .ag-flow-block > .ag-appointment{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin:0!important}
+
+/* Nexodent 112: reservar espaço real para intervalos como 10:30–11:00.
+   A coluna anterior (55px) deixava o texto invadir o cartão. */
+.ag-flow-list .ag-flow-row{grid-template-columns:100px minmax(0,1fr)!important}
+.ag-flow-list .ag-flow-time{box-sizing:border-box;white-space:nowrap;padding-right:10px;overflow:hidden;text-overflow:clip}
+.ag-flow-list .ag-flow-content{min-width:0}
+@media(max-width:480px){.ag-flow-list .ag-flow-row{grid-template-columns:96px minmax(0,1fr)!important}}
+
+/* Nexodent 113: aproximar os cartões do horário, mantendo a coluna legível. */
+.ag-flow-list .ag-flow-row{grid-template-columns:72px minmax(0,1fr)!important}
+@media(max-width:480px){.ag-flow-list .ag-flow-row{grid-template-columns:72px minmax(0,1fr)!important}}
+
+/* Nexodent 115: nome legível na agenda do celular, sem mudar dimensões dos cartões. */
+@media screen and (max-width:760px){
+  .ag-block .ag-appointment:not(.ag-compact):not(.ag-closed-expanded) .ag-l1 > strong,
+  .ag-block .ag-appointment:not(.ag-compact):not(.ag-closed-expanded) .ag-l1 > span:not(.ag-patient):not(.ag-tipo){display:none!important}
+  .ag-block .ag-appointment:not(.ag-compact):not(.ag-closed-expanded) .ag-l1 .ag-tipo.t1{display:none!important}
+  .ag-block .ag-appointment:not(.ag-compact):not(.ag-closed-expanded) .ag-l1 .ag-patient{
+    display:block!important;flex:1 1 auto!important;min-width:0!important;
+    max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;
+    white-space:nowrap!important;text-align:left!important;
+  }
+}
+
+/* Nexodent 117 — propostas: três opções na mesma linha somente no celular. */
+@media screen and (max-width:600px){
+  .pf-view-tabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex-wrap:nowrap}
+  .pf-view-tabs .pf-view-tab{width:100%;min-width:0;padding:9px 3px;font-size:clamp(10px,2.8vw,13px);line-height:1.2;white-space:nowrap;text-align:center;border-radius:9px}
+  .pf-entry .pf-followups{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:8px 7px;align-items:center}
+  .pf-entry .pf-followup{display:flex;min-width:0;gap:4px;font-size:clamp(9px,2.55vw,12px);line-height:1.15;white-space:nowrap;align-items:center}
+  .pf-entry .pf-followup input{width:15px;height:15px;flex:0 0 15px}
+}
+
+/* Nexodent 118 — ajustes exclusivos para telas de celular. */
+@media screen and (max-width:600px){
+  /* Filtros em duas linhas equilibradas: Situacao / De, Ate / Paciente. */
+  .pf-filters{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:12px!important;
+    padding:14px!important;
+    align-items:end!important;
+  }
+  .pf-filters > div{min-width:0!important;grid-column:auto!important}
+  .pf-filters .pf-q{grid-column:auto!important}
+  .pf-filters label{display:block;max-width:100%;margin-bottom:5px!important}
+  .pf-filters select,.pf-filters input{
+    display:block;width:100%!important;min-width:0!important;max-width:100%!important;
+    box-sizing:border-box!important;font-size:14px!important;
+    text-overflow:ellipsis;
+  }
+  /* Acompanhamento com caixas de selecao maiores, sem quebrar a linha. */
+  .pf-entry .pf-followups{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.45fr)!important;
+    gap:5px!important;padding:10px 8px!important;align-items:center!important;
+  }
+  .pf-entry .pf-followup{
+    display:flex!important;align-items:center!important;gap:5px!important;
+    min-width:0!important;margin:0!important;font-size:clamp(10px,2.85vw,13px)!important;
+    line-height:1.2!important;white-space:nowrap!important;
+  }
+  .pf-entry .pf-followup input{
+    width:19px!important;height:19px!important;min-width:19px!important;
+    flex:0 0 19px!important;margin:0!important;
+  }
+}
+
+/* NexoDent 165 — ampliação exclusiva da marca na barra superior (desktop). */
+@media (min-width: 761px) {
+  .ov-top .ov-brand { gap: 15px; min-width: 0; }
+  .ov-top .ov-logo { width: 70px; height: 74px; flex: 0 0 70px; }
+  .ov-top .ov-logo svg { width: 68px; height: 72px; }
+  .ov-top .ov-logo-img { height: 72px; width: auto; max-width: 125px; object-fit: contain; }
+  .ov-top .ov-icon-img { width: 70px; height: 74px; max-width: 125px; object-fit: contain; }
+  .ov-top .ov-brand-name { font-size: 33px; line-height: 1.08; font-weight: 800; }
+  .ov-top .ov-brand-sub { font-size: 16px; line-height: 1.25; margin-top: 5px; }
+}
+
+
+/* NexoDent 166 — marca real do cabeçalho (ovTop usa nexo-header-*).
+   Restrito ao desktop; não modifica a navegação nem os componentes clínicos. */
+@media screen and (min-width: 761px) {
+  .ov-top .ov-brand { display:flex; align-items:center; gap:14px; }
+  .ov-top .nexo-header-symbol {
+    display:block; width:76px; height:76px; flex:0 0 76px;
+    max-width:none; object-fit:contain;
+  }
+  .ov-top .nexo-header-name { display:flex; flex-direction:column; gap:4px; line-height:1.1; }
+  .ov-top .nexo-header-name strong { font-size:29px; line-height:1.1; font-weight:800; }
+  .ov-top .nexo-header-name small { font-size:12px; line-height:1.25; opacity:1; }
+}
+
+/* Agenda: nomes dos pacientes em peso normal, inclusive cartoes compactos. */
+.ag-block .ag-appointment .ag-patient,
+.ag-block .ag-appointment .ag-patient-link,
+.ag-block .ag-appointment.ag-compact .ag-patient,
+.ag-block .ag-appointment.ag-compact .ag-patient-link { font-weight: 400 !important; }

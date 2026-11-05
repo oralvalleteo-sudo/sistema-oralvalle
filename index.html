@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Nexodent" />
+    <meta name="theme-color" content="#c56800" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Nexodent</title>
+               <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=068" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=068" />
+    <link rel="shortcut icon" href="./favicon.ico?v=068" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=068" />
+    <link rel="manifest" href="./manifest.webmanifest?v=164" />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/legacy-1.css" />
+    <link rel="stylesheet" href="./assets/css/legacy-2.css" />
+    <link rel="stylesheet" href="./assets/css/legacy-3.css" />
+    <link rel="stylesheet" href="./assets/css/patients-refresh.css?v=150-pesquisa1" />
+    <link rel="stylesheet" href="./assets/css/agenda-refresh.css?v=1" />
+    <link rel="stylesheet" href="./assets/css/cloud.css" />
+    <link rel="stylesheet" href="./assets/css/theme-mode.css?v=163" />
+    <link rel="stylesheet" href="./assets/css/nexodent-clean.css?v=148" />
+    <link rel="stylesheet" href="./assets/css/nexodent-pages-unified.css?v=100" />
+    <link rel="stylesheet" href="./assets/css/nexodent-layout-101.css?v=101" />
+    <link rel="stylesheet" href="./assets/css/nexodent-visual-103.css?v=103" />
+    <link rel="stylesheet" href="./assets/css/nexodent-desktop-75.css?v=106" />
+<link rel="stylesheet" href="./assets/css/nexodent-4-abas-108.css?v=108" />
+    <script src="./assets/js/theme-mode.js?v=155"></script>
+    <style>
+      /* Tela de carregamento Nexodent: sem dados de pacientes antes do login. */
+      #ov-startup-shell{position:fixed;inset:0;z-index:9000;background:#fafafa;color:#747c85;font-family:Figtree,Arial,sans-serif;display:flex;align-items:center;justify-content:center}
+      #ov-startup-shell[hidden]{display:none!important}
+      .ov-splash-logo{width:110px;height:110px;object-fit:contain;animation:ov-splash-breathe 1.8s ease-in-out infinite;filter:none}
+      .nexo-splash-brand{display:flex;flex-direction:column;align-items:center;gap:2px}
+      .ov-splash-caption{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));right:24px;left:24px;text-align:right;font-size:12px;letter-spacing:.01em}
+      @keyframes ov-splash-breathe{0%,100%{opacity:.7;transform:scale(.97)}50%{opacity:1;transform:scale(1.03)}}
+      @media(prefers-reduced-motion:reduce){.ov-splash-logo{animation:none}}
+      @media(max-width:600px){.ov-splash-logo{width:88px;height:88px}.ov-splash-caption{text-align:center;font-size:11px}}
+    </style>
+  </head>
+  <body>
+    <!-- Tela neutra de abertura: somente a marca, sem informações clínicas. -->
+    <div id="ov-startup-shell" role="status" aria-live="polite" aria-label="Carregando Nexodent">
+      <div class="nexo-splash-brand"><img class="ov-splash-logo" src="./assets/img/nexodent-symbol.png" alt="Nexodent" /></div>
+      <span class="ov-splash-caption" id="ov-splash-message">Carregando seu sistema...</span>
+    </div>
+    <main id="app"></main>
+    <div id="printarea"></div>
+    <!-- Scripts clássicos mantêm a abertura local, sem servidor ou compilação. -->
+    <script defer src="./assets/js/state.js"></script>
+    <script defer src="./assets/js/utils.js"></script>
+    <script defer src="./assets/js/storage.js"></script>
+    <script defer src="./assets/js/auth.js?v=223-session-safe"></script>
+    <script defer src="./assets/js/calculations.js"></script>
+    <script defer src="./assets/js/features/dashboard.js?v=220-dentistas"></script>
+    <script defer src="./assets/js/features/reminders.js?v=150-pesquisa1"></script>
+    <script defer src="./assets/js/features/patients.js?v=149-rolagem-unica"></script>
+    <script defer src="./assets/js/features/treatments.js"></script>
+    <script defer src="./assets/js/features/prescriptions.js"></script>
+    <script defer src="./assets/js/features/certificates.js?v=147-sem-aba-trat"></script>
+    <script defer src="./assets/js/features/budget-documents.js"></script>
+    <script defer src="./assets/js/features/budget-print.js"></script>
+    <script defer src="./assets/js/features/pdf.js?v=153"></script>
+    <script defer src="./assets/js/features/catalogs.js"></script>
+    <script defer src="./assets/js/features/dentists.js?v=220-dentistas"></script>
+    <script defer src="./assets/js/features/appointments.js?v=160"></script>
+    <script defer src="./assets/js/payment-fees.js"></script>
+    <script defer src="./assets/js/features/sales.js"></script>
+    <script defer src="./assets/js/features/commissions.js?v=220-dentistas"></script>
+    <script defer src="./assets/js/features/reports.js?v=267"></script>
+    <script defer src="./assets/js/features/general-expenses.js?v=267"></script>
+    <script defer src="./assets/js/features/laboratory.js?v=255"></script>
+    <script defer src="./assets/js/features/backup.js"></script>
+    <script defer src="./assets/js/features/actions.js?v=110-fix1"></script>
+<script src="assets/js/features/evolution-signing.js"></script>
+<script defer src="./assets/js/features/evolution-finalization.js?v=259"></script>
+<script defer src="./assets/js/features/evolution-audit-history.js?v=259"></script>
+    <script defer src="./assets/js/features/payments.js"></script>
+    <script defer src="./assets/js/features/events.js?v=257"></script>
+    <script defer src="./assets/js/features/notifications.js"></script>
+    <script defer src="./assets/js/oralvalle-push-client.js"></script>
+    <script defer src="./assets/js/permissions.js"></script>
+    <script defer src="./assets/js/supabase/config.js"></script>
+    <script defer src="./assets/js/supabase/client.js"></script>
+    <script defer src="./assets/js/supabase/data.js"></script>
+    <script defer src="./assets/js/nexo-modules.js?v=183"></script>
+    <script defer src="./assets/js/supabase/integration.js"></script>
+    <script defer src="./assets/js/features/cloud-files.js"></script>
+    <script defer src="./assets/js/features/signature-pdf-upload.js?v=144-3"></script>
+    <script defer src="./assets/js/features/patient-audit.js"></script>
+    <script defer src="./assets/js/features/whatsapp-free.js"></script>
+    <script defer src="./assets/js/features/signatures.js"></script>
+    <script defer src="./assets/js/features/document-signing.js"></script>
+    <script defer src="./assets/js/app.js?v=150-pesquisa1"></script>
+    <script defer src="./assets/js/monitoring/client-errors.js?v=66"></script>
+    <script>if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(console.warn));</script>
+  </body>
+</html>
