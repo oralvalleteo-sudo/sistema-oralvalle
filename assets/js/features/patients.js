@@ -248,6 +248,14 @@ function itemHtml(o,it,i){
   ${qOf(it)>1?(()=>{const m=itMult(it);return `<div class="note" style="margin:0 0 6px">${brl(m.u)} × ${m.q} dentes = ${brl(m.t)}</div>`})():''}
   <div class="note oitem-last" data-cpi="${o.id}:${i}">${esc(cpText(o,it))}</div></div>`;
 }
+function nxPayPlan(o){
+ const raw=String(o.cond||'');const m=raw.match(/^Entrada: R\$ ([\d.,]+) \(([^)]+)\); Restante: R\$ ([\d.,]+) \(([^)]+)\)(?: em (\d+)x de R\$ ([\d.,]+))?$/);
+ return m?{entrada:m[1],formaEntrada:m[2],formaSaldo:m[4],parcelas:m[5]||'1'}:{entrada:'',formaEntrada:'PIX',formaSaldo:'Cartão de crédito',parcelas:'1'};
+}
+function nxPayHtml(o){
+ const a=nxPayPlan(o),opts=(v)=>['PIX','Dinheiro','Cartão de crédito','Cartão de débito','Transferência','Boleto','Outro'].map(x=>`<option${x===v?' selected':''}>${x}</option>`).join('');
+ return `<div class="nx-payplan" data-nxplan="${esc(o.id)}" style="border:1px solid #ddd;border-radius:10px;padding:14px;margin:12px 0;background:#fff"><strong>Planejamento de pagamento</strong><p class="note" style="margin:4px 0 10px">Defina a entrada e como será pago o restante. Isto não registra recebimento no caixa.</p><div class="row" style="flex-wrap:wrap;gap:10px"><div><label>Entrada (R$)</label><input data-nxp="entrada" inputmode="decimal" placeholder="0,00" value="${esc(a.entrada)}"></div><div><label>Forma da entrada</label><select data-nxp="formaEntrada">${opts(a.formaEntrada)}</select></div></div><div class="row" style="flex-wrap:wrap;gap:10px"><div><label>Pagamento do restante</label><select data-nxp="formaSaldo">${opts(a.formaSaldo)}</select></div><div><label>Quantidade de parcelas</label><input data-nxp="parcelas" type="number" min="1" max="60" value="${esc(a.parcelas)}"></div></div><div data-nxres style="font-weight:600;margin-top:10px" aria-live="polite"></div></div>`;
+}
 function orcHtml(o){
   const open=!!(view.orcOpen&&view.orcOpen[o.id]),nIt=o.itens.length,stc=o.status==='Aprovado'?'stt-ok':o.status==='Pendente'?'stt-wr':'';
   const head=`<button type="button" class="orc-h" data-act="otoggle" data-o="${o.id}" aria-expanded="${open}"><span class="orc-chev" aria-hidden="true">${open?'▾':'▸'}</span><span class="orc-t"><strong>${esc(o.data)}</strong><small>${nIt} ${nIt===1?'item':'itens'} · toque para ${open?'recolher':'abrir'}</small></span><span class="badge ${stc}" style="flex:none">${esc(o.status==='Pendente'?'Proposta':o.status==='Recusado'?'Perdida':o.status)}</span><strong class="orc-tot" data-ototal>${brl(total(o))}</strong></button>`;
@@ -255,7 +263,7 @@ function orcHtml(o){
   ${obAllHtml(o)}${o.itens.map((it,i)=>itemHtml(o,it,i)).join('')}
   <div class="row" style="margin-top:8px"><button class="ghost sm" data-act="addi" data-o="${o.id}">Adicionar item</button></div>
   <div class="row" style="align-items:flex-start"><div><label>Desconto (R$)</label><input data-o="${o.id}" data-f="desc" inputmode="decimal" value="${esc(o.desc)}"></div><div><label>Válido até</label><input type="date" data-o="${o.id}" data-f="val" value="${esc(o.val)}"></div></div>
-  <label>Condições de pagamento</label><input data-o="${o.id}" data-f="cond" placeholder="Ex.: entrada + 3x no cartão" value="${esc(o.cond)}">
+  ${nxPayHtml(o)}<label>Condições de pagamento (editável)</label><input data-o="${o.id}" data-f="cond" placeholder="Ex.: entrada + 3x no cartão" value="${esc(o.cond)}">
   <div data-sum>${orcSum(o)}</div>
   <div class="row" style="margin-top:12px;flex-wrap:wrap"><button type="button" class="sm" data-act="orcsave" data-o="${o.id}">Salvar orçamento</button><button type="button" class="ghost sm" data-act="orccollapse" data-o="${o.id}">Recolher orçamento ↑</button><button class="ghost sm" data-act="copy" data-o="${o.id}">Copiar texto</button><button class="ghost sm" data-act="owa" data-o="${o.id}">WhatsApp</button><button class="sm" data-act="pdf" data-o="${o.id}">Baixar PDF</button><button class="ghost sm" data-act="print" data-o="${o.id}">Imprimir</button><button class="danger sm" data-act="rmorc" data-o="${o.id}">${delArm==='orc:'+o.id?'Confirmar exclusão':'Excluir orçamento / proposta'}</button></div></div>`:''}</div>`;
 }
