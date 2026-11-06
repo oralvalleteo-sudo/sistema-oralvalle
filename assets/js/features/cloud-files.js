@@ -205,13 +205,26 @@
     } catch (error) { report(error); }
     finally { button.disabled = false; }
   };
-  for (const [action, slot] of [['sigclr', 'sign'], ['evsigclr', 'evolSign']]) {
-    A[action] = async (button, data, patient) => {
-      if (!patient || !signatureReady(patient, slot)) return;
-      const names = slot === 'sign' ? ['sign', 'signDate', 'signTermo'] : ['evolSign', 'evolSignDate'];
-      if (patient[slot]) { report(new Error('Assinatura já registrada e protegida; não pode ser apagada.')); return; }
-      try { await signature(patient, slot, Object.fromEntries(names.map(name => [name, '']))); }
-      catch (error) { report(error); }
+  // Limpar atua somente sobre o desenho ainda não confirmado.
+  // Assinaturas persistidas continuam imutáveis para preservar a auditoria.
+  for (const [action, slot, canvasId] of [['sigclr', 'sign', 'sig'], ['evsigclr', 'evolSign', 'evsig']]) {
+    A[action] = (button, data, patient) => {
+      if (!patient) return;
+      if (patient[slot]) {
+        report(new Error('Esta assinatura já foi registrada. Para corrigir, é necessário um fluxo de retificação com histórico.'));
+        return;
+      }
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const retry = canvas.nextElementSibling?.querySelector('button');
+      if (retry && retry.textContent.trim() === 'Refazer assinatura') {
+        retry.click(); // Atualiza também o estado interno e desabilita a confirmação.
+      } else {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     };
   }
   for (const [action, create, category] of [['rxsave', rxDoc, 'Receituário'], ['atsave', atDoc, 'Atestado']]) {
