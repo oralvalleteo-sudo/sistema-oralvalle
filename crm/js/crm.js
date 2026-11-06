@@ -326,10 +326,11 @@ window.addEventListener('nexocrm:import-budget',async event=>{
   const marker=budgetMarker(d.budgetId);
   if(current.some(x=>String(x.budget_id||'')===String(d.budgetId)||String(x.notes||'').includes(marker))){finish(true,'Este orçamento já foi adicionado ao funil.');return}
   await api('nexodent_crm_leads',{method:'POST',body:{clinic_id:clinicId,name:d.patientName,
-   phone:d.phone||'',source:'Outros',stage:'Orçamento',estimated_value:d.total,budget_id:String(d.budgetId),budget_synced_at:new Date().toISOString(),
-   notes:'Origem: orçamento NexoDent. Procedimentos: '+String(d.description||'').slice(0,700)+'\n'+marker}});
+   phone:d.phone||'',source:'Outros',stage:'Orçamento',estimated_value:d.total,
+   notes:'Origem: orçamento NexoDent. Procedimentos: '+String(d.description||'').slice(0,700)+'\n'+marker,
+   budget_id:String(d.budgetId),budget_synced_at:new Date().toISOString()}});
   finish(true,'Orçamento adicionado ao funil.');await load();
- }catch(e){const duplicate=String(e.message||'').includes('23505')||/duplicate key|unique constraint/i.test(String(e.message||''));finish(false,duplicate?'Este orçamento já foi vinculado por outro usuário. Atualize a lista.':'Não foi possível importar: '+e.message)}finally{importingBudget=false}
+ }catch(e){finish(false,'Não foi possível importar: '+e.message)}finally{importingBudget=false}
 });
 $('stage').replaceChildren();for(const s of stages){const opt=document.createElement('option');opt.value=s;opt.textContent=s;$('stage').append(opt)}$('stage').addEventListener('change',toggleResult);$('sales-period').addEventListener('change',renderSales);$('productivity-period').addEventListener('change',renderProductivity);$('sales-all').addEventListener('click',()=>{$('sales-period').value='';renderSales()});$('new').onclick=()=>edit(null);$('cancel').onclick=()=>$('editor').close();$('refresh').onclick=load;$('search').oninput=render;$('clinic').onchange=()=>{clinicId=$('clinic').value;if(window.NexoCRMIntegracao){window.NexoCRMIntegracao.limpar();window.NexoCRMIntegracao.cancelarPendentes()}loadCommercialMembers().then(load)};$('form').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target),payload={name:String(fd.get('name')).trim(),phone:String(fd.get('phone')).trim(),source:String(fd.get('source')),stage:String(fd.get('stage')),estimated_value:Number(fd.get('estimated_value')||0),notes:String(fd.get('notes')).trim(),next_contact_at:fd.get('next_contact_at')||null,commercial_owner_id:fd.get('commercial_owner')||null};if(!payload.name)return;
  if(payload.commercial_owner_id&&!commercialMembers.some(m=>m.id===payload.commercial_owner_id)){status('Responsável inválido para esta clínica.',true);return}const original=editing?leads.find(x=>String(x.id)===String(editing)):null;
