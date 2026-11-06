@@ -161,15 +161,22 @@ async function listarPendentes(clinicId,cloud){
  const current=++pendingSeq;target.textContent='Consultando orçamentos pendentes…';
  try{
   const scope='clinic_id=eq.'+encodeURIComponent(clinicId);
-  const [budgets,patients]=await Promise.all([
-   cloud.request('/rest/v1/budgets?'+scope+'&select=id,parent_id,status,dados&limit=1000'),
-   cloud.request('/rest/v1/patients?'+scope+'&select=id,nome,dados&limit=1000')
-  ]);
-  if(current!==pendingSeq)return;
-  const all=Array.isArray(budgets)?budgets:[],ps=Array.isArray(patients)?patients:[];
-  const byParent=new Map();
-  for(const p of ps){const id=String(p.dados?.id||p.id||'');if(id)byParent.set(id,p)}
-  const pending=all.filter(b=>norm(budgetStatus(b)).includes('pendente'));
+   const budgets=await cloud.request('/rest/v1/budgets?'+scope+'&select=id,parent_id,status,dados&limit=1000');
+   if(current!==pendingSeq)return;
+   const all=Array.isArray(budgets)?budgets:[];
+   const pending=all.filter(b=>norm(budgetStatus(b)).includes('pendente'));
+   // Resolve apenas os pacientes dos orçamentos exibidos, pelo ID completo.
+   const parentIds=[...new Set(pending.slice(0,60).map(b=>String(b.parent_id||'')).filter(Boolean))];
+   const ps=[];
+   for(let i=0;i<parentIds.length;i+=20){
+    const part=parentIds.slice(i,i+20);
+    const encoded=part.map(id=>JSON.stringify(id)).join(',');
+    const rows=await cloud.request('/rest/v1/patients?'+scope+'&id=in.('+encodeURIComponent(encoded)+')&select=id,nome,dados&limit=100');
+    if(Array.isArray(rows))ps.push(...rows);
+   }
+   if(current!==pendingSeq)return;
+   const byParent=new Map();
+   for(const p of ps){const id=String(p.id||'');if(id)byParent.set(id,p)}
   const itemsByBudget=await loadItems(clinicId,cloud,pending);
   if(current!==pendingSeq)return;
   const root=document.createElement('div');
@@ -183,7 +190,7 @@ async function listarPendentes(clinicId,cloud){
   for(const [label,value] of groups){const card=document.createElement('span');card.className='crm-budget-status-card';const strong=document.createElement('strong');strong.textContent=String(value);const caption=document.createElement('small');caption.textContent=label;card.append(strong,caption);counts.append(card)}
   root.append(counts);
   const reload=document.createElement('button');reload.type='button';reload.className='crm-budget-refresh';reload.textContent='Atualizar consulta de orçamentos';reload.addEventListener('click',()=>listarPendentes(clinicId,cloud));root.append(reload);
-  if(all.length===1000||ps.length===1000){const w=document.createElement('small');w.className='warning';w.textContent='Limite de 1.000 registros atingido: resultados podem estar incompletos.';root.append(w)}
+  if(all.length===1000){const w=document.createElement('small');w.className='warning';w.textContent='Limite de 1.000 registros atingido: resultados podem estar incompletos.';root.append(w)}
   const seen=new Set();
   for(const b of pending.slice(0,60)){
    if(seen.has(String(b.id)))continue;seen.add(String(b.id));
