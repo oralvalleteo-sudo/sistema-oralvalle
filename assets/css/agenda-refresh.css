@@ -116,3 +116,36 @@
 }
 
 
+
+/* NexoDent 189: coluna de horario independente do cartao de atendimento.
+   Sobrescreve a regra antiga de 72px sem modificar os agendamentos. */
+.nexo-agenda-page .ag-flow-list .ag-flow-row {
+  grid-template-columns: 104px minmax(0, 1fr) !important;
+  column-gap: 8px !important;
+  align-items: start !important;
+}
+.nexo-agenda-page .ag-flow-list .ag-flow-time {
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  padding: 8px 2px 4px 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  font-variant-numeric: tabular-nums;
+}
+.nexo-agenda-page .ag-flow-list .ag-flow-content {
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+.nexo-agenda-page .ag-flow-list .ag-flow-block,
+.nexo-agenda-page .ag-flow-list .ag-appointment {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+@media(max-width:480px) {
+  .nexo-agenda-page .ag-flow-list .ag-flow-row {
+    grid-template-columns: 96px minmax(0, 1fr) !important;
+    column-gap: 5px !important;
+  }
+  .nexo-agenda-page .ag-flow-list .ag-flow-time { font-size: 11px !important; }
+}
