@@ -126,3 +126,23 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
   background-image: none !important;
   border: 1px solid #b8c2cc !important;
 }
+
+
+/* NexoDent 190: cartões de lembretes, separados do botão de inclusão. */
+.ov-reminder-grid { display:flex !important; flex-direction:column !important; gap:18px !important; min-width:0; }
+.ov-reminder-grid > section { width:100% !important; min-width:0; margin:0 !important; }
+.ov-reminder-grid .nd-lem-create { display:block; margin:0; }
+.ov-reminder-grid .nd-lem-create > summary { min-height:42px; box-sizing:border-box; }
+.ov-reminder-grid .nd-lem-create[open] > div { margin-top:12px; padding:20px !important; border:1px solid #e3e7ec; border-radius:12px; background:#fff; }
+.ov-reminder-grid .ov-reminder-list { display:grid !important; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:14px !important; margin:0 !important; padding:0 !important; }
+.ov-reminder-grid .ov-reminder-item { display:flex !important; flex-direction:column; gap:10px; min-width:0; padding:18px !important; border:1px solid #dce2e9 !important; border-radius:12px !important; background:#fff !important; box-shadow:0 2px 8px rgba(23,35,54,.045); box-sizing:border-box; }
+.ov-reminder-grid .ov-reminder-top { display:flex; align-items:flex-start; gap:12px; min-width:0; }
+.ov-reminder-grid .ov-reminder-check { flex:0 0 auto; width:17px; height:17px; margin:3px 0 0; accent-color:#e97700; }
+.ov-reminder-grid .ov-reminder-title { flex:1; min-width:0; overflow-wrap:anywhere; font-size:14px; font-weight:650; line-height:1.45; color:#222b36; }
+.ov-reminder-grid .ov-reminder-meta { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 0 29px; }
+.ov-reminder-grid .ov-reminder-pill { display:inline-flex; align-items:center; padding:4px 9px; border-radius:20px; background:#fff6ed; border:1px solid #f5e3d3; color:#795030; font-size:11px; }
+.ov-reminder-grid .ov-reminder-note { margin-left:29px; line-height:1.5; color:#526071; overflow-wrap:anywhere; }
+.ov-reminder-grid .ov-reminder-actions { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 0 29px; }
+.ov-reminder-grid .ov-reminder-actions button { min-height:30px; padding:5px 12px; border-radius:7px; }
+.ov-reminder-grid .ov-reminder-item.done { opacity:.72; }
+@media(max-width:600px) { .ov-reminder-grid {gap:14px !important;} .ov-reminder-grid .ov-reminder-list {grid-template-columns:minmax(0,1fr);} .ov-reminder-grid .ov-reminder-item {padding:14px !important;} }
