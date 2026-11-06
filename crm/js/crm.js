@@ -120,7 +120,7 @@ function renderPriorities(groups,lastContact,now){
 }
 for(const button of document.querySelectorAll('[data-followup]'))button.addEventListener('click',()=>{followupFilter=button.dataset.followup;followup()});
 const resultMarker=/\[NEXODENT_RESULT:(?:FECHADO|PERDIDA)\|[^\]\r\n]*\]/g;
-const resultData=x=>{const m=String(x.notes||'').match(/\[NEXODENT_RESULT:(FECHADO|PERDIDA)\|([0-9]{4}-[0-9]{2}-[0-9]{2})(?:\|([^\]\r\n]*))?\]/);return m?{type:m[1],day:m[2],reason:decodeURIComponent(m[3]||'')}:null};
+const resultData=x=>{const m=String(x?.notes||'').match(/\[NEXODENT_RESULT:(FECHADO|PERDIDA)\|([0-9]{4}-[0-9]{2}-[0-9]{2})(?:\|([^\]\r\n]*))?\]/);return m?{type:m[1],day:m[2],reason:decodeURIComponent(m[3]||'')}:null};
 // Central de recuperação: somente orçamentos vinculados manualmente ao CRM.
 // Preferencia comercial preservada nas observacoes existentes, sem alterar o banco.
 const optoutMarker='[NEXODENT_NO_CONTACT]';
