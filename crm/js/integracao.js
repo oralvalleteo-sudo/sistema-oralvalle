@@ -167,7 +167,7 @@ async function listarPendentes(clinicId,cloud){
   if(current!==pendingSeq)return;
   const all=Array.isArray(budgets)?budgets:[],ps=Array.isArray(patients)?patients:[];
   const byParent=new Map();
-  for(const p of ps){const id=String(p.dados?.id||p.id||'');if(id)byParent.set(JSON.stringify([null,'p',['id',id]]),p)}
+  for(const p of ps){const id=String(p.dados?.id||p.id||'');if(id)byParent.set(id,p)}
   const pending=all.filter(b=>norm(budgetStatus(b)).includes('pendente'));
   const itemsByBudget=await loadItems(clinicId,cloud,pending);
   if(current!==pendingSeq)return;
@@ -175,7 +175,10 @@ async function listarPendentes(clinicId,cloud){
   const summary=document.createElement('p');summary.textContent=pending.length+' orçamento(s) com status pendente encontrados nesta consulta.';root.append(summary);
   // Visão somente leitura: status são exibidos conforme registrados no NexoDent.
   const counts=document.createElement('div');counts.className='crm-budget-status-summary';
-  const groups=[['Total consultado',all.length],['Pendentes',pending.length],['Outros status',all.length-pending.length]];
+  const approved=all.filter(b=>norm(budgetStatus(b))==='aprovado').length;
+  const refused=all.filter(b=>norm(budgetStatus(b))==='recusado').length;
+  const unknown=all.length-pending.length-approved-refused;
+  const groups=[['Total consultado',all.length],['Pendentes',pending.length],['Aprovados',approved],['Recusados',refused],['Sem status / outros',unknown]];
   for(const [label,value] of groups){const card=document.createElement('span');card.className='crm-budget-status-card';const strong=document.createElement('strong');strong.textContent=String(value);const caption=document.createElement('small');caption.textContent=label;card.append(strong,caption);counts.append(card)}
   root.append(counts);
   const reload=document.createElement('button');reload.type='button';reload.className='crm-budget-refresh';reload.textContent='Atualizar consulta de orçamentos';reload.addEventListener('click',()=>listarPendentes(clinicId,cloud));root.append(reload);
@@ -209,7 +212,7 @@ async function listarPendentes(clinicId,cloud){
    root.append(row);
   }
   if(pending.length>60){const more=document.createElement('small');more.textContent='Exibindo 60 de '+pending.length+' registros pendentes.';root.append(more)}
-  const note=document.createElement('small');note.textContent='Consulta somente leitura. A inclusão no funil exige clicar em Adicionar ao funil; o orçamento original não é alterado.';root.append(note);
+  const note=document.createElement('small');note.textContent='Prévia para a sincronização: somente orçamentos explicitamente pendentes são elegíveis para importação manual. Aprovados, recusados e sem status não são importados nem alterados automaticamente. A inclusão no funil exige clicar em Adicionar ao funil.';root.append(note);
   target.replaceChildren(root);
  }catch(e){if(current===pendingSeq)target.textContent='Não foi possível consultar orçamentos: '+e.message}
 }
