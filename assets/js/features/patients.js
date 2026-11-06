@@ -35,7 +35,7 @@ function tabAnam(p){
   `<label>Medicamentos em uso</label><textarea data-a="med">${esc(a.med)}</textarea><label>Queixa principal</label><textarea data-a="queixa">${esc(a.queixa)}</textarea><label>Última consulta ao dentista</label><input data-a="ultima" value="${esc(a.ultima)}">`+sigHtml(p);
 }
 function sigHtml(p){
-  return `<h2 style="margin-top:22px">Termo e assinatura do paciente</h2><div class="termo">${esc(TERMO)}</div><canvas id="sig" width="600" height="220" aria-label="Área de assinatura"></canvas><button class="ghost sm" data-act="sigclr">Limpar assinatura</button><p class="note" id="sigst">${p.sign?'Assinatura salva'+(p.signDate?' em '+esc(p.signDate):'')+', junto com o texto acima.':'Peça para o paciente ler o termo e assinar com o dedo.'}</p><p class="note" style="margin-top:4px">Texto-modelo genérico. Peça a um advogado para revisar antes de usar de fato.</p>`;
+  return `<h2 style="margin-top:22px">Termo e assinatura do paciente</h2><div class="termo">${esc(TERMO)}</div><canvas id="sig" width="600" height="220" aria-label="Área de assinatura"></canvas><button class="ghost sm" data-act="sigclr">Limpar assinatura</button><p class="note" id="sigst">${p.sign?'Assinatura salva'+(p.signDate?' em '+esc(p.signDate):'')+', junto com o texto acima.':'Peça para o paciente ler o termo e assinar com o dedo. Confira o desenho antes de confirmar.'}</p><p class="note" style="margin-top:4px">Texto-modelo genérico. Peça a um advogado para revisar antes de usar de fato.</p>`;
 }
 function initSig(){
   const c=$('sig'),p=cur();if(!c||!p)return;
@@ -46,7 +46,27 @@ function initSig(){
   const pt=e=>{const r=c.getBoundingClientRect();return [(e.clientX-r.left)*600/r.width,(e.clientY-r.top)*220/r.height]};
   c.onpointerdown=e=>{if(window.OralCloudFiles&&p.sign){toast('Assinatura já registrada e protegida.');return;}e.preventDefault();dr=true;try{c.setPointerCapture(e.pointerId)}catch(_){}const a=pt(e);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(a[0]+.1,a[1]);x.stroke()};
   c.onpointermove=e=>{if(!dr)return;const a=pt(e);x.lineTo(a[0],a[1]);x.stroke()};
-  c.onpointerup=c.onpointercancel=()=>{if(!dr)return;dr=false;const values={sign:c.toDataURL('image/png'),signDate:new Date().toLocaleString('pt-BR'),signTermo:TERMO};if(window.OralCloudFiles){OralCloudFiles.signature(p,'sign',values).catch(error=>toast(error.message,5000));return}Object.assign(p,values);save();$('sigst').textContent='Assinatura salva em '+p.signDate+', junto com o texto do termo.'};
+  const actions=document.createElement('div');
+   actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';
+   const retry=document.createElement('button');retry.type='button';retry.className='ghost sm';retry.textContent='Refazer assinatura';
+   const confirmBtn=document.createElement('button');confirmBtn.type='button';confirmBtn.className='sm';confirmBtn.textContent='Confirmar e salvar assinatura';confirmBtn.disabled=true;
+   actions.append(retry,confirmBtn);c.insertAdjacentElement('afterend',actions);
+   let ink=false,saving=false;
+   if(p['sign']){retry.disabled=true;confirmBtn.disabled=true;}
+   retry.onclick=()=>{if(p['sign']||saving)return;x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);ink=false;confirmBtn.disabled=true;};
+   c.onpointerup=c.onpointercancel=()=>{if(!dr)return;dr=false;ink=true;confirmBtn.disabled=false;};
+   confirmBtn.onclick=async()=>{
+     if(!ink||saving||p['sign'])return;
+     if(!window.confirm('Você conferiu a assinatura? Após confirmar, ela será registrada e não poderá ser apagada.'))return;
+     const values={sign:c.toDataURL('image/png'),signDate:new Date().toLocaleString('pt-BR'),signTermo:TERMO};
+     saving=true;confirmBtn.disabled=true;retry.disabled=true;
+     try{
+       if(window.OralCloudFiles)await OralCloudFiles.signature(p,'sign',values);
+       else{Object.assign(p,values);save();}
+       c.style.pointerEvents='none';toast('Assinatura registrada com sucesso.');
+     }catch(error){saving=false;confirmBtn.disabled=false;retry.disabled=false;toast(error.message||'Falha ao salvar assinatura',5000);}
+   };
+
 }
 function initEvolSig(){
   const c=$('evsig'),p=cur();if(!c||!p)return;
@@ -57,7 +77,27 @@ function initEvolSig(){
   const pt=e=>{const r=c.getBoundingClientRect();return [(e.clientX-r.left)*600/r.width,(e.clientY-r.top)*180/r.height]};
   c.onpointerdown=e=>{if(window.OralCloudFiles&&p.evolSign){toast('Assinatura já registrada e protegida.');return;}e.preventDefault();dr=true;try{c.setPointerCapture(e.pointerId)}catch(_){}const a=pt(e);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(a[0]+.1,a[1]);x.stroke()};
   c.onpointermove=e=>{if(!dr)return;e.preventDefault();const a=pt(e);x.lineTo(a[0],a[1]);x.stroke()};
-  c.onpointerup=c.onpointercancel=()=>{if(!dr)return;dr=false;const values={evolSign:c.toDataURL('image/png'),evolSignDate:new Date().toLocaleString('pt-BR')};if(window.OralCloudFiles){OralCloudFiles.signature(p,'evolSign',values).catch(error=>toast(error.message,5000));return}Object.assign(p,values);save();const st=$('evsigst');if(st)st.textContent='Assinatura salva em '+p.evolSignDate};
+  const actions=document.createElement('div');
+   actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';
+   const retry=document.createElement('button');retry.type='button';retry.className='ghost sm';retry.textContent='Refazer assinatura';
+   const confirmBtn=document.createElement('button');confirmBtn.type='button';confirmBtn.className='sm';confirmBtn.textContent='Confirmar e salvar assinatura';confirmBtn.disabled=true;
+   actions.append(retry,confirmBtn);c.insertAdjacentElement('afterend',actions);
+   let ink=false,saving=false;
+   if(p['evolSign']){retry.disabled=true;confirmBtn.disabled=true;}
+   retry.onclick=()=>{if(p['evolSign']||saving)return;x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);ink=false;confirmBtn.disabled=true;};
+   c.onpointerup=c.onpointercancel=()=>{if(!dr)return;dr=false;ink=true;confirmBtn.disabled=false;};
+   confirmBtn.onclick=async()=>{
+     if(!ink||saving||p['evolSign'])return;
+     if(!window.confirm('Você conferiu a assinatura? Após confirmar, ela será registrada e não poderá ser apagada.'))return;
+     const values={evolSign:c.toDataURL('image/png'),evolSignDate:new Date().toLocaleString('pt-BR')};
+     saving=true;confirmBtn.disabled=true;retry.disabled=true;
+     try{
+       if(window.OralCloudFiles)await OralCloudFiles.signature(p,'evolSign',values);
+       else{Object.assign(p,values);save();}
+       c.style.pointerEvents='none';toast('Assinatura registrada com sucesso.');
+     }catch(error){saving=false;confirmBtn.disabled=false;retry.disabled=false;toast(error.message||'Falha ao salvar assinatura',5000);}
+   };
+
 }
 function ologHtml(p){
   const l=(p.olog||[]).slice(-8).reverse();
