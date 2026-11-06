@@ -44,17 +44,17 @@ function initSig(){
   const x=c.getContext('2d');let dr=false;x.fillStyle='#fff';x.fillRect(0,0,600,220);x.lineWidth=3;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#3F4650';
   if(p.sign){const im=new Image();im.onload=()=>x.drawImage(im,0,0);im.src=p.sign}
   const pt=e=>{const r=c.getBoundingClientRect();return [(e.clientX-r.left)*600/r.width,(e.clientY-r.top)*220/r.height]};
-  c.onpointerdown=e=>{if(window.OralCloudFiles&&p.sign){toast('Assinatura já registrada e protegida.');return;}e.preventDefault();dr=true;try{c.setPointerCapture(e.pointerId)}catch(_){}const a=pt(e);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(a[0]+.1,a[1]);x.stroke()};
-  c.onpointermove=e=>{if(!dr)return;const a=pt(e);x.lineTo(a[0],a[1]);x.stroke()};
+  c.onpointerdown=e=>{if(window.OralCloudFiles&&p.sign){toast('Assinatura já registrada e protegida.');return;}e.preventDefault();dr=true;try{c.setPointerCapture(e.pointerId)}catch(_){}const a=pt(e);lastPoint=a;strokeDistance=0;x.beginPath();x.moveTo(a[0],a[1])};
+  c.onpointermove=e=>{if(!dr)return;const a=pt(e);if(lastPoint)strokeDistance+=Math.hypot(a[0]-lastPoint[0],a[1]-lastPoint[1]);lastPoint=a;x.lineTo(a[0],a[1]);x.stroke()};
   const actions=document.createElement('div');
    actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';
    const retry=document.createElement('button');retry.type='button';retry.className='ghost sm';retry.textContent='Refazer assinatura';
    const confirmBtn=document.createElement('button');confirmBtn.type='button';confirmBtn.className='sm';confirmBtn.textContent='Confirmar e salvar assinatura';confirmBtn.disabled=true;
    actions.append(retry,confirmBtn);c.insertAdjacentElement('afterend',actions);
-   let ink=false,saving=false;
+   let ink=false,saving=false,strokeDistance=0,lastPoint=null;
    if(p['sign']){retry.disabled=true;confirmBtn.disabled=true;}
-   retry.onclick=()=>{if(p['sign']||saving)return;x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);ink=false;confirmBtn.disabled=true;};
-   c.onpointerup=c.onpointercancel=()=>{if(!dr)return;dr=false;ink=true;confirmBtn.disabled=false;};
+   retry.onclick=()=>{if(p['sign']||saving)return;x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);ink=false;strokeDistance=0;lastPoint=null;confirmBtn.disabled=true;};
+   c.onpointerup=()=>{if(!dr)return;dr=false;ink=strokeDistance>=12;confirmBtn.disabled=!ink;if(!ink)toast('Traço muito curto. Use Refazer assinatura e assine novamente.');};c.onpointercancel=()=>{dr=false;};
    confirmBtn.onclick=async()=>{
      if(!ink||saving||p['sign'])return;
      if(!window.confirm('Você conferiu a assinatura? Após confirmar, ela será registrada e não poderá ser apagada.'))return;
@@ -75,17 +75,17 @@ function initEvolSig(){
   const x=c.getContext('2d');let dr=false;x.fillStyle='#fff';x.fillRect(0,0,600,180);x.lineWidth=3;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#3F4650';
   if(p.evolSign){const im=new Image();im.onload=()=>x.drawImage(im,0,0);im.src=p.evolSign}
   const pt=e=>{const r=c.getBoundingClientRect();return [(e.clientX-r.left)*600/r.width,(e.clientY-r.top)*180/r.height]};
-  c.onpointerdown=e=>{if(window.OralCloudFiles&&p.evolSign){toast('Assinatura já registrada e protegida.');return;}e.preventDefault();dr=true;try{c.setPointerCapture(e.pointerId)}catch(_){}const a=pt(e);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(a[0]+.1,a[1]);x.stroke()};
-  c.onpointermove=e=>{if(!dr)return;e.preventDefault();const a=pt(e);x.lineTo(a[0],a[1]);x.stroke()};
+  c.onpointerdown=e=>{if(window.OralCloudFiles&&p.evolSign){toast('Assinatura já registrada e protegida.');return;}e.preventDefault();dr=true;try{c.setPointerCapture(e.pointerId)}catch(_){}const a=pt(e);lastPoint=a;strokeDistance=0;x.beginPath();x.moveTo(a[0],a[1])};
+  c.onpointermove=e=>{if(!dr)return;e.preventDefault();const a=pt(e);if(lastPoint)strokeDistance+=Math.hypot(a[0]-lastPoint[0],a[1]-lastPoint[1]);lastPoint=a;x.lineTo(a[0],a[1]);x.stroke()};
   const actions=document.createElement('div');
    actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';
    const retry=document.createElement('button');retry.type='button';retry.className='ghost sm';retry.textContent='Refazer assinatura';
    const confirmBtn=document.createElement('button');confirmBtn.type='button';confirmBtn.className='sm';confirmBtn.textContent='Confirmar e salvar assinatura';confirmBtn.disabled=true;
    actions.append(retry,confirmBtn);c.insertAdjacentElement('afterend',actions);
-   let ink=false,saving=false;
+   let ink=false,saving=false,strokeDistance=0,lastPoint=null;
    if(p['evolSign']){retry.disabled=true;confirmBtn.disabled=true;}
-   retry.onclick=()=>{if(p['evolSign']||saving)return;x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);ink=false;confirmBtn.disabled=true;};
-   c.onpointerup=c.onpointercancel=()=>{if(!dr)return;dr=false;ink=true;confirmBtn.disabled=false;};
+   retry.onclick=()=>{if(p['evolSign']||saving)return;x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);ink=false;strokeDistance=0;lastPoint=null;confirmBtn.disabled=true;};
+   c.onpointerup=()=>{if(!dr)return;dr=false;ink=strokeDistance>=12;confirmBtn.disabled=!ink;if(!ink)toast('Traço muito curto. Use Refazer assinatura e assine novamente.');};c.onpointercancel=()=>{dr=false;};
    confirmBtn.onclick=async()=>{
      if(!ink||saving||p['evolSign'])return;
      if(!window.confirm('Você conferiu a assinatura? Após confirmar, ela será registrada e não poderá ser apagada.'))return;
