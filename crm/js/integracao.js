@@ -173,6 +173,12 @@ async function listarPendentes(clinicId,cloud){
   if(current!==pendingSeq)return;
   const root=document.createElement('div');
   const summary=document.createElement('p');summary.textContent=pending.length+' orçamento(s) com status pendente encontrados nesta consulta.';root.append(summary);
+  // Visão somente leitura: status são exibidos conforme registrados no NexoDent.
+  const counts=document.createElement('div');counts.className='crm-budget-status-summary';
+  const groups=[['Total consultado',all.length],['Pendentes',pending.length],['Outros status',all.length-pending.length]];
+  for(const [label,value] of groups){const card=document.createElement('span');card.className='crm-budget-status-card';const strong=document.createElement('strong');strong.textContent=String(value);const caption=document.createElement('small');caption.textContent=label;card.append(strong,caption);counts.append(card)}
+  root.append(counts);
+  const reload=document.createElement('button');reload.type='button';reload.className='crm-budget-refresh';reload.textContent='Atualizar consulta de orçamentos';reload.addEventListener('click',()=>listarPendentes(clinicId,cloud));root.append(reload);
   if(all.length===1000||ps.length===1000){const w=document.createElement('small');w.className='warning';w.textContent='Limite de 1.000 registros atingido: resultados podem estar incompletos.';root.append(w)}
   const seen=new Set();
   for(const b of pending.slice(0,60)){
