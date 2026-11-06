@@ -234,7 +234,14 @@ async function execute(action,id){
   const target=orders.find(o=>String(o.id)===String(id));if(!target)return;
   if(!confirm('Excluir definitivamente o trabalho de laboratório de '+patientName(target.patient_id)+'? Esta ação não pode ser desfeita.'))return;
   busy=true;try{
-   if(cloud()){await OralCloud.request('/rest/v1/nexodent_lab_orders?id=eq.'+encodeURIComponent(id)+'&clinic_id=eq.'+encodeURIComponent(clinic()),{method:'DELETE'});await fetchOrders(true);}
+   if(cloud()){
+    const activeClinic=clinic();
+    const removed=await OralCloud.request('/rest/v1/nexodent_lab_orders?id=eq.'+encodeURIComponent(id)+'&clinic_id=eq.'+encodeURIComponent(activeClinic),{method:'DELETE',headers:{'Prefer':'return=representation'}});
+    if(!Array.isArray(removed)||removed.length!==1||String(removed[0].id)!==String(id))throw Error('O banco de dados não autorizou a exclusão. Verifique a política DELETE (RLS) da tabela nexodent_lab_orders e as permissões do usuário.');
+    await fetchOrders(true);
+    if(clinic()!==activeClinic)throw Error('A clínica ativa mudou durante a exclusão. Atualize o Laboratório.');
+    if(orders.some(o=>String(o.id)===String(id)))throw Error('O trabalho ainda consta no banco de dados após a exclusão. Atualize e verifique as permissões.');
+   }
    else{orders=orders.filter(o=>String(o.id)!==String(id));localWrite();}
    const links=linksRead();delete links[String(id)];localStorage.setItem(linkKey(),JSON.stringify(links));
    if(editing===id)editing=null;publishOrders();renderLab();if(typeof toast==='function')toast('Trabalho excluído.');
