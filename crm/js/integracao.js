@@ -141,6 +141,7 @@ function syncImported(detail){
  importedClinic=String(detail.clinicId);
  importedIds=new Set();
  for(const lead of (Array.isArray(detail.leads)?detail.leads:[])){
+  if(lead.budget_id!=null&&String(lead.budget_id).trim())importedIds.add(String(lead.budget_id));
   const notes=String(lead.notes||'');
   for(const match of notes.matchAll(/\[NEXODENT_BUDGET:([^\]]+)\]/g)){
    try{importedIds.add(decodeURIComponent(match[1]))}catch(_){/* marcador invalido ignorado */}
