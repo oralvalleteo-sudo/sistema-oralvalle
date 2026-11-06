@@ -163,7 +163,7 @@ function lembretesHtml(){
   </div>`}`;
 }
 function home(){
-  const n=view.h||'ag',fn={ortho:orthoHtml,impl:implHtml,prot:protHtml,inicio:agHtml,pac:homePac,pf:pfListHtml,ag:agHtml,lab:()=>typeof window.nexoLabHtml==='function'?window.nexoLabHtml():'<div class="card">Módulo Laboratório indisponível. Atualize a página.</div>',lem:lembretesHtml,vd:vdHtml,dt:dtHtml,cm:comHtml,pr:prHtml,mt:mtHtml,hc:hcHtml,bk:bkHtml,cfg:cfgHtml,wa:nexoWaSettingsHtml,sigdoc:nexoSignHtml,conta:pmContaHtml,reports:nexoReportsHtml}[n]||homePac;
+  const n=view.h||'ag',fn={ortho:orthoHtml,impl:implHtml,prot:protHtml,inicio:agHtml,pac:homePac,pf:pfListHtml,ag:agHtml,lab:()=>typeof window.nexoLabHtml==='function'?window.nexoLabHtml():'<div class="card">Módulo Laboratório indisponível. Atualize a página.</div>',lem:lembretesHtml,vd:vdHtml,dt:dtHtml,cm:comHtml,pr:prHtml,mt:mtHtml,hc:hcHtml,bk:bkHtml,cfg:cfgHtml,wa:nexoWaSettingsHtml,sigdoc:nexoSignHtml,conta:pmContaHtml,reports:nexoReportsHtml,crm:()=>`<div class="nexo-crm-embed"><iframe title="CRM comercial" src="./crm/index.html?embedded=1" loading="eager"></iframe></div>`}[n]||homePac;
   const content=fn();
   return `<div class="ov-content-inner">${content}</div>`;
 }

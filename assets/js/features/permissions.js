@@ -25,7 +25,7 @@ function permOf(u,key){
   return PM_LV[v]!==undefined?PM_LV[v]:0;
 }
 const pmLvl=k=>permOf(pmUser(),k);
-const pmSee=k=>k==='reports' ? (pmLvl('vd')>=1||pmLvl('cm')>=1||pmLvl('pac')>=1) : pmLvl(k)>=1;
+const pmSee=k=>k==='crm' ? pmLvl('pac')>=1 : k==='reports' ? (pmLvl('vd')>=1||pmLvl('cm')>=1||pmLvl('pac')>=1) : pmLvl(k)>=1;
 function pmTabLvl(tab){
   const viaPf=view.h==='pf'&&pmLvl('pac')<1;
   if(viaPf)return tab==='orc'?pmLvl('pf'):0;
@@ -35,7 +35,7 @@ const pmTabOk=k=>{const u=pmUser();return !u||u.admin||pmTabLvl(k)>=1};
 function pmCur(){
   const u=pmUser();if(!u||u.admin)return 2;
   if(view.id)return pmTabLvl(view.tab);
-  return pmLvl((view.h==='ortho'||view.h==='impl'||view.h==='prot')?'lem':view.h||'pac');
+  return pmLvl(view.h==='crm'?'pac':(view.h==='ortho'||view.h==='impl'||view.h==='prot')?'lem':view.h||'pac');
 }
 function pmFirst(){return PM_ORDER.find(k=>pmLvl(k)>=1)||'conta'}
 function sanitizeView(){
