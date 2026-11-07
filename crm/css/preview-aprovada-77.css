@@ -1,0 +1,40 @@
+/* CRM NexoDent — adaptação do HTML de prévia aprovado, versão 77 */
+:root{--preview-orange:#f47721;--preview-ink:#17212d;--preview-muted:#75808c;--preview-line:#e8ebef;--preview-bg:#f7f8fa}
+html body{background:var(--preview-bg)!important;color:var(--preview-ink)}
+.crm-sidebar{background:#fff!important;border-right:1px solid var(--preview-line)!important;box-shadow:none!important}
+.crm-sidebar .sidebar-brand{font-size:25px;font-weight:800;letter-spacing:-.7px}
+.crm-sidebar .sidebar-brand span{color:var(--preview-orange)}
+.crm-sidebar nav a{border-radius:10px!important;margin:4px 0!important;color:#687380!important}
+.crm-sidebar nav a.selected{background:#fff0e5!important;color:#d95d0a!important}
+.crm-main{background:var(--preview-bg)!important;padding:30px!important;max-width:1700px!important}
+.crm-main .intro{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0 0 20px!important;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.crm-main .intro .eyebrow{color:var(--preview-orange)!important;font-size:12px!important;letter-spacing:1.3px!important;font-weight:800!important}
+.crm-main .intro h1{font-size:30px!important;letter-spacing:-.7px!important;color:var(--preview-ink)!important;margin:5px 0 6px!important}
+.crm-main .intro p{color:var(--preview-muted)!important;font-size:14px!important}
+.crm-main button:not([disabled]){cursor:pointer}
+.crm-main #new:not([disabled]),.crm-main #refresh,.crm-main #goal-save{background:var(--preview-orange)!important;color:#fff!important;border:1px solid var(--preview-orange)!important;border-radius:9px!important}
+.crm-main .bar{background:#fff!important;border:1px solid var(--preview-line)!important;border-radius:12px!important;padding:14px!important;box-shadow:0 3px 14px #25313b05!important}
+.crm-main input,.crm-main select{border:1px solid #e1e5e9!important;border-radius:8px!important;background:#fff!important;color:var(--preview-ink)!important}
+.crm-view-tabs{background:#fff!important;border:1px solid var(--preview-line)!important;border-radius:12px!important;padding:6px!important;margin:16px 0 22px!important;gap:5px!important}
+.crm-view-tabs button{border-radius:9px!important;font-size:13px!important;color:#6d7884!important}
+.crm-view-tabs button[aria-selected=true]{background:#fff0e5!important;color:#d95d0a!important;border-color:transparent!important;font-weight:750!important}
+.crm-preview-section-title{font-size:18px;font-weight:800;letter-spacing:-.3px;margin:20px 0 14px;color:var(--preview-ink)}
+.crm-main .metrics{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important;margin:0 0 24px!important}
+.crm-main .metrics>div{background:#fff!important;border:1px solid var(--preview-line)!important;border-radius:14px!important;padding:20px!important;box-shadow:0 3px 14px #25313b05!important;min-width:0!important}
+.crm-main .metrics small{font-size:13px!important;color:var(--preview-muted)!important;font-weight:500!important}
+.crm-main .metrics strong{font-size:29px!important;font-weight:800!important;color:var(--preview-ink)!important;letter-spacing:-.7px!important}
+.crm-main .metrics span{font-size:12px!important;color:#27946c!important}
+.crm-main .board-heading{background:#fff!important;border:1px solid var(--preview-line)!important;border-bottom:0!important;border-radius:14px 14px 0 0!important;padding:20px 20px 8px!important;margin:0!important}
+.crm-main #board{background:#fff!important;border:1px solid var(--preview-line)!important;border-top:0!important;border-radius:0 0 14px 14px!important;padding:14px!important;margin:0 0 18px!important;box-shadow:0 3px 14px #25313b05!important;min-width:0}
+.crm-main #board>*,.crm-main .board .column{border-radius:11px!important}
+.crm-main .board .column{background:#f8f9fa!important;border:1px solid #edf0f2!important}
+.crm-main .board .card{background:#fff!important;border:1px solid #e9ecef!important;border-radius:10px!important;box-shadow:0 2px 5px #00000005!important}
+.crm-main .integration{background:#fff!important;border:1px solid var(--preview-line)!important;border-radius:14px!important;box-shadow:0 3px 14px #25313b05!important;margin:16px 0!important;padding:20px!important}
+.crm-main .integration h2{font-size:17px!important;color:var(--preview-ink)!important;letter-spacing:-.3px!important}
+.crm-main .integration p{color:#75808c}
+.crm-main .followup-summary>button,.crm-main .daily-stats>div,.crm-main .goals-stats>div{background:#f8f9fa!important;border:1px solid #edf0f2!important;border-radius:11px!important}
+.crm-main .daily-list>*,.crm-main .tasks-list>*{border-radius:10px!important}
+.crm-main [hidden]{display:none!important}
+html.crm-embedded .crm-main{background:var(--preview-bg)!important;padding:24px!important}
+@media(max-width:1100px){.crm-main .metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:700px){.crm-main{padding:14px!important}.crm-main .metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}.crm-main .metrics>div{padding:13px!important}.crm-main .metrics strong{font-size:23px!important}.crm-main .intro{align-items:flex-start!important;flex-wrap:wrap!important}.crm-main .intro h1{font-size:25px!important}.crm-main .board-heading{padding:14px!important}.crm-main #board{padding:8px!important}.crm-view-tabs{overflow-x:auto!important;flex-wrap:nowrap!important}.crm-view-tabs button{white-space:nowrap!important}}
