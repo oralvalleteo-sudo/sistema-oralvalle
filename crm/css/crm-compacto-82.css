@@ -1,0 +1,15 @@
+/* Compactação progressiva, sem remover os componentes originais. */
+#crm-pending-compact{padding:0!important;overflow:hidden;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+#crm-pending-compact>summary{display:flex;justify-content:space-between;align-items:center;gap:14px;cursor:pointer;padding:14px 18px;list-style:none}
+#crm-pending-compact>summary::-webkit-details-marker{display:none}
+#crm-pending-compact>summary strong{display:block;font-size:15px;color:#222}
+#crm-pending-compact>summary small{display:block;margin-top:4px;font-size:12px;color:#777}
+#crm-pending-compact .crm-expand-label{flex-shrink:0;color:#c65b00;font-size:13px;font-weight:600}
+#crm-pending-compact[open] .crm-expand-label{font-size:0}
+#crm-pending-compact[open] .crm-expand-label:after{content:'Recolher ▴';font-size:13px}
+#crm-pending-compact .crm-pending-content{padding:0 16px 16px;border-top:1px solid #eee}
+#crm-pending-compact:not([open]) .crm-pending-content{display:none}
+#board .column>.card.crm-card-collapsed{display:none!important}
+#board .crm-stage-toggle{display:block;width:100%;margin:10px 0 3px;padding:9px 10px;background:#fff8f2;border:1px solid #f2cda9;border-radius:8px;color:#a94e00;font-size:12px;font-weight:600;cursor:pointer}
+#board .crm-stage-toggle:focus-visible,#crm-pending-compact>summary:focus-visible{outline:2px solid #db6b00;outline-offset:2px}
+@media(max-width:700px){#crm-pending-compact>summary{padding:12px}#crm-pending-compact .crm-pending-content{padding:0 10px 10px}}
