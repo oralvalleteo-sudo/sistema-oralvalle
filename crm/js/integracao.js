@@ -149,12 +149,16 @@ function syncImported(detail){
  }
  document.querySelectorAll('[data-crm-budget-id]').forEach(button=>{
   if(button.dataset.crmClinicId!==importedClinic)return;
-  const already=importedIds.has(button.dataset.crmBudgetId);
-  button.disabled=already;
-  button.textContent=already?'Já está no funil':'Adicionar ao funil';
+  if(importedIds.has(button.dataset.crmBudgetId))button.closest('.item')?.remove();
  });
+ updateAvailableCount();
 }
 window.addEventListener('nexocrm:leads-loaded',event=>syncImported(event.detail));
+function updateAvailableCount(){
+ const target=document.getElementById('pending-budgets');
+ const count=target?.querySelector('[data-crm-available-count]');
+ if(count)count.textContent=String(target.querySelectorAll('[data-crm-budget-row]').length);
+}
 let pendingSeq=0;
 async function listarPendentes(clinicId,cloud){
  const target=document.getElementById('pending-budgets');if(!target)return;
@@ -180,13 +184,13 @@ async function listarPendentes(clinicId,cloud){
   const itemsByBudget=await loadItems(clinicId,cloud,pending);
   if(current!==pendingSeq)return;
   const root=document.createElement('div');
-  const summary=document.createElement('p');summary.textContent=pending.length+' orçamento(s) com status pendente encontrados nesta consulta.';root.append(summary);
+  const summary=document.createElement('p');summary.innerHTML='<strong data-crm-available-count>0</strong> orçamento(s) pendente(s) disponível(is) para adicionar ao funil.';root.append(summary);
   // Visão somente leitura: status são exibidos conforme registrados no NexoDent.
   const counts=document.createElement('div');counts.className='crm-budget-status-summary';
   const approved=all.filter(b=>norm(budgetStatus(b))==='aprovado').length;
   const refused=all.filter(b=>norm(budgetStatus(b))==='recusado').length;
   const unknown=all.length-pending.length-approved-refused;
-  const groups=[['Total consultado',all.length],['Pendentes',pending.length],['Aprovados',approved],['Recusados',refused],['Sem status / outros',unknown]];
+  const groups=[['Total consultado',all.length],['Pendentes no sistema',pending.length],['Aprovados',approved],['Recusados',refused],['Sem status / outros',unknown]];
   for(const [label,value] of groups){const card=document.createElement('span');card.className='crm-budget-status-card';const strong=document.createElement('strong');strong.textContent=String(value);const caption=document.createElement('small');caption.textContent=label;card.append(strong,caption);counts.append(card)}
   root.append(counts);
   const reload=document.createElement('button');reload.type='button';reload.className='crm-budget-refresh';reload.textContent='Atualizar consulta de orçamentos';reload.addEventListener('click',()=>listarPendentes(clinicId,cloud));root.append(reload);
@@ -194,7 +198,8 @@ async function listarPendentes(clinicId,cloud){
   const seen=new Set();
   for(const b of pending.slice(0,60)){
    if(seen.has(String(b.id)))continue;seen.add(String(b.id));
-   const row=document.createElement('div');row.className='item';
+   if(importedClinic===String(clinicId)&&importedIds.has(String(b.id)))continue;
+   const row=document.createElement('div');row.className='item';row.dataset.crmBudgetRow=String(b.id);
    const p=byParent.get(String(b.parent_id||''));
    const title=document.createElement('strong');title.textContent=p?String(p.dados?.nome||p.nome||'Paciente sem nome'):'Paciente não identificado (verificar vínculo)';row.append(title);
    const info=document.createElement('small');const d=b.dados||{};
@@ -212,7 +217,7 @@ async function listarPendentes(clinicId,cloud){
      window.dispatchEvent(new CustomEvent('nexocrm:import-budget',{detail:{
       clinicId,budgetId:String(b.id),patientName:String(p.dados?.nome||p.nome||''),
       phone:String(p.dados?.tel||''),total:details.total,description:details.description,
-      onResult:(ok,message)=>{if(ok&&importedClinic===String(clinicId))importedIds.add(String(b.id));action.disabled=ok;action.textContent=ok?'Já está no funil':'Adicionar ao funil';if(message){let msg=row.querySelector('.crm-import-message');if(!msg){msg=document.createElement('small');msg.className='crm-import-message';row.append(msg)}msg.textContent=message}}
+      onResult:(ok,message)=>{if(ok){if(importedClinic!==String(clinicId)){importedClinic=String(clinicId);importedIds=new Set()}importedIds.add(String(b.id));row.remove();updateAvailableCount();return;}action.disabled=false;action.textContent='Adicionar ao funil';if(message){let msg=row.querySelector('.crm-import-message');if(!msg){msg=document.createElement('small');msg.className='crm-import-message';row.append(msg)}msg.textContent=message}}
      }}));
     };
     row.append(action);
@@ -222,6 +227,7 @@ async function listarPendentes(clinicId,cloud){
   if(pending.length>60){const more=document.createElement('small');more.textContent='Exibindo 60 de '+pending.length+' registros pendentes.';root.append(more)}
   const note=document.createElement('small');note.textContent='Prévia para a sincronização: somente orçamentos explicitamente pendentes são elegíveis para importação manual. Aprovados, recusados e sem status não são importados nem alterados automaticamente. A inclusão no funil exige clicar em Adicionar ao funil.';root.append(note);
   target.replaceChildren(root);
+  updateAvailableCount();
  }catch(e){if(current===pendingSeq)target.textContent='Não foi possível consultar orçamentos: '+e.message}
 }
 function cancelarPendentes(){pendingSeq++;const target=document.getElementById('pending-budgets');if(target)target.textContent='Aguardando consulta…'}
