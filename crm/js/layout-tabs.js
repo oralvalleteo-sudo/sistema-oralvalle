@@ -12,14 +12,14 @@ if(!app||!panel||tabs.length!==4)return;
 // Orçamentos pendentes e consulta integrada ficam na área Oportunidades.
 const children=Array.from(panel.children);
 const sections={
- overview:children.filter(n=>n.matches('.metrics,.crm-priorities,.crm-goals,.crm-management')),
- opportunities:children.filter(n=>n.matches('.board-heading,#board')||n.matches('section')&&!!n.querySelector('#pending-budgets,#integr-result')),
+ overview:children.filter(n=>n.matches('.metrics,.crm-priorities,.crm-goals,.crm-management,.board-heading,#board,.followups,.crm-daily,.crm-preview-section-title')),
+ opportunities:children.filter(n=>n.matches('.board-heading,#board,.crm-preview-section-title')||n.matches('section')&&!!n.querySelector('#pending-budgets,#integr-result')),
  followup:children.filter(n=>n.matches('.followups,.crm-tasks,.recovery,.crm-daily,.crm-operations')),
  reports:children.filter(n=>n.matches('.crm-productivity,.employee-performance,.sales-report'))
 };
 function activate(name,focus=false){
  if(!sections[name])return;
- for(const [key,nodes] of Object.entries(sections))for(const node of nodes)node.hidden=key!==name;
+ for(const [key,nodes] of Object.entries(sections))for(const node of nodes){const sharedOverview=name==='overview'&&node.matches('.board-heading,#board,.followups,.crm-daily');const sharedOpportunities=name==='opportunities'&&node.matches('.board-heading,#board');node.hidden=!(key===name||sharedOverview||sharedOpportunities);}
  for(const tab of tabs){const selected=tab.dataset.crmView===name;tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;if(selected){panel.setAttribute('aria-labelledby',tab.id);if(focus)tab.focus();}}
  try{sessionStorage.setItem('nexodent-crm-view',name)}catch(_){ }
 }
