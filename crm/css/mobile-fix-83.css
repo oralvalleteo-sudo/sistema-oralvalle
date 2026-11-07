@@ -59,3 +59,18 @@
 
 /* O tamanho da fonte é reduzido por js/mobile-fix-83.js SOMENTE quando o valor
    não cabe no cartão. Valores curtos (ex.: "18") mantêm o tamanho original. */
+
+/* ---------- 3. FILA DE ATENDIMENTO: botões do cartão (.daily-row) ----------
+   Causa: .daily-row>div{flex-direction:column} (crm.css) também pega o div
+   .daily-row-actions e vence a regra dele. Em coluna, o "flex:1 1 130px" do
+   mobile vira ALTURA (130px por botão) e os botões ficam altos e encolhidos.
+   Corrigido só em ≤760px; o desktop não é alterado. */
+@media(max-width:760px){
+  .crm-main .daily-row>.daily-row-actions{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;
+  }
+  .crm-main .daily-row-actions button{
+    flex:none;width:100%;min-height:44px;padding:10px 8px;line-height:1.25;
+  }
+  .crm-main .daily-row-actions button:first-child{grid-column:1/-1}  /* "Abrir ficha" ocupa a linha toda */
+}
