@@ -1,0 +1,61 @@
+/* CRM 83 — correção mobile: abas e valores numéricos.
+   Carregado POR ÚLTIMO. Só apresentação; não altera IDs, JS nem dados.
+
+   Causa 1 (abas): visual-refresh-48.css força display:grid com 4 colunas iguais
+   (!important) e preview-aprovada-77.css força white-space:nowrap. Em ~390px cada
+   coluna fica com ~85px e "Oportunidades"/"Atendimento" vazam para a vizinha.
+
+   Causa 2 (números): .metrics>div tem overflow:hidden (48) e o valor em R$ tem
+   fonte fixa de 23px (!important em 77), então "R$ 43.669,98" é cortado;
+   .goals-stats strong usa overflow-wrap:anywhere e quebra "R$ 50.000" / ",00". */
+
+/* ---------- 1. ABAS: uma linha, rolagem horizontal, sem sobreposição ---------- */
+.crm-main .crm-view-tabs{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  overflow-x:auto!important;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  scroll-snap-type:x proximity;
+  max-width:100%;
+}
+.crm-main .crm-view-tabs::-webkit-scrollbar{display:none}
+/* Sombra nas bordas indica que há mais abas para deslizar (some ao chegar no fim). */
+@media(max-width:700px){
+  .crm-main .crm-view-tabs{
+    background:
+      linear-gradient(to right,#fff,#fff) left center/22px 100% no-repeat local,
+      linear-gradient(to left,#fff,#fff) right center/22px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%,rgba(20,36,60,.22),transparent) left center/11px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%,rgba(20,36,60,.22),transparent) right center/11px 100% no-repeat scroll,
+      #fff!important;
+  }
+}
+.crm-main .crm-view-tabs button{
+  flex:0 0 auto!important;      /* não encolhe nem estica além do texto */
+  white-space:nowrap!important;
+  min-width:max-content;
+  padding-inline:16px!important;
+  scroll-snap-align:start;
+}
+/* Telas largas: volta a dividir o espaço igualmente. */
+@media(min-width:701px){
+  .crm-main .crm-view-tabs button{flex:1 1 0!important}
+}
+
+/* ---------- 2. NÚMEROS: nunca quebram nem são cortados ---------- */
+.crm-main .metrics>div,
+.crm-main .goals-stats>div{min-width:0}
+
+.crm-main .metrics strong,
+.crm-main .goals-stats strong{
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  font-variant-numeric:tabular-nums;
+  line-height:1.15;
+}
+
+/* O tamanho da fonte é reduzido por js/mobile-fix-83.js SOMENTE quando o valor
+   não cabe no cartão. Valores curtos (ex.: "18") mantêm o tamanho original. */
