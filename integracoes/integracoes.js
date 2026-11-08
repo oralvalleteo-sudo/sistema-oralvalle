@@ -1,6 +1,10 @@
 (()=>{'use strict';
 const cloud=window.OralCloud,clinic=document.getElementById('clinic'),status=document.getElementById('connection-status');
 const providers=['google_ads','meta_ads','whatsapp_business'];
+const connectBtn=document.getElementById('connect-google');
+const googleMsg=document.getElementById('google-connect-message');
+function googleInfo(message){if(googleMsg)googleMsg.textContent=message;}
+
 const setStatus=(message)=>{status.textContent=message};
 const setBadge=(provider,state,label)=>{const el=document.querySelector('[data-provider="'+provider+'"]');if(!el)return;el.textContent=label;el.dataset.state=state};
 async function refresh(){
@@ -20,6 +24,16 @@ async function refresh(){
   setStatus('Não foi possível consultar as integrações: '+e.message);
  }
 }
+async function connectGoogle(){
+ if(!clinic.value)return googleInfo('Selecione uma clínica.');
+ if(!/^https:$/.test(location.protocol))return googleInfo('Abra o NexoDent em HTTPS para conectar sua conta.');
+ connectBtn.disabled=true;googleInfo('Preparando autorização segura…');
+ try{
+  const response=await cloud.request('/functions/v1/nexodent-google-ads-start',{method:'POST',body:{clinic_id:clinic.value}});
+  if(!response?.authorization_url || !/^https:\/\/accounts\.google\.com\//.test(response.authorization_url))throw new Error('Resposta inválida do serviço de autorização.');
+  location.assign(response.authorization_url);
+ }catch(e){googleInfo('Não foi possível iniciar: '+e.message);connectBtn.disabled=false}
+}
 async function init(){
  if(!cloud?.enabled){setStatus('Supabase não configurado.');return}
  try{
@@ -28,7 +42,10 @@ async function init(){
   clinic.replaceChildren();
   for(const c of clinics||[]){if(!c.clinic_id)continue;const opt=document.createElement('option');opt.value=c.clinic_id;opt.textContent=c.nome||'Clínica';clinic.append(opt)}
   if(!clinic.options.length){setStatus('Nenhuma clínica autorizada.');return}
-  clinic.disabled=false;clinic.addEventListener('change',refresh);await refresh();
+  clinic.disabled=false;clinic.addEventListener('change',refresh);
+  if(connectBtn){connectBtn.disabled=false;connectBtn.addEventListener('click',connectGoogle)}
+  const query=new URLSearchParams(location.search);if(query.has('google_ads')){googleInfo(query.get('google_ads')==='authorized'?'Autorização recebida. A seleção da conta e o token de desenvolvedor ainda precisam ser configurados.':'Autorização não concluída. Confira o acesso e tente novamente.');history.replaceState(null,'',location.pathname)}
+  await refresh();
  }catch(e){setStatus('Não foi possível validar o acesso: '+e.message)}
 }
 init();
