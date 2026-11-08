@@ -31,7 +31,9 @@ async function connectGoogle(){
  try{
   const response=await cloud.request('/functions/v1/nexodent-google-ads-start',{method:'POST',body:{clinic_id:clinic.value}});
   if(!response?.authorization_url || !/^https:\/\/accounts\.google\.com\//.test(response.authorization_url))throw new Error('Resposta inválida do serviço de autorização.');
-  location.assign(response.authorization_url);
+  // A central de integrações pode estar dentro do iframe do CRM. O Google bloqueia OAuth em iframe;
+  // por isso a autorização precisa navegar a janela principal do aplicativo.
+  window.top.location.assign(response.authorization_url);
  }catch(e){googleInfo('Não foi possível iniciar: '+e.message);connectBtn.disabled=false}
 }
 async function init(){
