@@ -14,26 +14,21 @@ async function seal(s:string){const iv=random(12),data=new Uint8Array(await cryp
 function cors(req:Request){const origin=req.headers.get('origin')||'';const allowed=Deno.env.get('NEXODENT_APP_ORIGIN')||'';return {'Access-Control-Allow-Origin':origin===allowed?origin:allowed,'Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS','Vary':'Origin'}}
 async function db(path:string,method='GET',body?:unknown){const r=await fetch(URL_BASE+'/rest/v1/'+path,{method,headers:{'apikey':SERVICE_KEY,'Authorization':'Bearer '+SERVICE_KEY,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw Error('Banco de dados indisponível ('+r.status+')');return await r.json()}
 function reply(req:Request,status:number,obj:unknown){return new Response(JSON.stringify(obj),{status,headers:{...cors(req),'Content-Type':'application/json'}})}
-function unb64(s:string){const t=s.replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(t),c=>c.charCodeAt(0))}
-async function unseal(s:string){const [iv,data]=s.split('.');return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(iv)},await key(),unb64(data)))}
-function redirect(ok:boolean){const base=Deno.env.get('NEXODENT_APP_ORIGIN')!;return Response.redirect(base+'/integracoes/index.html?google_ads='+(ok?'authorized':'error'),303)}
 Deno.serve(async(req)=>{
- if(req.method!=='GET')return new Response('Método inválido',{status:405});
- const url=new URL(req.url);const state=url.searchParams.get('state')||'';const code=url.searchParams.get('code')||'';
- if(!state||!code)return redirect(false);
+ if(req.method==='OPTIONS')return new Response(null,{headers:cors(req)});
+ if(req.method!=='POST')return reply(req,405,{error:'Método inválido'});
  try{
-  const stateHash=await sha(state);
-  const rows=await db('nexodent_google_oauth_states?state_hash=eq.'+encodeURIComponent(stateHash)+'&select=clinic_id,user_id,verifier_cipher,expires_at');
-  if(rows.length!==1||new Date(rows[0].expires_at).getTime()<Date.now())return redirect(false);
-  // Consumir estado antes da troca do código: proteção contra replay.
-  await db('nexodent_google_oauth_states?state_hash=eq.'+encodeURIComponent(stateHash),'DELETE');
-  const verifier=await unseal(rows[0].verifier_cipher);
-  const body=new URLSearchParams({code,client_id:CLIENT_ID,client_secret:CLIENT_SECRET,redirect_uri:CALLBACK,grant_type:'authorization_code',code_verifier:verifier});
-  const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
-  if(!response.ok){console.error('Google token HTTP',response.status);return redirect(false)}
-  const result=await response.json();if(!result.refresh_token)return redirect(false);
-  await db('nexodent_google_ads_credentials?on_conflict=clinic_id','POST',{clinic_id:rows[0].clinic_id,user_id:rows[0].user_id,refresh_token_cipher:await seal(result.refresh_token),updated_at:new Date().toISOString()});
-  await db('nexodent_channel_connections?on_conflict=clinic_id,provider','POST',{clinic_id:rows[0].clinic_id,provider:'google_ads',status:'pending',external_account_label:'Autorizado — seleção de conta pendente',updated_at:new Date().toISOString()});
-  return redirect(true);
- }catch(e){console.error('google callback',e);return redirect(false)}
+  if(req.headers.get('origin')!==Deno.env.get('NEXODENT_APP_ORIGIN'))return reply(req,403,{error:'Origem não autorizada'});
+  const token=(req.headers.get('authorization')||'').replace(/^Bearer /i,'');if(!token)return reply(req,401,{error:'Entre no NexoDent'});
+  const userResponse=await fetch(URL_BASE+'/auth/v1/user',{headers:{apikey:SERVICE_KEY,Authorization:'Bearer '+token}});
+  if(!userResponse.ok)return reply(req,401,{error:'Sessão inválida'});
+  const user=await userResponse.json();const input=await req.json();const clinic=input.clinic_id;
+  if(!/^[0-9a-f-]{36}$/i.test(clinic||''))return reply(req,400,{error:'Clínica inválida'});
+  const member=await db('clinic_members?clinic_id=eq.'+encodeURIComponent(clinic)+'&user_id=eq.'+encodeURIComponent(user.id)+'&admin=eq.true&active=eq.true&select=user_id');
+  if(!member.length)return reply(req,403,{error:'Somente administradores da clínica podem conectar contas'});
+  const state=b64(random(32));const verifier=b64(random(48));const challenge=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(verifier))));
+  await db('nexodent_google_oauth_states','POST',{state_hash:await sha(state),clinic_id:clinic,user_id:user.id,verifier_cipher:await seal(verifier),expires_at:new Date(Date.now()+10*60*1000).toISOString()});
+  const p=new URLSearchParams({client_id:CLIENT_ID,redirect_uri:CALLBACK,response_type:'code',scope:'https://www.googleapis.com/auth/adwords',access_type:'offline',prompt:'consent',state,code_challenge:challenge,code_challenge_method:'S256'});
+  return reply(req,200,{authorization_url:'https://accounts.google.com/o/oauth2/v2/auth?'+p});
+ }catch(e){console.error('google start',e);return reply(req,500,{error:'Falha ao iniciar autorização. Confira a configuração das funções.'})}
 });
