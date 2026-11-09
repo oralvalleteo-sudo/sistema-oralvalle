@@ -219,3 +219,22 @@ html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-gray 
 .nexo-data-fold>summary::after{content:'⌄';color:#e66c0a;font-size:21px;line-height:1;}
 .nexo-data-fold[open]>summary::after{transform:rotate(180deg);}
 .nexo-data-fold[open]>summary{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line,#e5e7eb);}
+
+/* NexoDent 244 — seletores do reagendamento: radio laranja, sem circulos pretos. */
+html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"]{
+  -webkit-appearance:none!important;appearance:none!important;
+  box-sizing:border-box!important;flex:0 0 17px!important;
+  width:17px!important;height:17px!important;min-width:17px!important;
+  margin:0!important;padding:0!important;border-radius:50%!important;
+  border:1.5px solid #a9b3bf!important;background:#fff!important;
+  box-shadow:none!important;outline-offset:3px;cursor:pointer;
+}
+html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"]:checked{
+  border:5px solid #f47700!important;background:#fff!important;
+}
+html[data-ov-mode="light"] .ov-ag-status-options label:has(input[type="radio"]:checked){
+  border-color:#f47700!important;background:#fff6ed!important;
+}
+html[data-ov-mode="light"] .ov-ag-status-options label:focus-within{
+  outline:2px solid #f47700;outline-offset:2px;
+}
