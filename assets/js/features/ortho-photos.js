@@ -14,15 +14,8 @@ function gallery(p){const k=key(p),state=cache.get(k);if(window.OralCloud?.enabl
 }
 async function load(p){const k=key(p);if(cache.has(k))return;const state={photos:[],loading:true,error:'',status:''};cache.set(k,state);
  try{const rows=await OralCloudData.files(p.id);const matches=rows.filter(r=>r.slot==='arquivos'&&r.position>=0&&isPhoto(r.dados||{}));
-  const seen=new Set();const unique=matches.filter(r=>{const id=String(r.id);if(seen.has(id))return false;seen.add(id);return true;});
-  // Limita as consultas simultâneas, evitando bloquear a interface.
-  const results=new Array(unique.length);let next=0;
-  // Mostra miniaturas já processadas imediatamente, sem baixar novamente os arquivos completos.
-  unique.forEach((r,i)=>{const t=previews.get(k+':'+r.id);if(t)results[i]={...(r.dados||{}),_rowId:r.id,thumb:t,data:'',tipo:'image/jpeg',categoria:'Ortodontia - Fotos'};});
-  state.photos=results.filter(Boolean);refresh(p.id);state.status=`Carregando 0 de ${unique.length} fotos…`;
-  await Promise.all(Array.from({length:Math.min(3,unique.length)},async()=>{while(next<unique.length){const i=next++;try{const full=await OralCloudData.file(p.id,unique[i].id);const f=full.dados||{};if(isPhoto(f)&&/^data:image\/(jpeg|png|webp);base64,/.test(f.data||'')){const thumb=await mini(f.data);if(thumb)previews.set(k+':'+unique[i].id,thumb);
-    results[i]={...f,_rowId:unique[i].id,thumb};state.photos=results.filter(Boolean);state.status=`Carregando ${state.photos.length} de ${unique.length} fotos…`;refresh(p.id);}}catch(e){console.warn('Foto não carregada',e);}}}));
-  state.photos=results.filter(Boolean);state.status='';
+  const seen=new Set();state.photos=matches.filter(r=>{if(seen.has(String(r.id)))return false;seen.add(String(r.id));return true;}).map(r=>({...r.dados,_rowId:r.id,thumb:r.dados.thumb||previews.get(k+':'+r.id)||'',data:''}));
+  state.status=state.photos.some(f=>!f.thumb)?'Fotos antigas: miniaturas serão carregadas sob demanda.':'';
  }catch(e){state.error=e.message||'Não foi possível carregar fotos';}finally{state.loading=false;refresh(p.id);}}
 function refresh(id){document.querySelectorAll('[data-ortho-gallery]').forEach(el=>{if(el.dataset.orthoGallery!==String(id))return;const p=db.p.find(x=>String(x.id)===String(id));if(p)el.outerHTML=gallery(p);});}
 function read(file){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result));r.onerror=()=>no(Error('Erro ao ler imagem'));r.readAsDataURL(file);});}
@@ -51,7 +44,7 @@ async function upload(input){
   for(let i=0;i<files.length;i++){
    const state=cache.get(k);if(state)state.status=`Enviando ${i+1} de ${files.length} fotos…`;refresh(p.id);
    try{const photo=await preparePhoto(files[i]);const fp=fingerprint(photo);if(existing.has(fp)){skipped++;continue;}
-    const record={id:uid(),nome:photo.nome,tipo:photo.tipo,categoria:'Ortodontia - Fotos',data:photo.data,dataEnvio:hojeBR()};
+    const thumb=await mini(photo.data);const record={id:uid(),nome:photo.nome,tipo:photo.tipo,categoria:'Ortodontia - Fotos',data:photo.data,thumb,dataEnvio:hojeBR()};
     if(window.OralCloud?.enabled)await OralCloudSync.fileOperation(p.id,'append',{file:record});else{(p.arquivos=p.arquivos||[]).push(record);save();}
     existing.add(fp);added++;
    }catch(e){errors.push(files[i].name+': '+(e.message||e));}
@@ -67,7 +60,7 @@ function managePhotos(id){
  const photos=window.OralCloud?.enabled?(cache.get(k)?.photos||[]):(p.arquivos||[]).filter(isPhoto);
  if(!photos.length)return;
  const overlay=document.createElement('div');overlay.className='ortho-photo-overlay ortho-selection-overlay';
- overlay.innerHTML=`<div class="ortho-select-modal" role="dialog" aria-modal="true" aria-label="Selecionar fotografias para excluir"><div class="ortho-select-head"><strong>Selecionar fotos para excluir</strong><button type="button" data-ortho-cancel>Fechar ✕</button></div><p>Selecione as fotografias que deseja remover. Nenhuma foto será excluída antes da confirmação.</p><div class="ortho-select-grid">${photos.map((f,i)=>`<label class="ortho-select-item"><input type="checkbox" value="${i}" aria-label="Selecionar foto ${i+1}"><img src="${safe(f.data||'')}" alt="Foto ${i+1}" loading="lazy"><span>${safe(f.nome||'Foto '+(i+1))}</span></label>`).join('')}</div><div class="ortho-select-footer"><label><input type="checkbox" data-ortho-all> Selecionar todas</label><span data-ortho-count>0 selecionadas</span><button type="button" class="ortho-confirm-delete" disabled>Excluir selecionadas</button></div><small class="ortho-delete-progress" aria-live="polite"></small></div>`;
+ overlay.innerHTML=`<div class="ortho-select-modal" role="dialog" aria-modal="true" aria-label="Selecionar fotografias para excluir"><div class="ortho-select-head"><strong>Selecionar fotos para excluir</strong><button type="button" data-ortho-cancel>Fechar ✕</button></div><p>Selecione as fotografias que deseja remover. Nenhuma foto será excluída antes da confirmação.</p><div class="ortho-select-grid">${photos.map((f,i)=>`<label class="ortho-select-item"><input type="checkbox" value="${i}" aria-label="Selecionar foto ${i+1}"><img src="${safe(f.thumb||f.data||'')}" alt="Foto ${i+1}" loading="lazy"><span>${safe(f.nome||'Foto '+(i+1))}</span></label>`).join('')}</div><div class="ortho-select-footer"><label><input type="checkbox" data-ortho-all> Selecionar todas</label><span data-ortho-count>0 selecionadas</span><button type="button" class="ortho-confirm-delete" disabled>Excluir selecionadas</button></div><small class="ortho-delete-progress" aria-live="polite"></small></div>`;
  const close=()=>overlay.remove();overlay.addEventListener('click',e=>{if(e.target===overlay||e.target.closest('[data-ortho-cancel]'))close();});
  const checks=[...overlay.querySelectorAll('.ortho-select-item input')],all=overlay.querySelector('[data-ortho-all]'),confirmBtn=overlay.querySelector('.ortho-confirm-delete'),count=overlay.querySelector('[data-ortho-count]');
  function update(){const n=checks.filter(c=>c.checked).length;count.textContent=`${n} selecionada(s)`;confirmBtn.disabled=!n;all.checked=n===checks.length;all.indeterminate=n>0&&n<checks.length;}
