@@ -1,0 +1,31 @@
+/* NexoDent 260 — funil em sequência horizontal única, do primeiro contato ao fechamento. */
+#board.board {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  padding: 8px 2px 16px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: #f28a36 #f3f4f6;
+}
+#board.board > .column {
+  box-sizing: border-box;
+  flex: 0 0 clamp(205px, 22vw, 270px) !important;
+  width: clamp(205px, 22vw, 270px) !important;
+  min-width: 205px !important;
+  max-width: 270px !important;
+  min-height: 260px;
+  scroll-snap-align: start;
+  border-radius: 12px;
+}
+#board.board > .column .card {max-width: 100%;box-sizing: border-box;}
+#board.board > .column .card * {overflow-wrap: anywhere;}
+@media (max-width: 760px) {
+  #board.board {gap: 10px; padding-bottom: 14px;}
+  #board.board > .column {flex-basis: min(78vw, 280px) !important;width: min(78vw, 280px) !important;min-width: min(78vw, 280px) !important;max-width: min(78vw, 280px) !important;}
+}
