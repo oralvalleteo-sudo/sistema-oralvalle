@@ -170,3 +170,11 @@ html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"]:focus-visib
 .ov-ag-status-options input[value="Aguardando"] {background:#94a3b8!important;color:#94a3b8!important}
 .ov-ag-status-options input[type="radio"]:checked {box-shadow:0 0 0 3px #fff,0 0 0 5px #f97316!important}
 .ov-ag-status-options input[type="radio"]:focus-visible {outline:2px solid #2563eb!important;outline-offset:5px!important}
+
+/* Agenda 219: apenas o radio grande; sem marcador adicional no texto. */
+.ov-ag-status-options label {gap:12px!important}
+html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"][value="Compareceu"] {color:#16a34a!important;background:#16a34a!important}
+html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"][value="Faltou"] {color:#e11d48!important;background:#e11d48!important}
+html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"][value="Cancelado"] {color:#eab308!important;background:#eab308!important}
+html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"][value="Reagendou"] {color:#3b82f6!important;background:#3b82f6!important}
+html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"][value="Aguardando"] {color:#94a3b8!important;background:#94a3b8!important}
