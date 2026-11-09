@@ -29,3 +29,7 @@
   #board.board {gap: 10px; padding-bottom: 14px;}
   #board.board > .column {flex-basis: min(78vw, 280px) !important;width: min(78vw, 280px) !important;min-width: min(78vw, 280px) !important;max-width: min(78vw, 280px) !important;}
 }
+
+/* 277: respeitar o atributo hidden definido pelo controlador de abas.
+   O display:flex!important anterior mantinha o funil visivel em todas as abas. */
+#crm-view-panel > #board.board[hidden] { display: none !important; }
