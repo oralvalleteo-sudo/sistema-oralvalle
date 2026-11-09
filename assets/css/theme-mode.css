@@ -160,3 +160,13 @@ html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"]:focus-visib
     border-color:#b8c2cc !important;
   }
 }
+
+/* Agenda 217: indicador unico por opcao */
+.ov-ag-status-options label input[type="radio"] {appearance:none!important;-webkit-appearance:none!important;flex:0 0 20px!important;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;margin:0!important;border:0!important;border-radius:50%!important;box-shadow:none!important;opacity:1!important;cursor:pointer}
+.ov-ag-status-options input[value="Compareceu"] {background:#16a34a!important;color:#16a34a!important}
+.ov-ag-status-options input[value="Faltou"] {background:#e11d48!important;color:#e11d48!important}
+.ov-ag-status-options input[value="Cancelado"] {background:#eab308!important;color:#eab308!important}
+.ov-ag-status-options input[value="Reagendou"] {background:#3b82f6!important;color:#3b82f6!important}
+.ov-ag-status-options input[value="Aguardando"] {background:#94a3b8!important;color:#94a3b8!important}
+.ov-ag-status-options input[type="radio"]:checked {box-shadow:0 0 0 3px #fff,0 0 0 5px #f97316!important}
+.ov-ag-status-options input[type="radio"]:focus-visible {outline:2px solid #2563eb!important;outline-offset:5px!important}
