@@ -5,10 +5,10 @@ const cache=new Map(),busy=new Set(),deleteSelection=new Set();
 const previews=new Map();
 function mini(data){return new Promise(resolve=>{if(!data||!data.startsWith('data:image/'))return resolve('');const im=new Image();im.onload=()=>{try{const c=document.createElement('canvas');const scale=Math.min(1,180/Math.max(im.width,im.height));c.width=Math.max(1,Math.round(im.width*scale));c.height=Math.max(1,Math.round(im.height*scale));c.getContext('2d').drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.58));}catch(_){resolve('');}};im.onerror=()=>resolve('');im.src=data;});}
 const key=(p,scope='ortho')=>String(window.OralCloud?.clinicId||'local')+':'+String(p.id)+':'+scope;
-const category=scope=>({'ortho':'Ortodontia - Fotos','impl':'Implantodontia - Fotos','prot':'Prótese - Fotos'}[scope]||('Laboratório - Fotos - '+scope.slice(4)));
+const category=scope=>({'patient':'Imagem clínica','ortho':'Ortodontia - Fotos','impl':'Implantodontia - Fotos','prot':'Prótese - Fotos'}[scope]||('Laboratório - Fotos - '+scope.slice(4)));
 const scopeOf=el=>el?.dataset?.photoScope||'ortho';
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const isPhoto=(f,scope='ortho')=>String(f.categoria||'')===category(scope)&&String(f.tipo||'').startsWith('image/');
+const isPhoto=(f,scope='ortho')=>(scope==='patient'?/imagem cl[ií]nica|fotograf/i.test(String(f.categoria||'')):String(f.categoria||'')===category(scope))&&String(f.tipo||'').startsWith('image/');
 function gallery(p,scope='ortho'){const k=key(p,scope),state=cache.get(k);if(window.OralCloud?.enabled&&!state)load(p,scope);
  const photos=window.OralCloud?.enabled?(state?.photos||[]):(p.arquivos||[]).filter(f=>isPhoto(f,scope));
  const working=busy.has(k);
