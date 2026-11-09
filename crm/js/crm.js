@@ -325,6 +325,8 @@ window.addEventListener('nexocrm:import-budget',async event=>{
   if(!Array.isArray(current)||current.length===1000)throw new Error('Não foi possível verificar todas as oportunidades.');
   const marker=budgetMarker(d.budgetId);
   if(current.some(x=>String(x.budget_id||'')===String(d.budgetId)||String(x.notes||'').includes(marker))){finish(true,'Este orçamento já foi adicionado ao funil.');return}
+  const ignored=await api('nexodent_crm_ignored_budgets?clinic_id=eq.'+encodeURIComponent(clinicId)+'&budget_id=eq.'+encodeURIComponent(String(d.budgetId))+'&select=budget_id&limit=1');
+  if(Array.isArray(ignored)&&ignored.length){finish(false,'Este orçamento foi removido do funil anteriormente.');return}
   await api('nexodent_crm_leads',{method:'POST',body:{clinic_id:clinicId,name:d.patientName,
    phone:d.phone||'',source:'Outros',stage:'Orçamento',estimated_value:d.total,
    notes:'Origem: orçamento NexoDent. Procedimentos: '+String(d.description||'').slice(0,700)+'\n'+marker,
@@ -336,11 +338,14 @@ $('stage').replaceChildren();for(const s of stages){const opt=document.createEle
  const lead=leads.find(x=>String(x.id)===String(editing));
  if(!lead||!clinicId)return;
  // Leads vinculados a orçamentos podem ser recriados pela sincronização automática.
- if(lead.budget_id){alert('Este lead está vinculado a um orçamento. Para evitar que seja recriado automaticamente, a exclusão exige primeiro desvincular a sincronização de forma segura. Nenhum dado foi apagado.');return}
  if(!confirm('Excluir o lead "'+lead.name+'" do CRM? Esta ação não pode ser desfeita. Pacientes e prontuários não serão excluídos.'))return;
  const btn=$('delete-lead'),selectedClinic=clinicId,id=String(lead.id);btn.disabled=true;
  try{
-  await api('nexodent_crm_leads?id=eq.'+encodeURIComponent(id)+'&clinic_id=eq.'+encodeURIComponent(selectedClinic),{method:'DELETE'});
+  if(lead.budget_id){
+   await api('rpc/nexodent_crm_delete_linked_lead',{method:'POST',body:{p_clinic_id:selectedClinic,p_lead_id:id}});
+  }else{
+   await api('nexodent_crm_leads?id=eq.'+encodeURIComponent(id)+'&clinic_id=eq.'+encodeURIComponent(selectedClinic),{method:'DELETE'});
+  }
   const remaining=await api('nexodent_crm_leads?id=eq.'+encodeURIComponent(id)+'&clinic_id=eq.'+encodeURIComponent(selectedClinic)+'&select=id&limit=1');
   if(!Array.isArray(remaining)||remaining.length)throw Error('O registro continua no banco. Verifique a permissão de exclusão.');
   if(clinicId!==selectedClinic){$('editor').close();return}
