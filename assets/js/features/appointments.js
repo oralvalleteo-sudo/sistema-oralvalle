@@ -88,7 +88,7 @@ function agHtml(){
   const agExpanded=a=>String(view.agExpanded||'')===String(a.id);
   const apCard=a=>{
     if(agClosed(a)){
-      const cls=a.st==='Faltou'?'ag-compact-red':a.st==='Cancelado'?'ag-compact-yellow':a.st==='Reagendou'?'ag-compact-blue':'ag-compact-orange';
+      const cls=a.st==='Faltou'?'ag-compact-red':a.st==='Cancelado'?'ag-compact-yellow':a.st==='Reagendou'?'ag-compact-blue':a.st==='Aguardando'?'ag-compact-gray':'ag-compact-green';
       const label=a.st==='Faltou'?'Faltou':a.st==='Cancelado'?'Desmarcou':a.st==='Reagendou'?'Reagendou':'Atendido';
       return agExpanded(a)
         ? `<div class="ag-appointment ag-closed-expanded"><div class="ag-appointment-main"><strong>${esc(a.hora)}–${hm(mins(a.hora)+(a.dur||30))}</strong>${agPatient(a)}<span class="ag-status">${esc(label)}</span></div><div class="ag-actions"><button type="button" class="ghost sm" data-act="agedit" data-id="${esc(a.id)}">Editar</button><button type="button" class="ghost sm" data-act="agcollapse" data-id="${esc(a.id)}">Fechar</button><button type="button" class="danger sm" data-act="rmag" data-id="${esc(a.id)}" title="Remover somente este agendamento" aria-label="Remover agendamento">${delArm===a.id?'Confirmar':'✕'}</button></div></div>`
