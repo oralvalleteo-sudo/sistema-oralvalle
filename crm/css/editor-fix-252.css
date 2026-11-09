@@ -1,0 +1,8 @@
+/* NexoDent 252 — editor com rodapé sempre visível e tema claro */
+#editor[open]{overflow:hidden!important;background:#fff!important;color:#172033!important;display:flex!important;flex-direction:column!important;max-height:100dvh!important}
+#editor #form{height:100%!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;align-content:start!important;padding-bottom:0!important;scrollbar-gutter:stable}
+#editor #form>.buttons{position:sticky!important;bottom:0!important;z-index:30!important;grid-column:1/-1!important;align-self:end!important;background:#fff!important;border-top:1px solid #e3e7ed!important;padding:13px 8px!important;margin:8px -8px 0!important;box-shadow:0 -8px 18px #fff!important;flex-wrap:nowrap!important}
+#editor #delete-lead{margin-right:auto;background:#fff!important;color:#b42318!important;border:1px solid #f2b7b5!important;padding:10px 12px!important}
+#editor #delete-lead[hidden]{display:none!important}
+#editor #form input,#editor #form select,#editor #form textarea{color:#172033!important;background:#fff!important}
+@media(max-width:520px){#editor #form>.buttons{gap:6px!important}#editor #form>.buttons button{padding:10px!important;font-size:12px!important}}
