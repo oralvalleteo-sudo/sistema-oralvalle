@@ -6,10 +6,11 @@ const views={overview:[],opportunities:[],followup:[],reports:[]};
 const nodes=[...panel.children];
 const mapping=[
  ['overview','crm-goals'],['overview','crm-preview-section-title'],['overview','metrics'],
- ['opportunities','crm-preview-section-title'],['opportunities','board-heading'],['opportunities','board'],
+ ['opportunities','crm-preview-section-title'],['opportunities','board-heading'],['opportunities','crm-funil-nav-266'],['opportunities','board'],
  ['followup','followups'],['followup','crm-daily'],['followup','crm-operations'],['followup','crm-tasks'],
  ['reports','crm-management'],['followup','crm-priorities'],['followup','recovery'],
  ['reports','crm-productivity'],['reports','employee-performance'],['reports','sales-report'],
+ ['opportunities','crm-pending-compact'],
  ['opportunities','integration'],['opportunities','integration']
 ];
 // If the HTML changes, avoid hiding unknown elements or breaking CRM actions.
