@@ -290,6 +290,24 @@ const A={
       save();render();toast('Orçamento e proposta excluídos.');
     });
   },
+  orcsyncfin:(b,d,p)=>{
+    const o=p&&getO(p,d.o);if(!o||o.status!=='Aprovado')return;
+    const itens=(o.itens||[]).filter(i=>i.vid);
+    if(!itens.length){toast('Nenhum atendimento vinculado a este orçamento.');return}
+    // Somente registros inequivocamente vinculados: nunca alterar outras vendas.
+    const registros=itens.map(i=>({i,v:db.vd.find(v=>String(v.id)===String(i.vid)&&String(v.pid)===String(p.id))}));
+    if(registros.some(x=>!x.v)||new Set(registros.map(x=>String(x.v.id))).size!==registros.length){toast('Vínculos financeiros inconsistentes. Nenhum valor foi alterado.',4500);return}
+    const metas=registros.map(({i,v})=>({i,v,novo:r2(num(i.valor)*fac(o))}));
+    if(metas.some(x=>recebido(x.v)>x.novo+0.005)){
+      toast('Há pagamentos superiores ao novo valor. Confira os recebimentos antes de ajustar o orçamento.',5500);return;
+    }
+    const mudancas=metas.filter(x=>Math.abs(num(x.v.valor)-x.novo)>0.005);
+    if(!mudancas.length){toast('Os atendimentos vinculados já estão com os valores atualizados.');return}
+    const mensagem='Atualizar '+mudancas.length+' atendimento(s) vinculado(s) ao orçamento aprovado?\n\n'+mudancas.map(x=>(x.i.proc||'Procedimento')+': '+brl(x.v.valor)+' → '+brl(x.novo)).join('\n')+'\n\nPagamentos já registrados serão preservados. Comissões existentes NÃO serão recalculadas automaticamente; confira-as separadamente. Itens sem baixa não serão alterados.';
+    if(!confirm(mensagem))return;
+    mudancas.forEach(({v,novo})=>{v.valor=novo});
+    save();render();toast('Valores dos atendimentos atualizados. Confira as comissões.',4500);
+  },
   orcsave:(b,d,p)=>{if(!p||!getO(p,d.o))return;save();toast('Orçamento registrado. As alterações também são salvas automaticamente.',3200)},
   orccollapse:(b,d,p)=>{if(!p||!getO(p,d.o))return;save();view.orcOpen=view.orcOpen||{};view.orcOpen[d.o]=false;view.obx=null;view.obxAll=null;render();toast('Orçamento recolhido. Toque no resumo para abrir novamente.',2600)},
   otoggle:(b,d)=>{view.orcOpen=view.orcOpen||{};view.orcOpen[d.o]=!view.orcOpen[d.o];view.obx=null;view.obxAll=null;render()},
