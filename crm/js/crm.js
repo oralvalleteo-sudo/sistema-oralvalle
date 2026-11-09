@@ -271,7 +271,7 @@ async function completeTask(x){
   const notes=(String(row.notes||'').trim()?String(row.notes).trim()+'\n':'')+entry;
   if(notes.length>3000)throw new Error('O histórico atingiu o limite de 3.000 caracteres. Abra a ficha para revisar antes de concluir.');
   await api(path,{method:'PATCH',body:{notes,next_contact_at:null}});
-  const check=await api(path+'&select=id,notes,next_contact_at,commercial_owner_id&limit=1');
+  const check=await api(path+'&select=id,stage,notes,next_contact_at,commercial_owner_id&limit=1');
   if(!Array.isArray(check)||check.length!==1||check[0].notes!==notes||check[0].next_contact_at)throw new Error('Não foi possível confirmar a gravação da tarefa.');
   feedback.textContent='Tarefa concluída e registrada no histórico. Para novo contato, use Abrir / reagendar.';
   await load();
@@ -363,9 +363,9 @@ $('new').onclick=()=>edit(null);$('cancel').onclick=()=>$('editor').close();$('r
  const btn=$('save');btn.disabled=true;try{
  if(editing){
   await api('nexodent_crm_leads?id=eq.'+encodeURIComponent(editing)+'&clinic_id=eq.'+encodeURIComponent(clinicId),{method:'PATCH',body:payload});
-  const check=await api('nexodent_crm_leads?id=eq.'+encodeURIComponent(editing)+'&clinic_id=eq.'+encodeURIComponent(clinicId)+'&select=id,notes,next_contact_at,commercial_owner_id&limit=1');
-  if(!Array.isArray(check)||check.length!==1||String(check[0].notes||'')!==payload.notes||String(check[0].next_contact_at||'').slice(0,10)!==String(payload.next_contact_at||'').slice(0,10)||String(check[0].commercial_owner_id||'')!==String(payload.commercial_owner_id||''))
-   throw new Error('O Supabase não confirmou a gravação. Verifique a permissão de edição do CRM.');
+  const check=await api('nexodent_crm_leads?id=eq.'+encodeURIComponent(editing)+'&clinic_id=eq.'+encodeURIComponent(clinicId)+'&select=id,stage,notes,next_contact_at,commercial_owner_id&limit=1');
+  if(!Array.isArray(check)||check.length!==1||String(check[0].stage||'')!==payload.stage||String(check[0].notes||'')!==payload.notes||String(check[0].next_contact_at||'').slice(0,10)!==String(payload.next_contact_at||'').slice(0,10)||String(check[0].commercial_owner_id||'')!==String(payload.commercial_owner_id||''))
+   throw new Error('A alteração não foi gravada no Supabase (inclusive a etapa do lead). Verifique a permissão UPDATE do CRM para este funcionário.');
  }else await api('nexodent_crm_leads',{method:'POST',body:{...payload,clinic_id:clinicId}});
  $('editor').close();await load()
  }catch(err){status('Falha ao salvar: '+err.message,true);alert('Não foi possível confirmar o salvamento: '+err.message)}finally{btn.disabled=false}};init()})();
