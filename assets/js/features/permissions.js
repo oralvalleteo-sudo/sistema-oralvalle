@@ -1,13 +1,13 @@
 /* As permissões locais controlam a interface, não substituem autorização de servidor. */
 const PM_MODS=[
- ['Clínica',[['ag','Agenda'],['pac','Pacientes'],['lem','Lembretes'],['wa','WhatsApp'],['sigdoc','Documentos e assinaturas'],['dt','Dentistas'],['cm','Comissões'],['vd','Vendas e pagamentos recebidos']]],
+ ['Clínica',[['ag','Agenda'],['pac','Pacientes'],['crm','CRM'],['lem','Lembretes'],['wa','WhatsApp'],['sigdoc','Documentos e assinaturas'],['dt','Dentistas'],['cm','Comissões'],['vd','Vendas e pagamentos recebidos']]],
  ['Negociação',[['pf','Proposta financeira']]],
  ['Precificação',[['hc','Custo hora clínica'],['pr','Procedimentos'],['mt','Tabela de materiais']]],
  ['Controle',[['bk','Backup e importação de dados'],['reports','Relatórios']]],
  ['Dentro da ficha do paciente',[['pac.dados','Dados cadastrais'],['pac.anam','Anamnese'],['pac.odo','Evolução'],['pac.orc','Orçamentos'],['pac.trat','Tratamentos'],['pac.pag','Pagamentos'],['pac.agd','Agendamentos'],['pac.arquivos','Radiografias e documentos']]]
 ];
 const PM_TABS=['dados','anam','odo','orc','trat','pag','agd','arquivos'];
-const PM_ORDER=['ag','pac','lem','wa','sigdoc','dt','cm','vd','pf','hc','pr','mt','bk','reports'];
+const PM_ORDER=['ag','pac','crm','lem','wa','sigdoc','dt','cm','vd','pf','hc','pr','mt','bk','reports'];
 const PM_LV={none:0,view:1,edit:2};
 const PM_LAB={none:'Oculto',view:'Só ver',edit:'Ver e alterar'};
 const PM_SAFE=new Set(['actab','logout','nav','svw','ovFinDetail','ovFinPdf','pPage','vPage','otoggle','retall','lemtab','orthowa','implnav','protnav','lemgo','cmdent','cmback','agf','agdate','agtoday','arqt','dent','open','back','tab','copy','owa','print','pdf','printevol','printficha','rxpdf','rxprint','atpdf','atprint','atreset','prprint','prshare','bktxt','bkcopy','bksave','pfOpen','prsearch','avsok','avsgo','avsperm','avstest','savebtn','acpw']);
@@ -21,11 +21,12 @@ function permOf(u,key){
   if(key==='cfg')return 0;
   const p=u.perms;if(!p)return 2;
   const v=p[key];
+  if(key==='crm' && v===undefined)return permOf(u,'pac');
   if(v===undefined)return key.indexOf('.')>0?2:0;
   return PM_LV[v]!==undefined?PM_LV[v]:0;
 }
 const pmLvl=k=>permOf(pmUser(),k);
-const pmSee=k=>k==='crm' ? pmLvl('pac')>=1 : k==='reports' ? (pmLvl('vd')>=1||pmLvl('cm')>=1||pmLvl('pac')>=1) : pmLvl(k)>=1;
+const pmSee=k=>k==='crm' ? pmLvl('crm')>=1 : k==='reports' ? (pmLvl('vd')>=1||pmLvl('cm')>=1||pmLvl('pac')>=1) : pmLvl(k)>=1;
 function pmTabLvl(tab){
   const viaPf=view.h==='pf'&&pmLvl('pac')<1;
   if(viaPf)return tab==='orc'?pmLvl('pf'):0;
@@ -35,7 +36,7 @@ const pmTabOk=k=>{const u=pmUser();return !u||u.admin||pmTabLvl(k)>=1};
 function pmCur(){
   const u=pmUser();if(!u||u.admin)return 2;
   if(view.id)return pmTabLvl(view.tab);
-  return pmLvl(view.h==='crm'?'pac':(view.h==='ortho'||view.h==='impl'||view.h==='prot')?'lem':view.h||'pac');
+  return pmLvl(view.h==='crm'?'crm':(view.h==='ortho'||view.h==='impl'||view.h==='prot')?'lem':view.h||'pac');
 }
 function pmFirst(){return PM_ORDER.find(k=>pmLvl(k)>=1)||'conta'}
 function sanitizeView(){
