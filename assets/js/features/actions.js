@@ -41,21 +41,49 @@ const A={
   agencerrar:(b,d)=>{
     const a=db.ag.find(x=>String(x.id)===String(d.id));if(!a)return;
     const options=[['Compareceu','Atendido'],['Faltou','Faltou'],['Cancelado','Desmarcou'],['Reagendou','Reagendou'],['Aguardando','Aguardando']];
-    const html=`<p class="ov-ag-modal-note">Selecione o resultado do atendimento:</p><div class="ov-ag-status-options">${options.map(([v,label])=>`<label><input type="radio" name="status" value="${v}" ${v===(a.st||'Aguardando')?'checked':''}>${label}</label>`).join('')}</div><p class="ov-ag-modal-note">Ao selecionar Reagendou, informe a nova data e hora na próxima janela.</p>`;
+    const html=`<p class="ov-ag-modal-note">Selecione o resultado do atendimento:</p><div class="ov-ag-status-options">${options.map(([v,label])=>`<label><input type="radio" name="status" value="${v}" ${v===(a.st||'Aguardando')?'checked':''}>${label}</label>`).join('')}</div><p class="ov-ag-modal-note">Ao selecionar Reagendou, escolha entre marcar uma nova data ou aguardar a decisão do paciente.</p>`;
     ovAgDialog('Dar baixa no agendamento',html,form=>{
       const status=String(form.get('status')||'');if(!options.some(x=>x[0]===status))return false;
       if(status==='Reagendou'){
-        const html2=`<label>Nova data<input name="data" type="date" required min="${tdy()}"></label><label>Novo horário<input name="hora" type="time" required value="${esc(a.hora)}"></label>`;
-        setTimeout(()=>ovAgDialog('Reagendar consulta',html2,form2=>{
-          const data=String(form2.get('data')||''),hora=String(form2.get('hora')||'');
-          if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)){toast('Informe data e horário válidos.');return false}
-          const nova={...a,id:uid(),data,hora,st:'Agendado'};delete nova.vid;
-          if(confl(nova)){toast('Horário ocupado. Escolha outro.',4000);return false}
-          a.st='Reagendou';db.ag.push(nova);view.agExpanded='';save();render();toast('Consulta reagendada. Histórico preservado.');
-        }),0);
+        const html2=`<p class="ov-ag-modal-note">O paciente já definiu quando poderá retornar?</p><div class="ov-ag-status-options"><label><input type="radio" name="modo" value="pendente" checked> Aguardando definição do paciente</label><label><input type="radio" name="modo" value="agora"> Reagendar agora</label></div><div data-ag-nova-data hidden><label>Nova data<input name="data" type="date" min="${tdy()}"></label><label>Novo horário<input name="hora" type="time" value="${esc(a.hora)}"></label></div>`;
+        setTimeout(()=>{
+          const dialog=ovAgDialog('Reagendar consulta',html2,form2=>{
+            const modo=String(form2.get('modo')||'pendente');
+            if(modo==='pendente'){
+              a.st='Reagendou';a.reagendamentoPendente=true;
+              view.agExpanded='';save();render();toast('Paciente aguardando definição de nova data. Horário liberado.');return;
+            }
+            const data=String(form2.get('data')||''),hora=String(form2.get('hora')||'');
+            if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||data<tdy()||!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)){toast('Informe data e horário válidos.');return false}
+            const nova={...a,id:uid(),data,hora,st:'Agendado'};
+            delete nova.vid;delete nova.reagendamentoPendente;
+            if(confl(nova)){toast('Horário ocupado. Escolha outro.',4000);return false}
+            a.st='Reagendou';a.reagendamentoPendente=false;
+            db.ag.push(nova);view.agExpanded='';save();render();toast('Consulta reagendada. Histórico preservado.');
+          });
+          const sync=()=>{
+            const now=dialog.querySelector('input[name="modo"]:checked')?.value==='agora';
+            const fields=dialog.querySelector('[data-ag-nova-data]');fields.hidden=!now;
+            fields.querySelectorAll('input').forEach(input=>input.required=now);
+          };
+          dialog.querySelectorAll('input[name="modo"]').forEach(r=>r.addEventListener('change',sync));sync();
+        },0);
         return;
       }
       a.st=status;view.agExpanded='';save();render();toast(status==='Cancelado'?'Consulta desmarcada':status==='Faltou'?'Falta registrada':status==='Aguardando'?'Consulta aguardando':'Atendimento registrado');
+    });
+  },
+  agreagpend:(b,d)=>{
+    const a=db.ag.find(x=>String(x.id)===String(d.id)&&x.reagendamentoPendente===true);
+    if(!a)return;
+    const html=`<label>Nova data<input name="data" type="date" required min="${tdy()}"></label><label>Novo horário<input name="hora" type="time" required value="${esc(a.hora)}"></label>`;
+    ovAgDialog('Definir nova consulta',html,form=>{
+      const data=String(form.get('data')||''),hora=String(form.get('hora')||'');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||data<tdy()||!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)){toast('Informe data e horário válidos.');return false}
+      const nova={...a,id:uid(),data,hora,st:'Agendado'};
+      delete nova.vid;delete nova.reagendamentoPendente;
+      if(confl(nova)){toast('Horário ocupado. Escolha outro.',4000);return false}
+      a.reagendamentoPendente=false;db.ag.push(nova);save();render();toast('Nova consulta agendada. Histórico preservado.');
     });
   },
   agfalta:(b,d)=>{const a=db.ag.find(x=>x.id===d.id);if(!a)return;a.st='Faltou';save();render();toast('Falta registrada')},

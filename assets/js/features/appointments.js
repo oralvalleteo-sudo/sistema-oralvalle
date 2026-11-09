@@ -13,14 +13,14 @@ function agRentalOverlaps(date,chair,start,end){
 }
 function confl(n){
   if(agRentalOverlaps(n.data,n.cadeira,mins(n.hora),mins(n.hora)+Number(n.dur||30)))return {aluguel:true};
-  return db.ag.find(a=>a.id!==n.id&&a.data===n.data&&['Cancelado','Faltou'].indexOf(a.st)<0&&((a.cadeira||'1')===String(n.cadeira||'1')||(a.dt&&n.dt&&a.dt===n.dt))&&mins(a.hora)<mins(n.hora)+n.dur&&mins(n.hora)<mins(a.hora)+(a.dur||30));
+  return db.ag.find(a=>a.id!==n.id&&a.data===n.data&&['Cancelado','Faltou','Reagendou'].indexOf(a.st)<0&&((a.cadeira||'1')===String(n.cadeira||'1')||(a.dt&&n.dt&&a.dt===n.dt))&&mins(a.hora)<mins(n.hora)+n.dur&&mins(n.hora)<mins(a.hora)+(a.dur||30));
 }
 function agDefaults(date){
   const now=new Date(),isToday=date===tdy();
   let m=isToday?Math.ceil((now.getHours()*60+now.getMinutes())/30)*30:8*60;
   if(m>23*60+30)m=23*60+30;
   const hora=hm(m);
-  const busy=c=>agRentalOverlaps(date,c,m,m+30)||db.ag.some(a=>a.data===date&&['Cancelado','Faltou'].indexOf(a.st)<0&&String(a.cadeira||'1')===c&&mins(a.hora)<m+30&&m<mins(a.hora)+(a.dur||30));
+  const busy=c=>agRentalOverlaps(date,c,m,m+30)||db.ag.some(a=>a.data===date&&['Cancelado','Faltou','Reagendou'].indexOf(a.st)<0&&String(a.cadeira||'1')===c&&mins(a.hora)<m+30&&m<mins(a.hora)+(a.dur||30));
   return {hora,cad:busy('1')&&!busy('2')?'2':'1'};
 }
 const agNorm=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -140,6 +140,8 @@ function agHtml(){
   const total=list.length, confirmados=list.filter(a=>a.st==='Confirmado').length;
   const encerrados=list.filter(a=>['Compareceu','Faltou','Cancelado','Reagendou'].includes(a.st)||Boolean(a.vid)).length;
   const aguardando=list.filter(a=>!['Compareceu','Faltou','Cancelado','Reagendou'].includes(a.st)&&!a.vid&&a.st!=='Confirmado').length;
+  const pendentes=db.ag.filter(a=>a.tipoRegistro!=='aluguel'&&a.reagendamentoPendente===true&&a.st==='Reagendou');
+  const pendentesPanel=`<details class="card" style="margin-bottom:12px"><summary style="cursor:pointer;font-weight:700;color:#263445;padding:4px 0">Aguardando reagendamento <span class="badge">${pendentes.length}</span></summary>${pendentes.length?`<div style="display:grid;gap:8px;margin-top:12px">${pendentes.map(a=>`<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid #e2e7ed;border-radius:10px;padding:10px"><div><strong>${esc(pName(a.pid))}</strong><div class="note">Consulta anterior: ${esc((a.data||'').split('-').reverse().join('/'))} · ${esc(a.hora||'')} ${esc(db.p.find(p=>String(p.id)===String(a.pid))?.tel||'')}</div></div><button type="button" class="sm" data-act="agreagpend" data-id="${esc(a.id)}">Reagendar</button></div>`).join('')}</div>`:'<p class="note">Nenhum paciente aguardando nova data.</p>'}</details>`;
   const visualHead=`<div class="nexo-page-stats"><div class="nexo-stat"><span>Consultas no dia</span><strong>${total}</strong><small>Na data e filtro selecionados</small></div><div class="nexo-stat"><span>Confirmadas</span><strong>${confirmados}</strong><small>Presenças confirmadas</small></div><div class="nexo-stat"><span>Aguardando</span><strong>${aguardando}</strong><small>Ainda sem confirmação</small></div><div class="nexo-stat"><span>Encerradas</span><strong>${encerrados}</strong><small>Finalizadas, faltas ou cancelamentos</small></div></div>`;
-  return `<div class="nexo-page-shell nexo-agenda-page">${visualHead}${avsCardHtml()}${dateNav}<div class="nexo-agenda-tools">${form}${rentalPanel}</div><div class="nexo-section-title"><h2>Horários dos consultórios</h2><p>Selecione um horário livre para agendar ou abra um atendimento existente.</p></div><div class="ov-agenda-chairs">${chairCard('1','Consultório 1')}${chairCard('2','Consultório 2')}</div></div>`;
+  return `<div class="nexo-page-shell nexo-agenda-page">${visualHead}${avsCardHtml()}${pendentesPanel}${dateNav}<div class="nexo-agenda-tools">${form}${rentalPanel}</div><div class="nexo-section-title"><h2>Horários dos consultórios</h2><p>Selecione um horário livre para agendar ou abra um atendimento existente.</p></div><div class="ov-agenda-chairs">${chairCard('1','Consultório 1')}${chairCard('2','Consultório 2')}</div></div>`;
 }
