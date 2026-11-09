@@ -180,11 +180,19 @@ function listHtml(){
 }
 // Pacientes com procedimentos clínicos ainda não concluídos (independente de pagamentos).
 function nexoTratamentoPendente(p){
-  return (Array.isArray(p.trat)?p.trat:[]).some(t=>{
-    const st=String(t.status||'Pendente').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
-    return !t.vid && !['concluido','cancelado','recusado','finalizado'].includes(st);
-  });
+  // Uma única avaliação por paciente; não consulta a rede nem altera prontuários.
+  const encerrado=s=>['concluido','finalizado','cancelado','recusado','encerrado'].includes(String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase());
+  if(p.implAtivo&&!encerrado(p.implEtapa))return true;
+  if(p.protAtivo&&!encerrado(p.protEtapa))return true;
+  if(p.orthoMensal)return true;
+  if((Array.isArray(p.trat)?p.trat:[]).some(t=>!t.vid&&!encerrado(t.status)))return true;
+  // Orçamento aprovado só é pendente quando ainda há itens sem baixa.
+  return (Array.isArray(p.orcs)?p.orcs:[]).some(o=>
+    String(o.status||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()==='aprovado'&&
+    Array.isArray(o.itens)&&o.itens.some(it=>!it.vid&&!encerrado(it.status))
+  );
 }
+
 function homePac(){
   const archivedMode=Boolean(view.arq);
   const active=db.p.filter(p=>Boolean(p.arq)===archivedMode);
