@@ -40,7 +40,7 @@ const A={
   agcollapse:()=>{view.agExpanded='';render();},
   agencerrar:(b,d)=>{
     const a=db.ag.find(x=>String(x.id)===String(d.id));if(!a)return;
-    const options=[['Compareceu','🟢 Atendido'],['Faltou','🔴 Faltou'],['Cancelado','🟡 Desmarcou'],['Reagendou','🔵 Reagendou'],['Aguardando','⚪ Aguardando']];
+    const options=[['Compareceu','Atendido'],['Faltou','Faltou'],['Cancelado','Desmarcou'],['Reagendou','Reagendou'],['Aguardando','Aguardando']];
     const html=`<p class="ov-ag-modal-note">Selecione o resultado do atendimento:</p><div class="ov-ag-status-options">${options.map(([v,label])=>`<label><input type="radio" name="status" value="${v}" ${v===(a.st||'Aguardando')?'checked':''}><span>${label}</span></label>`).join('')}</div><p class="ov-ag-modal-note">Ao selecionar Reagendou, informe a nova data e hora na próxima janela.</p>`;
     ovAgDialog('Dar baixa no agendamento',html,form=>{
       const status=String(form.get('status')||'');if(!options.some(x=>x[0]===status))return false;
