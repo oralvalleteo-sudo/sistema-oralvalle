@@ -178,15 +178,32 @@ function listHtml(){
   if(!l.length)return '<div class="empty">Nenhum paciente encontrado.</div>';
   return l.map(p=>`<button class="pt" data-act="open" data-id="${p.id}"><span>${esc(p.nome)}<small>${esc(pvFmtTel(p.tel)||'Sem telefone')}</small></span><span class="badge">${p.orcs.length} orç.</span></button>`).join('');
 }
+// Pacientes com procedimentos clínicos ainda não concluídos (independente de pagamentos).
+function nexoTratamentoPendente(p){
+  return (Array.isArray(p.trat)?p.trat:[]).some(t=>{
+    const st=String(t.status||'Pendente').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+    return !t.vid && !['concluido','cancelado','recusado','finalizado'].includes(st);
+  });
+}
+// Filtro apenas da listagem; não altera tratamentos nem registros do paciente.
+window.addEventListener('click',function(event){
+  const btn=event.target.closest('[data-nexo-trat-filter]');
+  if(!btn)return;
+  event.preventDefault();
+  view.tratOnly=!Boolean(view.tratOnly);
+  view.pPage=0;
+  render();
+});
 function homePac(){
   const archivedMode=Boolean(view.arq);
   const active=db.p.filter(p=>Boolean(p.arq)===archivedMode);
   const pending=(db.vd||[]).filter(v=>saldoV(v)>0.005);
   const pendingIds=new Set(pending.map(v=>v.pid));
+  const treatmentIds=new Set(active.filter(nexoTratamentoPendente).map(p=>String(p.id)));
   const filtered=active.filter(p=>{
     const match=p.nome.toLowerCase().includes(String(q||'').toLowerCase().trim());
     const pend=archivedMode||!view.pendOnly||pendingIds.has(p.id);
-    return match&&pend;
+    return match&&pend&&(!view.tratOnly||treatmentIds.has(String(p.id)));
   }).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   const novo=view.novoPac?`<div class="card ov-patient-form"><h2>Adicionar novo paciente</h2><label for="nn">Nome completo</label><input id="nn" autocomplete="off" placeholder="Digite o nome para buscar ou cadastrar"><div class="row" style="align-items:flex-start"><div style="min-width:0"><label for="nc">CPF (opcional)</label><input id="nc" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14"></div><div style="min-width:0"><label for="nt">Telefone</label><input id="nt" type="tel" inputmode="tel" autocomplete="off" placeholder="(00) 00000-0000" maxlength="15"></div></div><div id="pvBox"></div><div class="row" style="margin-top:12px"><button id="pvAdd" data-act="add" style="flex:1" disabled>Cadastrar paciente</button><button class="ghost" data-act="cancelNovoPac" style="flex:1">Cancelar</button></div></div>`:'';
   const pageSize=50, pages=Math.max(1,Math.ceil(filtered.length/pageSize));
@@ -196,7 +213,7 @@ function homePac(){
   const pager=filtered.length>pageSize?`<div class="row ov-patient-pager" style="justify-content:space-between;margin-top:12px"><span class="note" style="margin:0">Página ${view.pPage+1} de ${pages} · ${filtered.length} pacientes</span><span class="row" style="flex:none;gap:6px"><button class="ghost sm" data-act="pPage" data-p="${view.pPage-1}"${view.pPage===0?' disabled':''}>Anterior</button><button class="ghost sm" data-act="pPage" data-p="${view.pPage+1}"${view.pPage>=pages-1?' disabled':''}>Próxima</button></span></div>`:'';
   return `<div class="ov-patients-page">
     <div class="ov-page-head nd-patient-hero"><span class="nd-patient-hero-icon" aria-hidden="true">♧</span><div><h1>Pacientes</h1><p class="sub">Cadastro, histórico e acompanhamento de tratamentos.</p></div><span class="nd-patient-hero-decoration" aria-hidden="true">✧</span></div>
-    <div class="nd-patient-stats" aria-label="Resumo dos pacientes"><div class="nd-patient-stat nd-patient-stat-main"><span class="nd-stat-icon" aria-label="Pessoas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2"/><path d="M17 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v1"/></svg></span><div><strong>${db.p.filter(p=>!p.arq).length}</strong><span>Pacientes ativos</span></div></div><div class="nd-patient-stat"><span class="nd-stat-icon" aria-label="Arquivo"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 14h4"/></svg></span><div><strong>${db.p.filter(p=>p.arq).length}</strong><span>Arquivados</span></div></div><div class="nd-patient-stat"><span class="nd-stat-icon" aria-label="Pagamento pendente"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="16" r="4" fill="white"/><path d="M17 13.5V16l1.5 1"/></svg></span><div><strong>${active.filter(p=>pendingIds.has(p.id)).length}</strong><span>Com pagamento pendente</span></div></div><div class="nd-patient-stat"><span class="nd-stat-icon" aria-label="Pesquisa"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></span><div><strong>${filtered.length}</strong><span>Resultados da pesquisa</span></div></div></div>
+    <div class="nd-patient-stats" aria-label="Resumo dos pacientes"><div class="nd-patient-stat nd-patient-stat-main"><span class="nd-stat-icon" aria-label="Pessoas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2"/><path d="M17 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v1"/></svg></span><div><strong>${db.p.filter(p=>!p.arq).length}</strong><span>Pacientes ativos</span></div></div><div class="nd-patient-stat"><span class="nd-stat-icon" aria-label="Arquivo"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 14h4"/></svg></span><div><strong>${db.p.filter(p=>p.arq).length}</strong><span>Arquivados</span></div></div><div class="nd-patient-stat"><span class="nd-stat-icon" aria-label="Pagamento pendente"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="16" r="4" fill="white"/><path d="M17 13.5V16l1.5 1"/></svg></span><div><strong>${active.filter(p=>pendingIds.has(p.id)).length}</strong><span>Com pagamento pendente</span></div></div><button type="button" class="nd-patient-stat" data-nexo-trat-filter="1" aria-pressed="${Boolean(view.tratOnly)}" title="Filtrar pacientes com tratamento pendente" style="text-align:left;cursor:pointer;font:inherit;${view.tratOnly?'border-color:#f97316;background:#fff3eb;':''}"><span class="nd-stat-icon" aria-hidden="true">◷</span><div><strong>${treatmentIds.size}</strong><span>Com tratamento pendente</span></div></button><div class="nd-patient-stat"><span class="nd-stat-icon" aria-label="Pesquisa"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></span><div><strong>${filtered.length}</strong><span>Resultados da pesquisa</span></div></div></div>
     ${novo}
     <section class="ov-patients-panel">
       <div class="ov-patients-head">

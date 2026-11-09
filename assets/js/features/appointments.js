@@ -141,18 +141,5 @@ function agHtml(){
   const encerrados=list.filter(a=>['Compareceu','Faltou','Cancelado','Reagendou'].includes(a.st)||Boolean(a.vid)).length;
   const aguardando=list.filter(a=>!['Compareceu','Faltou','Cancelado','Reagendou'].includes(a.st)&&!a.vid&&a.st!=='Confirmado').length;
   const visualHead=`<div class="nexo-page-stats"><div class="nexo-stat"><span>Consultas no dia</span><strong>${total}</strong><small>Na data e filtro selecionados</small></div><div class="nexo-stat"><span>Confirmadas</span><strong>${confirmados}</strong><small>Presenças confirmadas</small></div><div class="nexo-stat"><span>Aguardando</span><strong>${aguardando}</strong><small>Ainda sem confirmação</small></div><div class="nexo-stat"><span>Encerradas</span><strong>${encerrados}</strong><small>Finalizadas, faltas ou cancelamentos</small></div></div>`;
-  // Tratamentos clínicos pendentes são independentes de pagamentos em aberto.
-  // Considera somente procedimentos registrados no prontuário, sem inferir
-  // pendência a partir de orçamentos ainda não aprovados.
-  const agTratPendentes=pts.map(p=>{
-    const itens=(Array.isArray(p.trat)?p.trat:[]).filter(t=>{
-      const st=agNorm(t.status||'Pendente');
-      return st!=='concluido'&&st!=='cancelado'&&st!=='recusado'&&!t.vid;
-    });
-    if(!itens.length)return null;
-    const futuro=(db.ag||[]).filter(a=>String(a.pid)===String(p.id)&&a.data>=today&&!['Cancelado','Faltou','Reagendou'].includes(a.st)).sort((a,b)=>String(a.data+' '+a.hora).localeCompare(String(b.data+' '+b.hora)))[0];
-    return {p,itens,futuro};
-  }).filter(Boolean).sort((a,b)=>Number(!!a.futuro)-Number(!!b.futuro)||a.p.nome.localeCompare(b.p.nome,'pt-BR'));
-  const agTratPanel=`<details class="card" style="margin-bottom:12px" id="agTratPendentes"><summary style="cursor:pointer;font-weight:700;padding:4px 0">🦷 Tratamentos em andamento <span class="badge" style="margin-left:8px">${agTratPendentes.length} pacientes</span></summary><p class="note" style="margin:10px 0">Pacientes com procedimentos cadastrados ainda não concluídos. Independente de pagamentos pendentes. Sem retorno agendado aparecem primeiro.</p><div style="display:grid;gap:8px;max-height:420px;overflow-y:auto">${agTratPendentes.length?agTratPendentes.map(({p,itens,futuro})=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border:1px solid #e4e7eb;border-radius:10px;padding:10px 12px"><div style="min-width:0"><strong>${esc(p.nome)}</strong><div class="note" style="margin-top:3px">${itens.length} procedimento${itens.length===1?'':'s'} pendente${itens.length===1?'':'s'} · ${futuro?'Retorno: '+esc(fd(futuro.data)):'Sem retorno agendado'}</div><div class="note" style="margin-top:3px">${esc(itens.slice(0,3).map(t=>t.proc||'Procedimento').join(' · '))}${itens.length>3?' · +'+(itens.length-3):''}</div></div><button type="button" class="ghost sm" data-act="open" data-id="${esc(p.id)}">Ver paciente</button></div>`).join(''):'<div class="note">Nenhum tratamento pendente registrado.</div>'}</div></details>`;
-  return `<div class="nexo-page-shell nexo-agenda-page">${visualHead}${avsCardHtml()}${dateNav}${agTratPanel}<div class="nexo-agenda-tools">${form}${rentalPanel}</div><div class="nexo-section-title"><h2>Horários dos consultórios</h2><p>Selecione um horário livre para agendar ou abra um atendimento existente.</p></div><div class="ov-agenda-chairs">${chairCard('1','Consultório 1')}${chairCard('2','Consultório 2')}</div></div>`;
+  return `<div class="nexo-page-shell nexo-agenda-page">${visualHead}${avsCardHtml()}${dateNav}<div class="nexo-agenda-tools">${form}${rentalPanel}</div><div class="nexo-section-title"><h2>Horários dos consultórios</h2><p>Selecione um horário livre para agendar ou abra um atendimento existente.</p></div><div class="ov-agenda-chairs">${chairCard('1','Consultório 1')}${chairCard('2','Consultório 2')}</div></div>`;
 }
