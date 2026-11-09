@@ -1,0 +1,8 @@
+/* NexoDent CRM 266: controles acessíveis de navegação, sem alterar o kanban */
+.crm-funil-nav-266{position:sticky;top:8px;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;margin:12px 0 8px;background:#fff;border:1px solid #f1c9ad;border-radius:12px;box-shadow:0 3px 12px rgba(45,34,20,.09)}
+.crm-funil-nav-266-label{font-size:13px;font-weight:700;color:#333}.crm-funil-nav-266-label span{font-weight:500;color:#777;margin-left:8px}
+.crm-funil-nav-266-actions{display:flex;gap:8px;flex-shrink:0}
+.crm-funil-nav-266-actions button{cursor:pointer;border:1px solid #e6a477;background:#fff7f0;color:#a34b0c;padding:9px 14px;border-radius:9px;font:600 13px system-ui,Arial,sans-serif}
+.crm-funil-nav-266-actions button:hover:not(:disabled){background:#ffeadb}.crm-funil-nav-266-actions button:disabled{opacity:.35;cursor:default}
+#board.board{scroll-behavior:smooth;overscroll-behavior-x:contain;scrollbar-gutter:stable}
+@media(max-width:600px){.crm-funil-nav-266{top:4px;padding:8px;gap:6px}.crm-funil-nav-266-label{font-size:11px}.crm-funil-nav-266-label span{display:none}.crm-funil-nav-266-actions button{padding:8px;font-size:12px}}
