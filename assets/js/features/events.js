@@ -45,6 +45,7 @@ document.addEventListener('input',e=>{
     return;
   }
   if(t.id==='pendOnly'){view.pendOnly=t.checked;render();return}
+  if(t.id==='tratOnly'){view.tratOnly=t.checked;view.pPage=0;render();return}
   if(t.id==='pfQ'){view.pfQ=t.value;const pos=t.selectionStart;render();setTimeout(()=>{const e=document.getElementById('pfQ');if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(_){}}},0);return}
   if(t.id==='prq'){
     view.prq=t.value;
