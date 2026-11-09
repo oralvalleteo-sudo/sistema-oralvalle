@@ -205,3 +205,10 @@ html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-gray 
 .ov-doc-folds .ov-doc-fold-body{padding:15px!important;border-top:1px solid #e8edf1!important;min-width:0!important}
 .ov-doc-folds > details.ov-doc-fold > summary:focus-visible{outline:2px solid #e66a10!important;outline-offset:-3px!important}
 @media(max-width:540px){.ov-doc-folds > details.ov-doc-fold > summary{padding:10px!important;gap:8px!important}.ov-doc-folds .ov-doc-count{font-size:10px!important;padding:3px 6px!important}.ov-doc-folds .ov-doc-fold-body{padding:11px!important}}
+
+/* Galeria de documentos: duas colunas compactas, painel aberto em largura total. */
+@media(min-width:701px){
+ .ov-doc-folds{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:start!important}
+ .ov-doc-folds>details.ov-doc-fold[open]{grid-column:1/-1!important}
+}
+@media(max-width:700px){.ov-doc-folds{grid-template-columns:minmax(0,1fr)!important}}
