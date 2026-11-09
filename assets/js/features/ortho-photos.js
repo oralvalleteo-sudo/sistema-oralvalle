@@ -3,6 +3,47 @@
 const cache=new Map(),busy=new Set(),deleteSelection=new Set();
 // Miniaturas leves em cache apenas durante esta sessão; não persiste imagens clínicas no navegador.
 const previews=new Map();
+// Legacy attachments did not store thumbnails. Hydrate only visible photos, with bounded
+// concurrency, and retain the generated previews in memory for this session.
+const previewQueue=[];const previewPending=new Set();let previewActive=0;
+function scheduleLegacyPreviews(id,scope){
+ const p=db.p.find(x=>String(x.id)===String(id));if(!p||!window.OralCloud?.enabled)return;
+ const k=key(p,scope),state=cache.get(k);if(!state||state.loading)return;
+ const roots=[...document.querySelectorAll('[data-ortho-gallery]')].filter(el=>el.dataset.orthoGallery===String(id)&&scopeOf(el)===scope&&el.getClientRects().length);
+ if(!roots.length)return;
+ for(const f of state.photos){if(f.thumb||!f._rowId)continue;
+  const token=k+':'+f._rowId;if(previewPending.has(token))continue;
+  previewPending.add(token);previewQueue.push({id,scope,rowId:f._rowId,token});
+ }
+ pumpPreviews();
+}
+function pumpPreviews(){while(previewActive<3&&previewQueue.length){
+ const job=previewQueue.shift();previewActive++;
+ (async()=>{try{
+  const full=await OralCloudData.file(job.id,job.rowId);
+  const data=full?.dados?.data;
+  if(!data||!String(data).startsWith('data:image/'))return;
+  const thumb=await mini(data);
+  if(!thumb)return;
+  previews.set(job.token,thumb);
+  const p=db.p.find(x=>String(x.id)===String(job.id));if(!p)return;
+  const state=cache.get(key(p,job.scope));const f=state?.photos.find(x=>String(x._rowId)===String(job.rowId));
+  if(f)f.thumb=thumb;
+  document.querySelectorAll('[data-ortho-gallery]').forEach(root=>{
+   if(root.dataset.orthoGallery!==String(job.id)||scopeOf(root)!==job.scope)return;
+   const index=state?.photos.indexOf(f);
+   if(index<0)return;
+   const img=root.querySelector(`[data-ortho-index="${index}"] img`);
+   if(img)img.src=thumb;
+  });
+ }catch(e){console.warn('Miniatura antiga indisponível:',e?.message||e);}
+ finally{previewPending.delete(job.token);previewActive--;pumpPreviews();}})();
+}}
+function hydrateVisibleGalleries(){document.querySelectorAll('[data-ortho-gallery]').forEach(el=>{
+ if(el.getClientRects().length)scheduleLegacyPreviews(el.dataset.orthoGallery,scopeOf(el));
+});}
+document.addEventListener('toggle',e=>{if(e.target.matches('details'))setTimeout(hydrateVisibleGalleries,0);},true);
+
 function mini(data){return new Promise(resolve=>{if(!data||!data.startsWith('data:image/'))return resolve('');const im=new Image();im.onload=()=>{try{const c=document.createElement('canvas');const scale=Math.min(1,180/Math.max(im.width,im.height));c.width=Math.max(1,Math.round(im.width*scale));c.height=Math.max(1,Math.round(im.height*scale));c.getContext('2d').drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.58));}catch(_){resolve('');}};im.onerror=()=>resolve('');im.src=data;});}
 const key=(p,scope='ortho')=>String(window.OralCloud?.clinicId||'local')+':'+String(p.id)+':'+scope;
 const category=scope=>({'patient':'Imagem clínica','ortho':'Ortodontia - Fotos','impl':'Implantodontia - Fotos','prot':'Prótese - Fotos'}[scope]||('Laboratório - Fotos - '+scope.slice(4)));
@@ -17,9 +58,9 @@ function gallery(p,scope='ortho'){const k=key(p,scope),state=cache.get(k);if(win
 async function load(p,scope='ortho'){const k=key(p,scope);if(cache.has(k))return;const state={photos:[],loading:true,error:'',status:''};cache.set(k,state);
  try{const rows=await OralCloudData.files(p.id);const matches=rows.filter(r=>r.slot==='arquivos'&&r.position>=0&&isPhoto(r.dados||{},scope));
   const seen=new Set();state.photos=matches.filter(r=>{if(seen.has(String(r.id)))return false;seen.add(String(r.id));return true;}).map(r=>({...r.dados,_rowId:r.id,thumb:r.dados.thumb||previews.get(k+':'+r.id)||'',data:''}));
-  state.status=state.photos.some(f=>!f.thumb)?'Fotos antigas: miniaturas serão carregadas sob demanda.':'';
- }catch(e){state.error=e.message||'Não foi possível carregar fotos';}finally{state.loading=false;refresh(p.id,scope);}}
-function refresh(id,scope='ortho'){document.querySelectorAll('[data-ortho-gallery]').forEach(el=>{if(el.dataset.orthoGallery!==String(id)||scopeOf(el)!==scope)return;const p=db.p.find(x=>String(x.id)===String(id));if(p)el.outerHTML=gallery(p,scope);});}
+  state.status=state.photos.some(f=>!f.thumb)?'Carregando miniaturas de fotografias antigas…':'';
+ }catch(e){state.error=e.message||'Não foi possível carregar fotos';}finally{state.loading=false;refresh(p.id,scope);setTimeout(()=>scheduleLegacyPreviews(p.id,scope),0);}}
+function refresh(id,scope='ortho'){document.querySelectorAll('[data-ortho-gallery]').forEach(el=>{if(el.dataset.orthoGallery!==String(id)||scopeOf(el)!==scope)return;const p=db.p.find(x=>String(x.id)===String(id));if(p)el.outerHTML=gallery(p,scope);});setTimeout(()=>scheduleLegacyPreviews(id,scope),0);}
 function read(file){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result));r.onerror=()=>no(Error('Erro ao ler imagem'));r.readAsDataURL(file);});}
 const MAX_BYTES=1.5*1024*1024;
 async function preparePhoto(file){
@@ -62,7 +103,7 @@ function managePhotos(id,scope='ortho'){
  const photos=window.OralCloud?.enabled?(cache.get(k)?.photos||[]):(p.arquivos||[]).filter(f=>isPhoto(f,scope));
  if(!photos.length)return;
  const overlay=document.createElement('div');overlay.className='ortho-photo-overlay ortho-selection-overlay';
- overlay.innerHTML=`<div class="ortho-select-modal" role="dialog" aria-modal="true" aria-label="Selecionar fotografias para excluir"><div class="ortho-select-head"><strong>Selecionar fotos para excluir</strong><button type="button" data-ortho-cancel>Fechar ✕</button></div><p>Selecione as fotografias que deseja remover. Nenhuma foto será excluída antes da confirmação.</p><div class="ortho-select-grid">${photos.map((f,i)=>`<label class="ortho-select-item"><input type="checkbox" value="${i}" aria-label="Selecionar foto ${i+1}"><img src="${safe(f.thumb||f.data||'')}" alt="Foto ${i+1}" loading="lazy"><span>${safe(f.nome||'Foto '+(i+1))}</span></label>`).join('')}</div><div class="ortho-select-footer"><label><input type="checkbox" data-ortho-all> Selecionar todas</label><span data-ortho-count>0 selecionadas</span><button type="button" class="ortho-confirm-delete" disabled>Excluir selecionadas</button></div><small class="ortho-delete-progress" aria-live="polite"></small></div>`;
+ overlay.innerHTML=`<div class="ortho-select-modal" role="dialog" aria-modal="true" aria-label="Selecionar fotografias para excluir"><div class="ortho-select-head"><strong>Selecionar fotos para excluir</strong><button type="button" data-ortho-cancel>Fechar ✕</button></div><p>Selecione as fotografias que deseja remover. Nenhuma foto será excluída antes da confirmação.</p><div class="ortho-select-grid">${photos.map((f,i)=>`<label class="ortho-select-item"><input type="checkbox" value="${i}" aria-label="Selecionar foto ${i+1}"><img src="${safe(f.thumb||previews.get(k+':'+(f._rowId||f.id))||f.data||'')}" alt="Foto ${i+1}" loading="lazy"><span>${safe(f.nome||'Foto '+(i+1))}</span></label>`).join('')}</div><div class="ortho-select-footer"><label><input type="checkbox" data-ortho-all> Selecionar todas</label><span data-ortho-count>0 selecionadas</span><button type="button" class="ortho-confirm-delete" disabled>Excluir selecionadas</button></div><small class="ortho-delete-progress" aria-live="polite"></small></div>`;
  const close=()=>overlay.remove();overlay.addEventListener('click',e=>{if(e.target===overlay||e.target.closest('[data-ortho-cancel]'))close();});
  const checks=[...overlay.querySelectorAll('.ortho-select-item input')],all=overlay.querySelector('[data-ortho-all]'),confirmBtn=overlay.querySelector('.ortho-confirm-delete'),count=overlay.querySelector('[data-ortho-count]');
  function update(){const n=checks.filter(c=>c.checked).length;count.textContent=`${n} selecionada(s)`;confirmBtn.disabled=!n;all.checked=n===checks.length;all.indeterminate=n>0&&n<checks.length;}
