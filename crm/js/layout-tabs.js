@@ -11,13 +11,17 @@ const mapping=[
  ['reports','crm-management'],['followup','crm-priorities'],['followup','recovery'],
  ['reports','crm-productivity'],['reports','employee-performance'],['reports','sales-report'],
  ['opportunities','crm-pending-compact'],
- ['opportunities','integration'],['opportunities','integration']
+ ['opportunities','integration']
 ];
 // If the HTML changes, avoid hiding unknown elements or breaking CRM actions.
-if(nodes.length!==mapping.length||nodes.some((node,i)=>!node.classList.contains(mapping[i][1])&&node.id!==mapping[i][1])){
- console.warn('CRM: estrutura alterada; revise o mapeamento de abas.');return;
+if(nodes.length!==mapping.length||nodes.some((node,i)=>mapping[i]&&!node.classList.contains(mapping[i][1])&&node.id!==mapping[i][1])){
+ console.warn('CRM: estrutura de seções alterada; mantendo navegação ativa.');
 }
-nodes.forEach((node,i)=>{node.dataset.crmSection=mapping[i][0];views[mapping[i][0]].push(node)});
+nodes.forEach((node,i)=>{
+ const expected=mapping[i];
+ const group=expected&&(node.classList.contains(expected[1])||node.id===expected[1])?expected[0]:'opportunities';
+ node.dataset.crmSection=group;views[group].push(node);
+});
 function activate(name,focus=false){
  if(!views[name])name='overview';
  for(const node of nodes){node.hidden=node.dataset.crmSection!==name;}
