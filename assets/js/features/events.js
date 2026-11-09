@@ -122,6 +122,12 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
       if(f==='proc'){const m=procBy(t.value);if(m&&m.preco&&!it.valor){it.valor=m.preco;const vf=t.parentNode.querySelector('[data-f="valor"]');if(vf)vf.value=m.preco}}
     }else{o[f]=f==='desc'?t.value.replace(',','.'):t.value}
     refreshOrc(t.closest('[data-oid]'),o);
+    // Após editar desconto/valor, atualizar os atendimentos já vinculados.
+    // Não transformar entrada planejada em pagamento efetivo.
+    if(o.status==='Aprovado'&&typeof ovSyncBudgetFinancial==='function'){
+      const result=ovSyncBudgetFinancial(p,o);
+      if(!result.ok)toast(result.message,5500);
+    }
   }
   save();
 });

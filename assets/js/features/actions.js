@@ -15,6 +15,23 @@ function ovAgDialog(title, content, onSubmit) {
   return backdrop;
 }
 
+// Sincroniza somente vendas comprovadamente vinculadas ao orçamento.
+// A entrada do planejamento NÃO é recebimento: pagamentos são registrados apenas no caixa.
+function ovSyncBudgetFinancial(p,o){
+  if(!p||!o||o.status!=='Aprovado')return {ok:true,changed:false};
+  const itens=(o.itens||[]).filter(i=>i.vid);
+  if(!itens.length)return {ok:true,changed:false};
+  const rows=itens.map(i=>({i,v:(db.vd||[]).find(v=>String(v.id)===String(i.vid)&&String(v.pid)===String(p.id))}));
+  if(rows.some(x=>!x.v)||new Set(rows.map(x=>String(x.v.id))).size!==rows.length)
+    return {ok:false,message:'Vínculos financeiros inconsistentes. Nenhum atendimento foi atualizado.'};
+  const metas=rows.map(({i,v})=>({v,novo:r2(num(i.valor)*fac(o))}));
+  if(metas.some(x=>recebido(x.v)>x.novo+0.005))
+    return {ok:false,message:'O novo valor é inferior ao que já foi recebido. Confira os pagamentos antes de salvar.'};
+  let changed=false;
+  metas.forEach(({v,novo})=>{if(Math.abs(num(v.valor)-novo)>0.005){v.valor=novo;changed=true}});
+  return {ok:true,changed};
+}
+
 const A={
   agrentadd:()=>{
     const date=view.agDate||tdy(),chair=$('agRentChair').value,start=$('agRentStart').value,end=$('agRentEnd').value;
@@ -290,25 +307,14 @@ const A={
       save();render();toast('Orçamento e proposta excluídos.');
     });
   },
-  orcsyncfin:(b,d,p)=>{
-    const o=p&&getO(p,d.o);if(!o||o.status!=='Aprovado')return;
-    const itens=(o.itens||[]).filter(i=>i.vid);
-    if(!itens.length){toast('Nenhum atendimento vinculado a este orçamento.');return}
-    // Somente registros inequivocamente vinculados: nunca alterar outras vendas.
-    const registros=itens.map(i=>({i,v:db.vd.find(v=>String(v.id)===String(i.vid)&&String(v.pid)===String(p.id))}));
-    if(registros.some(x=>!x.v)||new Set(registros.map(x=>String(x.v.id))).size!==registros.length){toast('Vínculos financeiros inconsistentes. Nenhum valor foi alterado.',4500);return}
-    const metas=registros.map(({i,v})=>({i,v,novo:r2(num(i.valor)*fac(o))}));
-    if(metas.some(x=>recebido(x.v)>x.novo+0.005)){
-      toast('Há pagamentos superiores ao novo valor. Confira os recebimentos antes de ajustar o orçamento.',5500);return;
+  orcsave:(b,d,p)=>{
+    const o=p&&getO(p,d.o);if(!o)return;
+    if(o.status==='Aprovado'){
+      const result=ovSyncBudgetFinancial(p,o);
+      if(!result.ok){toast(result.message,5500);return}
     }
-    const mudancas=metas.filter(x=>Math.abs(num(x.v.valor)-x.novo)>0.005);
-    if(!mudancas.length){toast('Os atendimentos vinculados já estão com os valores atualizados.');return}
-    const mensagem='Atualizar '+mudancas.length+' atendimento(s) vinculado(s) ao orçamento aprovado?\n\n'+mudancas.map(x=>(x.i.proc||'Procedimento')+': '+brl(x.v.valor)+' → '+brl(x.novo)).join('\n')+'\n\nPagamentos já registrados serão preservados. Comissões existentes NÃO serão recalculadas automaticamente; confira-as separadamente. Itens sem baixa não serão alterados.';
-    if(!confirm(mensagem))return;
-    mudancas.forEach(({v,novo})=>{v.valor=novo});
-    save();render();toast('Valores dos atendimentos atualizados. Confira as comissões.',4500);
+    save();render();toast('Orçamento salvo e financeiro sincronizado.',3200);
   },
-  orcsave:(b,d,p)=>{if(!p||!getO(p,d.o))return;save();toast('Orçamento registrado. As alterações também são salvas automaticamente.',3200)},
   orccollapse:(b,d,p)=>{if(!p||!getO(p,d.o))return;save();view.orcOpen=view.orcOpen||{};view.orcOpen[d.o]=false;view.obx=null;view.obxAll=null;render();toast('Orçamento recolhido. Toque no resumo para abrir novamente.',2600)},
   otoggle:(b,d)=>{view.orcOpen=view.orcOpen||{};view.orcOpen[d.o]=!view.orcOpen[d.o];view.obx=null;view.obxAll=null;render()},
   oball:(b,d,p)=>{
