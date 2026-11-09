@@ -660,3 +660,41 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 .ag-block .ag-appointment .ag-patient-link,
 .ag-block .ag-appointment.ag-compact .ag-patient,
 .ag-block .ag-appointment.ag-compact .ag-patient-link { font-weight: 400 !important; }
+
+/* NexoDent 277 — agenda: indicadores de status alinhados numa coluna fixa.
+   O alinhamento não depende do comprimento do nome do paciente. */
+.nexo-agenda-page .ag-flow-list .ag-flow-block .ag-appointment.ag-compact {
+  justify-content:flex-start!important;
+  padding-left:12px!important;
+  padding-right:72px!important;
+}
+.nexo-agenda-page .ag-flow-list .ag-flow-block .ag-appointment.ag-compact .ag-compact-identity {
+  display:grid!important;
+  grid-template-columns:12px minmax(0,1fr)!important;
+  align-items:center!important;
+  justify-content:stretch!important;
+  column-gap:8px!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+}
+.nexo-agenda-page .ag-flow-list .ag-flow-block .ag-appointment.ag-compact .ag-compact-dot {
+  grid-column:1!important;
+  justify-self:center!important;
+  margin:0!important;
+  position:static!important;
+  transform:none!important;
+}
+.nexo-agenda-page .ag-flow-list .ag-flow-block .ag-appointment.ag-compact .ag-patient,
+.nexo-agenda-page .ag-flow-list .ag-flow-block .ag-appointment.ag-compact .ag-patient-link {
+  grid-column:2!important;
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  text-align:left!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
