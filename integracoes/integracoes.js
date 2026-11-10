@@ -2,6 +2,7 @@
 const cloud=window.OralCloud,clinic=document.getElementById('clinic'),status=document.getElementById('connection-status');
 const providers=['google_ads','meta_ads','whatsapp_business'];
 const whatsappBtn=document.getElementById('connect-whatsapp'),whatsappMsg=document.getElementById('whatsapp-connect-message');
+const metaBtn=document.getElementById('connect-meta'),metaMsg=document.getElementById('meta-connect-message');
 const connectBtn=document.getElementById('connect-google'),googleMsg=document.getElementById('google-connect-message');
 const picker=document.getElementById('google-account-picker'),loadBtn=document.getElementById('load-google-accounts');
 const accountSelect=document.getElementById('google-account-select'),saveBtn=document.getElementById('save-google-account'),accountMsg=document.getElementById('google-account-message');
@@ -56,6 +57,19 @@ async function saveAccount(){
  }catch(e){accountMsg.textContent='Não foi possível vincular a conta: '+e.message}
  finally{saveBtn.disabled=false}
 }
+async function connectMeta(){
+ if(!clinic.value){metaMsg.textContent='Selecione uma clínica.';return}
+ if(location.protocol!=='https:'){metaMsg.textContent='Abra o NexoDent em HTTPS.';return}
+ metaBtn.disabled=true;metaMsg.textContent='Preparando autorização Meta…';
+ try{
+  const response=await cloud.request('/functions/v1/nexodent-meta-ads-start',{method:'POST',body:{clinic_id:clinic.value}});
+  const url=response?.authorization_url;
+  if(!url){throw new Error('A função não retornou authorization_url.')}
+  const parsed=new URL(url);
+  if(parsed.protocol!=='https:'||!['www.facebook.com','facebook.com'].includes(parsed.hostname))throw new Error('URL de autorização Meta inválida.');
+  window.top.location.assign(parsed.href);
+ }catch(e){metaMsg.textContent='Não foi possível conectar: '+(e.status===404?'função nexodent-meta-ads-start não encontrada.':e.message);metaBtn.disabled=false}
+}
 async function connectWhatsapp(){
  if(!clinic.value)return whatsappMsg.textContent='Selecione uma clínica.';
  if(location.protocol!=='https:')return whatsappMsg.textContent='Abra o NexoDent em HTTPS.';
@@ -75,6 +89,7 @@ async function init(){
   if(!clinic.options.length){setStatus('Nenhuma clínica autorizada.');return}
   clinic.disabled=false;clinic.addEventListener('change',refresh);
   connectBtn.disabled=false;connectBtn.addEventListener('click',connectGoogle);
+  if(metaBtn){metaBtn.disabled=false;metaBtn.addEventListener('click',connectMeta);}
   if(whatsappBtn){whatsappBtn.disabled=false;whatsappBtn.addEventListener('click',connectWhatsapp);}
   loadBtn.addEventListener('click',loadAccounts);saveBtn.addEventListener('click',saveAccount);
   const query=new URLSearchParams(location.search);if(query.has('google_ads')){googleInfo(query.get('google_ads')==='authorized'?'Autorização Google recebida. Agora vamos selecionar a conta de anúncios.':'Autorização não concluída. Confira o acesso e tente novamente.');history.replaceState(null,'',location.pathname)}
