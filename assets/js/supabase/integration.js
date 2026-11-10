@@ -496,6 +496,52 @@
     } catch (error) { localToast(explain(error), 5000); }
   };
   A.acadd = () => localToast('Peça ao usuário que crie a conta na tela de cadastro e confirme o e-mail. Depois, aprove a solicitação em Acessos.', 5000);
+  // A promoção administrativa é exclusiva do Supabase: nunca salvar somente no navegador.
+  A.acadmin = (button, data) => {
+    if (!ME?.admin || membersPending || membersRunning || !data?.id || data.id === ME.id) return;
+    const target = AUTH.users.find(user => String(user.id) === String(data.id));
+    if (!target || !target.active) return;
+    const makeAdmin = !target.admin;
+    if (!makeAdmin && AUTH.users.filter(user => user.active && user.admin).length <= 1) {
+      localToast('A clínica precisa manter pelo menos um administrador.', 3500);
+      return;
+    }
+    if (!confirm((makeAdmin ? 'Conceder acesso administrativo completo a ' : 'Retirar acesso administrativo de ') + target.nome + '?')) return;
+    const clinicId = OralCloud.clinicId;
+    button.disabled = true;
+    membersPending++;
+    memberQueue = memberQueue.catch(() => {}).then(async () => {
+      await flush();
+      membersRunning = true;
+      $('app').inert = true;
+      try {
+        if (!clinicId || OralCloud.clinicId !== clinicId) throw new Error('A clínica mudou. Entre novamente.');
+        await OralCloud.request('/rest/v1/rpc/nexodent_set_clinic_admin', {
+          method: 'POST', body: { p_clinic_id: clinicId, p_user_id: target.id, p_make_admin: makeAdmin }
+        });
+        AUTH.users = (await OralCloudData.members()).filter(user => user.active);
+        memberBaseline = copy(AUTH.users);
+        const current = AUTH.users.find(user => user.id === ME.id);
+        if (current) ME = { ...ME, ...current };
+        render();
+        status(makeAdmin ? '✓ Administrador promovido no Supabase.' : '✓ Acesso administrativo retirado no Supabase.');
+      } catch (error) {
+        // Uma falha após a RPC pode significar que o banco foi alterado: forçar nova leitura.
+        try {
+          AUTH.users = (await OralCloudData.members()).filter(user => user.active);
+          memberBaseline = copy(AUTH.users);
+          render();
+        } catch (_) {}
+        localToast('Não foi possível confirmar a alteração: ' + explain(error), 6000);
+        status('Erro ao alterar administrador: ' + explain(error), true);
+      } finally {
+        membersRunning = false;
+        $('app').inert = false;
+      }
+    }).finally(() => { membersPending--; button.disabled = false; });
+    memberQueue.catch(() => {});
+  };
+
   A.cloudrequests = async () => {
     if (!ME?.admin || accessLoading) return;
     await refreshAccessRequests();
