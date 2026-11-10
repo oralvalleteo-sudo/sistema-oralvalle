@@ -307,3 +307,7 @@
  .nexo-agenda-page .ag-flow-list .ag-flow-row.ag-flow-booked .ag-flow-block > .ag-appointment.ag-card-redesign{grid-template-columns:25px minmax(0,1fr)!important}
  .nexo-agenda-page .ag-flow-list .ag-card-redesign .ag-card-buttons{grid-column:2!important;justify-self:start!important}
 }
+
+/* Identificação de paciente de plano na agenda; não altera o status da consulta. */
+.nexo-agenda-page .ag-card-top .ag-card-plano{display:inline-flex;align-items:center;flex:0 0 auto;white-space:nowrap;padding:2px 7px;border:1px solid #86d6a2;border-radius:999px;background:#eaf9ef;color:#14763d;font-size:10px;font-weight:700;line-height:1.25}
+@media(max-width:600px){.nexo-agenda-page .ag-card-top .ag-card-plano{font-size:9px;padding:1px 5px}}
