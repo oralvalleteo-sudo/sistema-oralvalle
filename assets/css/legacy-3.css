@@ -698,3 +698,28 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   text-overflow:ellipsis!important;
   white-space:nowrap!important;
 }
+
+/* NexoDent 278 — diâmetro uniforme dos indicadores de atendimento.
+   Mantém o alinhamento da coluna implementado na revisão 277. */
+.nexo-agenda-page .ag-flow-list .ag-flow-block .ag-appointment.ag-compact .ag-compact-identity .ag-compact-dot {
+  display:block!important;
+  box-sizing:border-box!important;
+  inline-size:12px!important;
+  block-size:12px!important;
+  min-inline-size:12px!important;
+  min-block-size:12px!important;
+  max-inline-size:12px!important;
+  max-block-size:12px!important;
+  flex:0 0 12px!important;
+  aspect-ratio:1 / 1!important;
+  border:0!important;
+  border-radius:50%!important;
+  box-shadow:none!important;
+  outline:0!important;
+  padding:0!important;
+  margin:0!important;
+  line-height:0!important;
+  align-self:center!important;
+  justify-self:center!important;
+  transform:none!important;
+}
