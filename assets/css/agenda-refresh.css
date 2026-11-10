@@ -204,3 +204,27 @@
  .nexo-agenda-page .ag-card-avatar{width:25px!important;height:25px!important}
  .nexo-agenda-page .ag-card-top .ag-patient{white-space:normal!important;overflow-wrap:anywhere!important}
 }
+
+/* NexoDent 252 — reduzir o espaço vazio vertical dos cartões, sem cortar informações. */
+.nexo-agenda-page .ag-flow-list .ag-flow-booked{align-items:center!important;padding-top:1px!important;padding-bottom:1px!important}
+.nexo-agenda-page .ag-flow-list .ag-flow-booked .ag-flow-content{gap:2px!important;padding:1px 0!important}
+.nexo-agenda-page .ag-flow-list .ag-flow-block>.ag-appointment.ag-card-redesign{
+  height:auto!important;min-height:0!important;
+  padding:4px 7px!important;gap:6px!important;
+  align-content:center!important;align-items:center!important;
+  margin:0!important;line-height:1.15!important;
+}
+.nexo-agenda-page .ag-card-redesign .ag-card-info{gap:1px!important;justify-content:center!important}
+.nexo-agenda-page .ag-card-redesign .ag-card-top{gap:2px 6px!important}
+.nexo-agenda-page .ag-card-redesign .ag-card-sub{line-height:1.15!important}
+.nexo-agenda-page .ag-card-redesign .ag-card-chip{line-height:1.15!important;padding:1px 5px!important}
+.nexo-agenda-page .ag-card-redesign .ag-card-avatar{width:27px!important;height:27px!important}
+.nexo-agenda-page .ag-card-redesign .ag-card-icon{height:24px!important;min-height:24px!important}
+@media(max-width:1150px){
+ .nexo-agenda-page .ag-flow-list .ag-flow-block>.ag-appointment.ag-card-redesign{grid-template-columns:27px minmax(0,1fr) auto!important}
+ .nexo-agenda-page .ag-card-redesign .ag-card-buttons{grid-column:auto!important;justify-self:end!important}
+}
+@media(max-width:650px){
+ .nexo-agenda-page .ag-flow-list .ag-flow-block>.ag-appointment.ag-card-redesign{grid-template-columns:25px minmax(0,1fr)!important}
+ .nexo-agenda-page .ag-card-redesign .ag-card-buttons{grid-column:2!important;justify-self:start!important}
+}
