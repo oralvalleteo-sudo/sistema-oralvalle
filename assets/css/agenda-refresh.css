@@ -178,3 +178,29 @@
 .nexo-agenda-page .ag-card-delete{color:#d64545!important}
 @media(max-width:1250px){.nexo-agenda-page .ag-card-redesign{flex-wrap:wrap!important}.nexo-agenda-page .ag-card-buttons{margin-left:49px!important}.nexo-agenda-page .ag-card-top{flex-wrap:wrap!important}.nexo-agenda-page .ag-flow-list .ag-flow-row{grid-template-columns:85px minmax(0,1fr)!important}}
 @media(max-width:650px){.nexo-agenda-page .ag-flow-list .ag-flow-row{grid-template-columns:76px minmax(0,1fr)!important}.nexo-agenda-page .ag-card-redesign{gap:6px!important;padding:7px!important}.nexo-agenda-page .ag-card-avatar{flex-basis:30px!important;width:30px!important;height:30px!important;font-size:11px!important}.nexo-agenda-page .ag-card-buttons{margin-left:36px!important}}
+
+/* NexoDent 251 — agenda compacta, sem sobreposicao de informacoes. */
+.nexo-agenda-page .ag-flow-list .ag-flow-row{grid-template-columns:78px minmax(0,1fr)!important;column-gap:7px!important}
+.nexo-agenda-page .ag-flow-list .ag-flow-time{font-size:11px!important;line-height:1.25!important;white-space:normal!important;overflow-wrap:normal!important;font-variant-numeric:tabular-nums!important}
+.nexo-agenda-page .ag-card-redesign{display:grid!important;grid-template-columns:30px minmax(0,1fr) auto!important;align-items:center!important;gap:7px!important;min-height:0!important;padding:7px 8px!important;flex-wrap:nowrap!important;border-radius:11px!important}
+.nexo-agenda-page .ag-card-avatar{width:30px!important;height:30px!important;flex:none!important;font-size:11px!important}
+.nexo-agenda-page .ag-card-info{width:100%!important;min-width:0!important;gap:2px!important}
+.nexo-agenda-page .ag-card-top{display:flex!important;flex-wrap:wrap!important;justify-content:flex-start!important;gap:3px 7px!important;min-width:0!important}
+.nexo-agenda-page .ag-card-top .ag-patient{flex:1 1 85px!important;font-size:12px!important;min-width:0!important;line-height:1.25!important}
+.nexo-agenda-page .ag-card-status{font-size:9px!important;padding:2px 6px!important;max-width:100%!important}
+.nexo-agenda-page .ag-card-sub{font-size:10px!important;line-height:1.25!important}
+.nexo-agenda-page .ag-card-chips{gap:3px!important}
+.nexo-agenda-page .ag-card-chip{font-size:9px!important;padding:1px 5px!important}
+.nexo-agenda-page .ag-card-buttons{display:flex!important;flex-wrap:nowrap!important;align-self:center!important;gap:3px!important;margin:0!important}
+.nexo-agenda-page .ag-card-icon{width:24px!important;min-width:24px!important;height:26px!important;font-size:13px!important}
+@media(max-width:1150px){
+ .nexo-agenda-page .ag-card-redesign{grid-template-columns:28px minmax(0,1fr)!important}
+ .nexo-agenda-page .ag-card-buttons{grid-column:2!important;justify-self:start!important;margin:2px 0 0!important}
+ .nexo-agenda-page .ag-flow-list .ag-flow-row{grid-template-columns:76px minmax(0,1fr)!important}
+}
+@media(max-width:650px){
+ .nexo-agenda-page .ag-flow-list .ag-flow-row{grid-template-columns:67px minmax(0,1fr)!important;gap:5px!important}
+ .nexo-agenda-page .ag-card-redesign{grid-template-columns:25px minmax(0,1fr)!important;padding:6px!important;gap:5px!important}
+ .nexo-agenda-page .ag-card-avatar{width:25px!important;height:25px!important}
+ .nexo-agenda-page .ag-card-top .ag-patient{white-space:normal!important;overflow-wrap:anywhere!important}
+}
