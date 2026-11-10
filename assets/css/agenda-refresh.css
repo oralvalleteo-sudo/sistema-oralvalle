@@ -228,3 +228,27 @@
  .nexo-agenda-page .ag-flow-list .ag-flow-block>.ag-appointment.ag-card-redesign{grid-template-columns:25px minmax(0,1fr)!important}
  .nexo-agenda-page .ag-card-redesign .ag-card-buttons{grid-column:2!important;justify-self:start!important}
 }
+
+/* NexoDent 253: retirar altura minima herdada de legacy-3.css.
+   A altura acompanha o conteudo real, inclusive com dois agendamentos no mesmo horario. */
+.nexo-agenda-page .ag-flow-list .ag-flow-block > .ag-appointment.ag-card-redesign {
+  min-height: 0 !important;
+  height: auto !important;
+  padding-block: 5px !important;
+  box-sizing: border-box !important;
+  align-content: center !important;
+}
+.nexo-agenda-page .ag-flow-list .ag-flow-block {
+  min-height: 0 !important;
+  height: auto !important;
+}
+.nexo-agenda-page .ag-flow-list .ag-flow-booked .ag-flow-content {
+  padding-block: 1px !important;
+  gap: 2px !important;
+}
+.nexo-agenda-page .ag-flow-list .ag-card-redesign .ag-card-info {
+  gap: 1px !important;
+}
+.nexo-agenda-page .ag-flow-list .ag-card-redesign .ag-card-buttons {
+  align-self: center !important;
+}
