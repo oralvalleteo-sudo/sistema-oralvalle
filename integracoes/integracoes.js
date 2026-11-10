@@ -1,6 +1,7 @@
 (()=>{'use strict';
 const cloud=window.OralCloud,clinic=document.getElementById('clinic'),status=document.getElementById('connection-status');
 const providers=['google_ads','meta_ads','whatsapp_business'];
+const whatsappBtn=document.getElementById('connect-whatsapp'),whatsappMsg=document.getElementById('whatsapp-connect-message');
 const connectBtn=document.getElementById('connect-google'),googleMsg=document.getElementById('google-connect-message');
 const picker=document.getElementById('google-account-picker'),loadBtn=document.getElementById('load-google-accounts');
 const accountSelect=document.getElementById('google-account-select'),saveBtn=document.getElementById('save-google-account'),accountMsg=document.getElementById('google-account-message');
@@ -12,8 +13,10 @@ async function refresh(){
  setStatus('Consultando o status das integrações…');
  try{
   const rows=await cloud.request('/rest/v1/nexodent_channel_connections?clinic_id=eq.'+encodeURIComponent(id)+'&select=provider,status,external_account_label,external_account_id,updated_at');
-  let googleState='disconnected';
-  for(const row of rows||[]){if(!providers.includes(row.provider))continue;const labels={connected:'Conectado',pending:'Em configuração',error:'Requer atenção',disconnected:'Não conectado'};setBadge(row.provider,row.status,labels[row.status]||'Não conectado');if(row.provider==='google_ads'){googleState=row.status;if(row.status==='connected'&&row.external_account_label)googleInfo('Conta vinculada: '+row.external_account_label+'.');}}
+  let googleState='disconnected',whatsappState='disconnected';
+  for(const row of rows||[]){if(!providers.includes(row.provider))continue;const labels={connected:'Conectado',pending:'Em configuração',error:'Requer atenção',disconnected:'Não conectado'};setBadge(row.provider,row.status,labels[row.status]||'Não conectado');if(row.provider==='whatsapp_business'){whatsappState=row.status;if(row.status==='connected'&&whatsappMsg)whatsappMsg.textContent='Número conectado: '+(row.external_account_label||'WhatsApp Business')+'.';}
+  if(row.provider==='google_ads'){googleState=row.status;if(row.status==='connected'&&row.external_account_label)googleInfo('Conta vinculada: '+row.external_account_label+'.');}}
+  if(whatsappBtn){whatsappBtn.textContent=whatsappState==='connected'?'WhatsApp conectado':'Conectar WhatsApp';whatsappBtn.disabled=whatsappState==='connected';if(whatsappState!=='connected'&&whatsappMsg)whatsappMsg.textContent='Conexão oficial disponível após configurar a autorização Meta no servidor.';}
   if(picker)picker.hidden=googleState!=='pending';
   if(googleState==='pending')googleInfo('Autorização Google concluída. Falta selecionar a conta de anúncios da clínica.');
   setStatus('Status carregado.');
@@ -53,6 +56,16 @@ async function saveAccount(){
  }catch(e){accountMsg.textContent='Não foi possível vincular a conta: '+e.message}
  finally{saveBtn.disabled=false}
 }
+async function connectWhatsapp(){
+ if(!clinic.value)return whatsappMsg.textContent='Selecione uma clínica.';
+ if(location.protocol!=='https:')return whatsappMsg.textContent='Abra o NexoDent em HTTPS.';
+ whatsappBtn.disabled=true;whatsappMsg.textContent='Verificando a integração oficial…';
+ try{
+  const response=await cloud.request('/functions/v1/nexodent-whatsapp-connect-start',{method:'POST',body:{clinic_id:clinic.value}});
+  if(!response?.authorization_url||!/^https:\/\/(www\.)?facebook\.com\//.test(response.authorization_url))throw new Error('O serviço Meta não retornou uma autorização válida.');
+  window.top.location.assign(response.authorization_url);
+ }catch(e){whatsappMsg.textContent='Conexão ainda indisponível: '+(e.status===404?'é necessário publicar e configurar a função de autorização Meta no Supabase.':e.message);whatsappBtn.disabled=false;}
+}
 async function init(){
  if(!cloud?.enabled){setStatus('Supabase não configurado.');return}
  try{
@@ -62,6 +75,7 @@ async function init(){
   if(!clinic.options.length){setStatus('Nenhuma clínica autorizada.');return}
   clinic.disabled=false;clinic.addEventListener('change',refresh);
   connectBtn.disabled=false;connectBtn.addEventListener('click',connectGoogle);
+  if(whatsappBtn){whatsappBtn.disabled=false;whatsappBtn.addEventListener('click',connectWhatsapp);}
   loadBtn.addEventListener('click',loadAccounts);saveBtn.addEventListener('click',saveAccount);
   const query=new URLSearchParams(location.search);if(query.has('google_ads')){googleInfo(query.get('google_ads')==='authorized'?'Autorização Google recebida. Agora vamos selecionar a conta de anúncios.':'Autorização não concluída. Confira o acesso e tente novamente.');history.replaceState(null,'',location.pathname)}
   await refresh();
