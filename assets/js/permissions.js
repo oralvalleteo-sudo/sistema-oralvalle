@@ -71,15 +71,16 @@ function pmSeg(u,key,label){
 }
 function pmCardHtml(){
   if(!ME||!ME.admin)return '';
-  const us=AUTH.users.filter(x=>!x.admin);
-  const list=us.length?us.map(u=>`<details class="up-user" data-pmd="${u.id}"${view.pmOpen===u.id?' open':''}><summary><strong>${esc(u.nome)}</strong><span class="note" style="margin:0">· ${esc(u.login)}</span></summary>
+  const us=AUTH.users.filter(x=>x.id!==ME.id);
+  const list=us.length?us.map(u=>`<details class="up-user" data-pmd="${u.id}"${view.pmOpen===u.id?' open':''}><summary><strong>${esc(u.nome)}</strong>${u.admin?`<span class="note" style="margin:0;color:#a65b00;font-weight:700">· Administrador</span>`:""}<span class="note" style="margin:0">· ${esc(u.login)}</span></summary>
     <div class="up-body">
-      <div class="up-quick"><span class="note" style="margin:0">Marcar tudo como:</span>${['none','view','edit'].map(m=>`<button type="button" class="ghost sm" data-act="pmset" data-id="${u.id}" data-m="${m}">${PM_LAB[m]}</button>`).join('')}</div>
+      <div style="margin-bottom:12px"><button type="button" class="ghost sm" data-act="acadmin" data-id="${u.id}">${u.admin?"Retirar administrador":"Tornar administrador"}</button></div>
+      ${u.admin?`<p class="note">Este usuário possui acesso completo como administrador.</p>`:`<div class="up-quick"><span class="note" style="margin:0">Marcar tudo como:</span>${['none','view','edit'].map(m=>`<button type="button" class="ghost sm" data-act="pmset" data-id="${u.id}" data-m="${m}">${PM_LAB[m]}</button>`).join('')}</div>
       ${PM_MODS.map(g=>`<h3 class="up-h">${g[0]}</h3>${g[1].map(x=>`<div class="up-row"><span>${x[1]}</span>${pmSeg(u,x[0],x[1])}</div>`).join('')}`).join('')}
-      <div style="margin-top:14px"><button type="button" class="danger sm" data-act="acrm" data-id="${u.id}">${delArm===u.id?'Confirmar remoção':'Remover usuário'}</button></div>
+      <div style="margin-top:14px"><button type="button" class="danger sm" data-act="acrm" data-id="${u.id}">${delArm===u.id?'Confirmar remoção':'Remover usuário'}</button></div>`}
     </div></details>`).join(''):`<p class="note" style="margin:10px 0">Ainda não há usuários além do administrador. Crie um abaixo e depois escolha o que ele pode ver e alterar.</p>`;
   return `<section class="card cfg-card"><h2>Acesso dos usuários</h2>
-    <p class="note" style="margin:0 0 4px">Escolha o que cada pessoa que entra com login pode ver e alterar. O administrador sempre tem acesso a tudo. Cada mudança é salva na hora.</p>
+    <p class="note" style="margin:0 0 4px">Escolha o que cada pessoa que entra com login pode ver e alterar. Administradores têm acesso completo. É possível promover ou rebaixar outros usuários. Cada mudança é salva na hora.</p>
     <p class="note" style="margin:0 0 8px"><strong>Oculto</strong>: a função some do menu. <strong>Só ver</strong>: consulta e imprime, sem alterar nada. <strong>Ver e alterar</strong>: acesso completo à função.</p>
     ${list}
     <h3 class="up-h" style="margin-top:20px">Novo usuário</h3>
