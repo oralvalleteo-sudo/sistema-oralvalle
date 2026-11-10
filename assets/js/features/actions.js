@@ -149,6 +149,17 @@ const A={
     if(!nome||!login){toast('Preencha nome e usuário',3000);return}if(pw.length<6){toast('A senha precisa ter pelo menos 6 caracteres',3000);return}
     if(AUTH.users.some(x=>x.login===login)){toast('Já existe um usuário com esse nome de entrada',3000);return}
     const salt=rnd(16);AUTH.users.push({id:uid(),nome,login,salt,hash:await hashPw(pw,salt),admin:false,perms:pmDefault()});view.pmOpen=AUTH.users[AUTH.users.length-1].id;aSave();render();toast('Usuário adicionado. Defina o que ele pode ver e alterar.',3500)},
+  acadmin:(b,d)=>{
+    if(!ME||!ME.admin||!d.id||d.id===ME.id)return;
+    const target=AUTH.users.find(x=>String(x.id)===String(d.id));if(!target)return;
+    const next=!target.admin;
+    if(!next&&AUTH.users.filter(x=>x.admin).length<=1){toast('A clínica precisa manter ao menos um administrador',3500);return}
+    if(!confirm(next?'Conceder acesso administrativo completo a '+target.nome+'?':'Retirar o acesso administrativo de '+target.nome+'?'))return;
+    target.admin=next;
+    if(!next)target.perms=pmDefault();
+    if(!aSave()){target.admin=!next;return}
+    render();toast(next?'Administrador adicionado':'Acesso administrativo retirado',3000);
+  },
   acrm:(b,d)=>{if(!ME||!ME.admin||d.id===ME.id)return;arm(d.id,()=>{AUTH.users=AUTH.users.filter(x=>x.id!==d.id);aSave();render();toast('Usuário removido')})},
   acrec:async()=>{if(!ME||!ME.admin)return;const c=newCode(),s=rnd(16);AUTH.rec={salt:s,hash:await hashPw(recNorm(c),s)};aSave();view.newrec=c;render();toast('Novo código gerado. Anote agora.',3500)},
   orthonav:()=>{view.h='ortho';view.id=null;render();topo()},

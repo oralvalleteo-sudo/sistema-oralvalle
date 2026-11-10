@@ -56,7 +56,7 @@ function pmAllowed(act,d){
   if(act==='pfOpen')return pmLvl('pf')>=1;
   if(act==='pfFollow')return pmLvl('pf')>=2;
   if(act==='tab')return pmTabOk(d.t);
-  if(act.slice(0,3)==='cfg'||act==='acadd'||act==='acrm'||act==='acrec'||act==='pmset')return false;
+  if(act.slice(0,3)==='cfg'||act==='acadd'||act==='acrm'||act==='acrec'||act==='acadmin'||act==='pmset')return false;
   if(PM_SAFE.has(act))return true;
   return pmCur()>=2;
 }
@@ -74,12 +74,13 @@ function pmCardHtml(){
   const us=AUTH.users.filter(x=>!x.admin);
   const list=us.length?us.map(u=>`<details class="up-user" data-pmd="${u.id}"${view.pmOpen===u.id?' open':''}><summary><strong>${esc(u.nome)}</strong><span class="note" style="margin:0">· ${esc(u.login)}</span></summary>
     <div class="up-body">
+      <button type="button" class="ghost sm" data-act="acadmin" data-id="${u.id}">Promover a administrador</button>
       <div class="up-quick"><span class="note" style="margin:0">Marcar tudo como:</span>${['none','view','edit'].map(m=>`<button type="button" class="ghost sm" data-act="pmset" data-id="${u.id}" data-m="${m}">${PM_LAB[m]}</button>`).join('')}</div>
       ${PM_MODS.map(g=>`<h3 class="up-h">${g[0]}</h3>${g[1].map(x=>`<div class="up-row"><span>${x[1]}</span>${pmSeg(u,x[0],x[1])}</div>`).join('')}`).join('')}
       <div style="margin-top:14px"><button type="button" class="danger sm" data-act="acrm" data-id="${u.id}">${delArm===u.id?'Confirmar remoção':'Remover usuário'}</button></div>
     </div></details>`).join(''):`<p class="note" style="margin:10px 0">Ainda não há usuários além do administrador. Crie um abaixo e depois escolha o que ele pode ver e alterar.</p>`;
   return `<section class="card cfg-card"><h2>Acesso dos usuários</h2>
-    <p class="note" style="margin:0 0 4px">Escolha o que cada pessoa que entra com login pode ver e alterar. O administrador sempre tem acesso a tudo. Cada mudança é salva na hora.</p>
+    <p class="note" style="margin:0 0 4px">Escolha o que cada pessoa que entra com login pode ver e alterar. Administradores têm acesso completo. Você pode promover funcionários existentes a administrador. Cada mudança é salva na hora.</p>
     <p class="note" style="margin:0 0 8px"><strong>Oculto</strong>: a função some do menu. <strong>Só ver</strong>: consulta e imprime, sem alterar nada. <strong>Ver e alterar</strong>: acesso completo à função.</p>
     ${list}
     <h3 class="up-h" style="margin-top:20px">Novo usuário</h3>
