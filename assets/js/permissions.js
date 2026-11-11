@@ -18,6 +18,7 @@ function permOf(u,key){
   if(!u)return 0;if(u.admin)return 2;
   if(key==='inicio')key='ag';
   if(key==='conta')return 2;
+  if(key==='sigdoc')return Math.min(permOf(u,'pac'),permOf(u,'pac.arquivos'));
   if(key==='cfg')return 0;
   const p=u.perms;if(!p)return 2;
   const v=p[key];

@@ -1,16 +1,20 @@
-/* NexoDent — protótipo local de coleta de assinaturas. NÃO é assinatura digital ICP-Brasil. */
+/* NexoDent — coleta presencial e arquivamento. Assinatura em imagem, NÃO ICP-Brasil. */
 (function(){
  'use strict';
  const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const types=['Termo de consentimento','Contrato de tratamento','Orçamento','Declaração','Outro documento'];
- let signatures={dentista:null,paciente:null}, signedAt={};
+ let signatures={dentista:null,paciente:null}, signedAt={},form={},revision=0,saving=false,saved=null,attemptId=null,sessionOwner=null;
  let registryClinic=null,registryRows=[],registryBusy=false,registryError='';
  const activeClinic=()=>window.OralCloud?.clinicId||null;
  const registryAvailable=()=>!!(window.OralCloud?.enabled&&activeClinic());
- function clear(){signatures={dentista:null,paciente:null};signedAt={};}
+ function clear(){signatures={dentista:null,paciente:null};signedAt={};revision++;saved=null;attemptId=null;}
+ function resetInk(){clear();for(const role of ['dentista','paciente']){const canvas=document.getElementById('ns-'+role);if(canvas)canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);const label=document.getElementById('ns-status-'+role);if(label)label.textContent='Assine após revisar o documento';}const consent=document.getElementById('ns-consent');if(consent)consent.checked=false;}
+ const owner=()=>activeClinic()+':'+(window.OralCloud?.session?.user?.id||'');
+
  window.nexoSignHtml=function(){
+  if(sessionOwner!==owner()){clear();form={};sessionOwner=owner();}
   const patients=(db.p||[]).filter(p=>!p.arq),dentists=(db.dt||[]).filter(d=>d.ativo!==false);
-  return `<div class="ov-page-head"><div><h1>Documentos e Assinaturas</h1><p class="sub">Coleta manual gratuita de assinaturas — versão de testes.</p></div></div>
+  return `<div class="ov-page-head"><div><h1>Documentos e Assinaturas</h1><p class="sub">Assinatura presencial e documentos arquivados no prontuário.</p></div></div>
 
   <style>
   .ns-compact .ns-panel{border:1px solid var(--border,#d9dfe6);border-radius:12px;margin:12px 0;overflow:hidden;background:var(--card,#fff)}
@@ -28,7 +32,7 @@
   .ns-compact .ns-panel>details{margin:12px}
   </style>
   <section class="card ns-compact" style="border-top:1px solid #d9dfe6;max-width:980px">
-   <p class="note" style="padding:12px;background:#ffffff;color:#222;border:1px solid #d9dfe6;border-radius:8px"><strong>Atenção:</strong> este módulo é um protótipo local. Não salva documentos assinados no Supabase, não oferece trilha de auditoria verificável, não comprova identidade e <strong>não realiza assinatura digital ICP-Brasil</strong>. Não use como substituto de assinaturas exigidas por lei em receitas, atestados ou documentos clínicos. Imprima e colha assinatura física quando necessário.</p>
+   <p class="note" style="padding:12px;background:#ffffff;color:#222;border:1px solid #d9dfe6;border-radius:8px"><strong>Atenção:</strong> a assinatura presencial é eletrônica simples, registrada como imagem no PDF e arquivada no prontuário. Ela não comprova identidade por conta própria e <strong>não realiza assinatura digital ICP-Brasil</strong>. Não use como substituto de assinaturas exigidas por lei em receitas, atestados ou documentos clínicos. Imprima e colha assinatura física quando necessário.</p>
    <details class="ns-panel"><summary><span class="ns-panel-label"><strong>Certificado digital A1</strong><small>Verificar titular e validade do certificado</small></span><span class="ns-panel-arrow" aria-hidden="true">⌄</span></summary>
    <section style="padding:16px;border:1px solid #d9dfe6;border-radius:12px;margin:16px 0;background:#ffffff;color:#222" aria-label="Inspeção de certificado A1">
     <h3 style="margin-top:0">Verificar certificado digital A1</h3>
@@ -42,7 +46,7 @@
    <section style="padding:16px;border:1px solid #d9dfe6;border-radius:12px;margin:16px 0;background:#ffffff;color:#222" aria-label="Assinatura PDF A1 em teste">
     <h3 style="margin-top:0">Assinar PDF com A1</h3>
     <p class="note"><strong>Não use para documentos clínicos reais nesta etapa.</strong> O serviço ainda não comprova que o certificado pertence ao profissional autenticado, não valida toda a cadeia ICP-Brasil e não salva o arquivo no prontuário. Use apenas PDF de teste, sem dados de pacientes.</p>
-    <label for="ns-pdf-file">PDF de teste (até 5 MB)</label><input type="file" id="ns-pdf-file" accept="application/pdf,.pdf">
+    <label for="ns-pdf-file">PDF de teste (até 2 MB)</label><input type="file" id="ns-pdf-file" accept="application/pdf,.pdf">
     <label style="display:block;margin-top:10px"><input type="checkbox" id="ns-a1-ack"> Confirmo que sou titular do certificado, autorizo esta assinatura e estou utilizando somente um PDF de teste sem dados de pacientes.</label>
     <button type="button" id="ns-a1-sign" style="background:#f97316;margin-top:10px">Assinar PDF de teste</button>
     <p class="note" id="ns-a1-sign-result" role="status" aria-live="polite">Selecione o certificado A1 e informe a senha acima; escolha também um PDF de teste.</p>
@@ -69,23 +73,36 @@
    <div class="row"><div><label>Paciente</label><select id="ns-patient"><option value="">Selecione</option>${patients.map(p=>`<option value="${e(p.id)}">${e(p.nome)}</option>`).join('')}</select></div><div><label>Dentista</label><select id="ns-dentist"><option value="">Selecione</option>${dentists.map(d=>`<option value="${e(d.id)}">${e(d.nome)}${d.cro?' — '+e(d.cro):''}</option>`).join('')}</select></div></div>
    <label>Tipo de documento</label><select id="ns-type">${types.map(t=>`<option>${e(t)}</option>`).join('')}</select>
    <label>Título</label><input id="ns-title" maxlength="160" placeholder="Ex.: Consentimento para procedimento">
-   <label>Texto do documento</label><textarea id="ns-body" rows="9" placeholder="Digite ou cole o conteúdo do documento. Revise com o profissional responsável antes da assinatura."></textarea>
-   ${['dentista','paciente'].map(role=>`<div style="margin-top:20px"><h3>Assinatura do ${role}</h3><p class="note">Assine usando mouse, dedo ou caneta digital. A imagem só fica nesta página até imprimir ou sair.</p><canvas id="ns-${role}" width="700" height="160" aria-label="Área para assinatura do ${role}" style="display:block;width:100%;max-width:700px;height:160px;background:#fff;border:2px solid #f97316;border-radius:10px;touch-action:none"></canvas><div class="row" style="margin-top:8px"><button type="button" class="ghost sm" data-ns-clear="${role}">Limpar assinatura</button><span id="ns-status-${role}" class="note">Ainda não assinou</span></div></div>`).join('')}
+   <label>Texto do documento</label><textarea id="ns-body" maxlength="12000" rows="9" placeholder="Digite ou cole o conteúdo do documento. Revise com o profissional responsável antes da assinatura."></textarea>
+   ${['dentista','paciente'].map(role=>`<div style="margin-top:20px"><h3>Assinatura do ${role}</h3><p class="note">Assine usando mouse, dedo ou caneta digital. O PDF será arquivado no prontuário após a confirmação de salvamento.</p><canvas id="ns-${role}" width="700" height="160" aria-label="Área para assinatura do ${role}" style="display:block;width:100%;max-width:700px;height:160px;background:#fff;border:2px solid #f97316;border-radius:10px;touch-action:none"></canvas><div class="row" style="margin-top:8px"><button type="button" class="ghost sm" data-ns-clear="${role}">Limpar assinatura</button><span id="ns-status-${role}" class="note">Ainda não assinou</span></div></div>`).join('')}
    <label style="display:block;margin-top:18px"><input type="checkbox" id="ns-consent"> Confirmo que as pessoas identificadas revisaram o conteúdo e concordaram em registrar suas assinaturas nesta tela.</label>
-   <div class="row" style="margin-top:18px;flex-wrap:wrap"><button type="button" id="ns-print" style="background:#f97316">Gerar versão para impressão / PDF</button><button type="button" class="ghost" id="ns-reset">Limpar formulário</button></div>
-   <p class="note">Para salvar como PDF, escolha “Salvar como PDF” na janela de impressão. Não há envio automático, armazenamento central ou validação criptográfica.</p>
+   <div class="row" style="margin-top:18px;flex-wrap:wrap"><button type="button" id="ns-print" style="background:#f97316">Salvar PDF assinado no prontuário</button><button type="button" class="ghost" id="ns-reset">Limpar formulário</button></div>
+   <p class="note">O paciente assina presencialmente, sem conta ou certificado. Após salvar, o PDF fica em Radiografias e documentos do paciente. Assinatura eletrônica simples; não é ICP-Brasil.</p>
    </details>
   </section>`;
  };
  function setup(canvas){if(!canvas||canvas.dataset.ready)return;canvas.dataset.ready='1';const ctx=canvas.getContext('2d'),role=canvas.id.slice(3);ctx.strokeStyle='#222';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';let drawing=false,changed=false;
   const pos=ev=>{const r=canvas.getBoundingClientRect();return {x:(ev.clientX-r.left)*canvas.width/r.width,y:(ev.clientY-r.top)*canvas.height/r.height}};
-  canvas.addEventListener('pointerdown',ev=>{drawing=true;canvas.setPointerCapture(ev.pointerId);const p=pos(ev);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+.01,p.y+.01);ctx.stroke();changed=true});
-  canvas.addEventListener('pointermove',ev=>{if(!drawing)return;const p=pos(ev);ctx.lineTo(p.x,p.y);ctx.stroke()});
-  const finish=()=>{if(!drawing)return;drawing=false;if(changed){signatures[role]=canvas.toDataURL('image/png');signedAt[role]=new Date().toISOString();const el=document.getElementById('ns-status-'+role);if(el)el.textContent='Assinatura capturada nesta sessão';}};
+  canvas.addEventListener('pointerdown',ev=>{drawing=true;canvas.setPointerCapture(ev.pointerId);const p=pos(ev);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+.01,p.y+.01);ctx.stroke();changed=false});
+  canvas.addEventListener('pointermove',ev=>{if(!drawing)return;const p=pos(ev);ctx.lineTo(p.x,p.y);ctx.stroke();changed=true});
+  const finish=()=>{if(!drawing)return;drawing=false;if(changed){revision++;saved=null;attemptId=null;signatures[role]=canvas.toDataURL('image/png');signedAt[role]=new Date().toISOString();const el=document.getElementById('ns-status-'+role);if(el)el.textContent='Assinatura capturada nesta sessão';}};
   canvas.addEventListener('pointerup',finish);canvas.addEventListener('pointercancel',finish);
  }
- const obs=new MutationObserver(()=>{['dentista','paciente'].forEach(r=>setup(document.getElementById('ns-'+r)))});
+ function restoreForm(){for(const id of ['ns-patient','ns-dentist','ns-title','ns-body','ns-type']){const el=document.getElementById(id);if(el&&form[id]!==undefined)el.value=form[id];}for(const role of ['dentista','paciente']){const canvas=document.getElementById('ns-'+role);if(canvas&&!canvas.dataset.ready){setup(canvas);if(signatures[role]){const image=new Image();image.onload=()=>{if(canvas.isConnected)canvas.getContext('2d').drawImage(image,0,0)};image.src=signatures[role];const status=document.getElementById('ns-status-'+role);if(status)status.textContent='Assinatura capturada nesta sessão';}}}}
+ const obs=new MutationObserver(restoreForm);
  document.addEventListener('DOMContentLoaded',()=>obs.observe(document.body,{childList:true,subtree:true}));
+ function certificateURL(path){
+  const configured=window.OralCloud?.config?.certificateApiUrl||'';
+  if(!configured&&location.hostname.endsWith('.github.io'))throw Error('O serviço A1 ainda não foi conectado. Configure o endereço HTTPS do assinador antes de enviar o certificado.');
+  const url=new URL(configured||location.origin);if(url.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(url.hostname))throw Error('O serviço de certificado precisa usar HTTPS.');
+  return new URL('/api/'+path,url).href;
+ }
+ async function certificateRequest(path,body){
+  const url=certificateURL(path),cloud=window.OralCloud;if(!cloud?.clinicId)throw Error('Selecione uma clínica conectada.');
+  // Atualiza a sessão pelo mesmo mecanismo do sistema antes de enviar certificado e senha.
+  await cloud.request('/rest/v1/rpc/clinic_list',{method:'POST',body:{}});
+  return fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cloud.session.access_token},cache:'no-store',body:JSON.stringify({...body,clinicId:cloud.clinicId}),signal:AbortSignal.timeout(45000)});
+ }
  async function checkA1(){
   const file=document.getElementById('ns-a1-file')?.files?.[0],pwd=document.getElementById('ns-a1-password'),out=document.getElementById('ns-a1-result'),btn=document.getElementById('ns-a1-check');
   if(!out||!pwd||!btn)return;
@@ -97,7 +114,7 @@
   try{
    const bytes=new Uint8Array(await file.arrayBuffer());
    let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
-   const response=await fetch('/api/certificado-inspecionar',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},cache:'no-store',body:JSON.stringify({pfxBase64:btoa(binary),password:pwd.value})});
+   const response=await certificateRequest('certificado-inspecionar',{pfxBase64:btoa(binary),password:pwd.value});
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(data.error||'Não foi possível verificar o certificado (HTTP '+response.status+').');
    out.textContent='Titular: '+(data.titular||'Não identificado')+' | Validade: '+(data.fim?new Date(data.fim).toLocaleDateString('pt-BR'):'não informada')+' | '+(data.vigente?'Dentro do prazo de validade':'Fora do prazo de validade')+'. Inspeção apenas; documento NÃO assinado.';
@@ -109,7 +126,7 @@
   const pwd=document.getElementById('ns-a1-password'),out=document.getElementById('ns-a1-sign-result'),btn=document.getElementById('ns-a1-sign');
   if(!out||!pwd||!btn)return;
   if(!cert||!(/\.(pfx|p12)$/i.test(cert.name))||!cert.size||cert.size>1024*1024){out.textContent='Selecione um certificado A1 .pfx/.p12 de até 1 MB.';return}
-  if(!pdf||!(/\.pdf$/i.test(pdf.name))||!pdf.size||pdf.size>5*1024*1024){out.textContent='Selecione um PDF de teste de até 5 MB.';return}
+  if(!pdf||!(/\.pdf$/i.test(pdf.name))||!pdf.size||pdf.size>2*1024*1024){out.textContent='Selecione um PDF de teste de até 2 MB.';return}
   if(!pwd.value){out.textContent='Informe a senha do certificado.';return}
   if(!document.getElementById('ns-a1-ack')?.checked){out.textContent='Confirme a autorização e o uso exclusivo de documento de teste.';return}
   const token=window.OralCloud?.session?.access_token;
@@ -117,7 +134,7 @@
   const b64=async file=>{const bytes=new Uint8Array(await file.arrayBuffer());let str='';for(let i=0;i<bytes.length;i+=8192)str+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(str)};
   btn.disabled=true;out.textContent='Assinando PDF de teste...';
   try{
-   const response=await fetch('/api/certificado-assinar-pdf',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},cache:'no-store',body:JSON.stringify({pdfBase64:await b64(pdf),pfxBase64:await b64(cert),password:pwd.value,acknowledge:true})});
+   const response=await certificateRequest('certificado-assinar-pdf',{pdfBase64:await b64(pdf),pfxBase64:await b64(cert),password:pwd.value,acknowledge:true});
    if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||'Erro HTTP '+response.status)}
    if(!String(response.headers.get('content-type')||'').includes('application/pdf'))throw new Error('Resposta inesperada do servidor');
    const blob=await response.blob();if(blob.size<100)throw new Error('PDF assinado inválido');
@@ -179,6 +196,25 @@
  document.addEventListener('change',ev=>{if(ev.target?.id==='ns-reg-patient')registryRender()});
  const regObserver=new MutationObserver(()=>{if(document.getElementById('ns-reg-list')){if(registryClinic!==activeClinic()){registryRows=[];registryClinic=null;}registryLoad();}});
  document.addEventListener('DOMContentLoaded',()=>regObserver.observe(document.body,{childList:true,subtree:true}));
+ async function savePresential(){
+  if(saving)return;const get=id=>document.getElementById(id),button=get('ns-print'),cloud=window.OralCloud;
+  if(!cloud?.enabled||!cloud.clinicId||!cloud.session?.user?.id||!window.OralCloudSync?.fileOperation){alert('Conecte a clínica para salvar o documento no prontuário.');return;}
+  const patient=(db.p||[]).find(p=>String(p.id)===get('ns-patient').value&&!p.arq),dentist=(db.dt||[]).find(d=>String(d.id)===get('ns-dentist').value&&d.ativo!==false);
+  if(!get('ns-consent').checked){alert('Confirme que o paciente e o profissional revisaram o documento e concordaram com as assinaturas.');return;}
+  const currentOwner=owner(),version=revision;
+  if(saved?.revision===version){saved.pdf.save(saved.file.nome);return;}
+  saving=true;button.disabled=true;button.textContent='Salvando no prontuário…';attemptId=attemptId||uid();
+  try{
+   const result=await NexoPresentialSigning.prepare({patient,dentist,title:get('ns-title').value.trim(),body:get('ns-body').value.trim(),type:get('ns-type').value,signatures:{...signatures},signedAt:{...signedAt},clinicId:cloud.clinicId,userId:cloud.session.user.id,fileId:attemptId});
+   if(owner()!==currentOwner||revision!==version)throw Error('O documento ou a sessão mudou. Revise e colete as assinaturas novamente.');
+   if(window.OralCloudFiles?.append)await OralCloudFiles.append(patient,result.file);else await OralCloudSync.fileOperation(patient.id,'append',{file:result.file});
+   if(owner()!==currentOwner)return;saved={...result,revision:version};result.pdf.save(result.file.nome);alert('PDF assinado salvo no prontuário do paciente. A assinatura é eletrônica simples presencial, não ICP-Brasil.');
+  }catch(error){alert('Não foi possível confirmar o arquivamento: '+(error.message||error)+' Confira a sincronização e o prontuário antes de tentar novamente.');}
+  finally{saving=false;button.disabled=false;button.textContent='Salvar PDF assinado no prontuário';}
+ }
+ function changed(event){const id=event.target.id;if(!['ns-patient','ns-dentist','ns-title','ns-body','ns-type'].includes(id))return;form[id]=event.target.value;resetInk();}
+ document.addEventListener('input',changed);document.addEventListener('change',changed);
+ window.addEventListener('beforeunload',event=>{if(!saved&&(signatures.paciente||signatures.dentista)){event.preventDefault();event.returnValue='';}});
  document.addEventListener('click',ev=>{
   const regPdf=ev.target.closest('[data-ns-reg-pdf]');if(regPdf){printRegistryPdf(regPdf.dataset.nsRegPdf);return}
   const regView=ev.target.closest('[data-ns-reg-view]');if(regView){viewRegistry(regView.dataset.nsRegView);return}
@@ -186,16 +222,8 @@
   if(ev.target.closest('#ns-reg-refresh')){registryClinic=null;registryLoad(true);return}
   if(ev.target.closest('#ns-a1-check')){checkA1();return}
   if(ev.target.closest('#ns-a1-sign')){signPdfTest();return}
-  const c=ev.target.closest('[data-ns-clear]');if(c){const r=c.dataset.nsClear,cv=document.getElementById('ns-'+r);cv?.getContext('2d').clearRect(0,0,cv.width,cv.height);signatures[r]=null;delete signedAt[r];document.getElementById('ns-status-'+r).textContent='Ainda não assinou';return}
-  if(ev.target.closest('#ns-reset')){if(confirm('Limpar texto e assinaturas desta sessão?')){clear();render()}return}
-  if(!ev.target.closest('#ns-print'))return;
-  const get=id=>document.getElementById(id),patient=(db.p||[]).find(p=>String(p.id)===get('ns-patient').value),dentist=(db.dt||[]).find(d=>String(d.id)===get('ns-dentist').value);
-  const title=get('ns-title').value.trim(),body=get('ns-body').value.trim();
-  if(!patient||!dentist||!title||!body){alert('Selecione paciente, dentista e preencha título e conteúdo.');return}
-  if(!get('ns-consent').checked){alert('Confirme a concordância antes de gerar o documento.');return}
-  if(!signatures.dentista||!signatures.paciente){alert('Colete as duas assinaturas ou imprima o documento sem usar este módulo e colha assinaturas físicas.');return}
-  const date=new Date().toLocaleString('pt-BR');const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${e(title)}</title><style>body{font:15px Arial,sans-serif;color:#222;max-width:780px;margin:35px auto;line-height:1.5}h1{color:#d65b0a}article{white-space:pre-wrap;min-height:220px}.sign{display:flex;gap:30px;margin-top:50px}.sign>div{flex:1}.sign img{width:100%;height:85px;object-fit:contain;border-bottom:1px solid #555}.note{font-size:11px;color:#555;margin-top:40px}@media print{body{margin:15mm}}</style></head><body><h1>${e(title)}</h1><p><b>Tipo:</b> ${e(get('ns-type').value)}<br><b>Paciente:</b> ${e(patient.nome)}<br><b>Dentista:</b> ${e(dentist.nome)} — ${e(dentist.cro||'CRO não informado')}<br><b>Gerado em:</b> ${e(date)}</p><article>${e(body)}</article><div class="sign"><div><img src="${signatures.dentista}"><b>${e(dentist.nome)}</b><br>Assinatura eletrônica simples (imagem)<br><small>${e(new Date(signedAt.dentista).toLocaleString('pt-BR'))}</small></div><div><img src="${signatures.paciente}"><b>${e(patient.nome)}</b><br>Assinatura eletrônica simples (imagem)<br><small>${e(new Date(signedAt.paciente).toLocaleString('pt-BR'))}</small></div></div><p class="note">Registro de teste gerado localmente no navegador. Não contém assinatura digital ICP-Brasil nem verificação independente de autoria ou integridade.</p></body></html>`;
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='nexodent-documento-para-impressao.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
-  alert('Arquivo HTML para impressão gerado. Abra-o e use Ctrl+P → Salvar como PDF. Não equivale a assinatura digital certificada.');
+  const c=ev.target.closest('[data-ns-clear]');if(c){const r=c.dataset.nsClear,cv=document.getElementById('ns-'+r);cv?.getContext('2d').clearRect(0,0,cv.width,cv.height);signatures[r]=null;delete signedAt[r];revision++;saved=null;attemptId=null;document.getElementById('ns-status-'+r).textContent='Ainda não assinou';return}
+  if(ev.target.closest('#ns-reset')){if(confirm('Limpar texto e assinaturas desta sessão?')){form={};clear();render()}return}
+  if(ev.target.closest('#ns-print')){savePresential();return;}
  });
 })();

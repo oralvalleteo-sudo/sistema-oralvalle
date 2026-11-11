@@ -6,6 +6,7 @@
   const urls = new Set();
   const nativeFilesTab = tabArquivos;
   PM_SAFE.add('cloudfileopen');
+  PM_SAFE.add('cloudfileverify');
   PM_SAFE.add('cloudfilesretry');
   PM_SAFE.add('cloudfilefilter');
   function entry(patient) {
@@ -124,6 +125,7 @@
         : visible.map(({row, index}) => `<article class="ov-file-card"><strong>${esc(row.dados?.nome || 'Arquivo')}</strong>
           <p>${esc(row.dados?.categoria || 'Outros')} · ${esc(row.dados?.dataEnvio || 'Data não informada')}</p>
           <button class="ghost sm" data-act="cloudfileopen" data-index="${index}">Abrir / baixar</button>
+          ${row.dados?.sha256?`<button class="ghost sm" data-act="cloudfileverify" data-index="${index}">Verificar integridade</button>`:''}
           <button class="danger sm" data-act="cloudfiledelete" data-index="${index}">Excluir</button></article>`).join('') || '<p>Nenhum documento nesta categoria.</p>';
     const marker = '<h2>Arquivos anexados';
     const markerAt = base.indexOf(marker);
@@ -176,6 +178,14 @@
     render();
   };
   A.cloudfilesretry = () => { const patient = cur(); if (!patient) return; cache.delete(JSON.stringify(patient.id)); render(); };
+  async function checkedBytes(row){
+    const data=row.dados?.data;
+    if(typeof data!=='string'||!/^data:(application\/pdf|image\/(?:png|jpeg|gif|webp)|text\/plain)(?:;filename=[a-zA-Z0-9_.-]+)?;base64,[a-zA-Z0-9+/]+=*$/i.test(data))throw new Error('Formato de arquivo não permitido para abertura segura.');
+    const bytes=await (await fetch(data)).arrayBuffer();
+    if(row.dados.sha256){const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(x=>x.toString(16).padStart(2,'0')).join('');if(hash!==String(row.dados.sha256).toLowerCase())throw new Error('O arquivo não corresponde ao hash de integridade registrado. Solicite revisão antes de usar o documento.');}
+    return bytes;
+  }
+  A.cloudfileverify=async(button,data,patient)=>{const descriptor=entry(patient).rows?.filter(row=>row.slot==='arquivos'&&row.position>=0)[Number(data.index)];if(!descriptor)return;button.disabled=true;try{const row=await OralCloudData.file(patient.id,descriptor.id);if(!row.dados?.sha256)throw new Error('Documento sem hash registrado');await checkedBytes(row);toast('Integridade conferida. Isso não verifica identidade nem certificação ICP-Brasil.',6000);}catch(error){report(error)}finally{button.disabled=false}};
   A.cloudfileopen = async (button, data, patient) => {
     const rows = entry(patient).rows?.filter(row => row.slot === 'arquivos' && row.position >= 0) || [];
     const descriptor = rows[Number(data.index)];
@@ -183,10 +193,8 @@
     button.disabled = true;
     try {
       const row = await OralCloudData.file(patient.id, descriptor.id);
-      if (typeof row.dados?.data !== 'string' || !/^data:/i.test(row.dados.data))
-        throw new Error('Conteúdo do arquivo inválido. Solicite recuperação administrativa.');
-      const response = await fetch(row.dados.data);
-      const url = URL.createObjectURL(await response.blob());
+      const bytes=await checkedBytes(row);
+      const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
       urls.add(url);
       const link = document.createElement('a');
       link.href = url; link.download = row.dados.nome || 'arquivo'; link.click();
@@ -197,7 +205,9 @@
   A.cloudfiledelete = async (button, data, patient) => {
     const rows = entry(patient).rows?.filter(row => row.slot === 'arquivos' && row.position >= 0) || [];
     const row = rows[Number(data.index)];
-    if (!row || !confirm('Excluir este arquivo do prontuário?')) return;
+    if(!row)return;
+    if(row.dados?.assinaturaTipo||row.dados?.sha256||/assinad/i.test(String(row.dados?.categoria||''))){toast('Documento com assinatura: mantenha o histórico. A exclusão exige revisão administrativa.',6000);return;}
+    if(!confirm('Excluir este arquivo do prontuário?'))return;
     button.disabled = true;
     try {
       await OralCloudSync.fileOperation(patient.id, 'delete', { row_id: row.id });
