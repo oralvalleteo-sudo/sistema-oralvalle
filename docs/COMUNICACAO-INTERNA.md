@@ -10,6 +10,19 @@ Mensagens aceitam até 4.000 caracteres. É possível anexar um arquivo de até 
 
 A central atualiza conversas a cada 8 segundos enquanto visível. O menu do sistema mostra um contador de mensagens não lidas, atualizado a cada 20 segundos. Não há notificação push com navegador fechado, indicação de presença, áudio/chamada ou confirmação de leitura do destinatário nesta versão. O contador indica o que o próprio usuário ainda não leu.
 
+## Botão flutuante em todas as telas de uso
+
+O botão laranja de chat aparece para usuários autenticados na tela principal, CRM, administração, integrações, assinatura, ativação e central de comunicação. Em módulos embutidos existe apenas o botão da janela principal, evitando duplicatas.
+
+- Arrastar por mouse ou toque muda a posição; ela é mantida no navegador para aquele usuário ao mudar de tela. Somente coordenadas são salvas, nunca texto de mensagens ou arquivos.
+- Clicar abre uma janela de chat sobre a tela atual. Fechar esconde o painel, sem interromper o formulário de trabalho nem apagar o rascunho. Trocar a clínica da tela principal mantém janelas de chat separadas em memória.
+- A janela compacta usa a mesma sessão da página principal, evitando outra instância de renovação de credenciais. Quando a tela informa uma clínica válida, a seleção fica travada a esse contexto no painel. A central completa continua permitindo selecionar as próprias clínicas autorizadas.
+- “Abrir central” abre a página completa em outra aba. “Repor botão” volta ao canto padrão. Escape fecha o painel; com o botão em foco, Alt + setas permite movê-lo pelo teclado.
+- A posição é ajustada ao tamanho visível da tela. Painéis fechados/inativos pausam a atualização e não marcam novas mensagens como lidas. Sair ou trocar de conta remove as janelas privadas da sessão anterior.
+- Rascunhos ficam em memória enquanto a página está aberta. Não há garantia de recuperação após recarregar/fechar a página ou sair da conta; o navegador avisa sobre mensagem não enviada ao sair da página.
+
+Para validar a interface, com Playwright e Chromium disponíveis: `node tests/browser/chat-widget.cjs`. O script aceita PLAYWRIGHT_MODULE e CHROMIUM_BIN para instalações fora do projeto e usa somente dados sintéticos. É um teste visual separado da suíte padrão de banco/CI.
+
 ## Permissões e segurança
 
 - Cada chamada valida sessão, vínculo ativo, clínica e participação na conversa. Sem gravações REST diretas nas tabelas. Um ID de conversa/arquivo conhecido não concede acesso.

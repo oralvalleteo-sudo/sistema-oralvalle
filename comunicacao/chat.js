@@ -1,11 +1,16 @@
 (()=>{'use strict';
-const $=id=>document.getElementById(id),cloud=window.OralCloud;
-const state={clinic:null,user:null,canWrite:false,people:[],rooms:[],active:null,messages:new Map(),detail:null,version:0,busy:false,polling:false,older:false,roomOffset:0,roomHasMore:false,lastRead:null,reading:false,draft:null};
+const $=id=>document.getElementById(id),embedded=new URLSearchParams(location.search).get('embedded')==='1'&&window.parent!==window;
+let cloud=window.OralCloud;
+if(embedded){document.documentElement.classList.add('chat-embedded');try{if(window.parent.location.origin===location.origin&&window.parent.OralCloud)cloud=window.parent.OralCloud;}catch{}}
+
+const state={clinic:null,user:null,canWrite:false,people:[],rooms:[],active:null,messages:new Map(),detail:null,version:0,busy:false,polling:false,older:false,roomOffset:0,roomHasMore:false,lastRead:null,reading:false,draft:null,lockedClinic:false,embedVisible:true};
+function visible(){if(document.hidden)return false;if(!embedded)return true;try{return state.embedVisible&&window.parent.NexoChatWidget?.isOpen!==false&&window.parent.NexoChatWidget?.isFrameActive?.(window)!==false;}catch{return false}}
+window.NexoChatEmbedded={hasDraft:()=>dirty()};
 const status=text=>{$('status').textContent=text};
 const rpc=(name,body={},clinic=state.clinic)=>cloud.request('/rest/v1/rpc/nexodent_chat_'+name,{method:'POST',body:{p_clinic:clinic,...body}});
 const dirty=()=>!!($('body').value.trim()||$('file').files.length);
 function confirmDiscard(){return !dirty()||confirm('Há uma mensagem não enviada. Descartar para trocar de conversa?')}
-function setSending(value){state.busy=value;$('send').disabled=value||!state.canWrite;$('body').disabled=value;$('file').disabled=value;$('clinic').disabled=value;$('new').disabled=value||!state.canWrite||state.people.filter(p=>p.id!==state.user).length===0;}
+function setSending(value){state.busy=value;$('send').disabled=value||!state.canWrite;$('body').disabled=value;$('file').disabled=value;$('clinic').disabled=value||state.lockedClinic;$('new').disabled=value||!state.canWrite||state.people.filter(p=>p.id!==state.user).length===0;}
 function clearComposer(){$('body').readOnly=false;$('file').disabled=false;$('send').disabled=!state.canWrite;$('body').value='';$('file').value='';$('clear-file').hidden=true;state.draft=null;}
 function renderRooms(){
  const fragment=document.createDocumentFragment();
@@ -30,7 +35,7 @@ function renderMessages(mode='new'){
  $('older').hidden=!state.older;
 }
 async function markRead(){
- if(state.reading||!state.active||!state.messages.size||document.hidden)return;const box=$('messages');if(box.scrollHeight-box.scrollTop-box.clientHeight>100)return;
+ if(state.reading||!state.active||!state.messages.size||!visible())return;const box=$('messages');if(embedded&&!document.documentElement.classList.contains('has-chat-room'))return;if(box.scrollHeight-box.scrollTop-box.clientHeight>100)return;
  const id=[...state.messages.keys()].reduce((a,b)=>BigInt(a)>BigInt(b)?a:b);if(state.lastRead===id)return;
  const version=state.version,room=state.active,clinic=state.clinic;state.reading=true;
  try{await rpc('mark_read',{p_room:room,p_message:id},clinic);if(version===state.version){state.lastRead=id;const entry=state.rooms.find(r=>r.id===room);if(entry)entry.unread=0;renderRooms();$('new-messages').textContent='';}}
@@ -48,8 +53,8 @@ async function messages(mode='new',remaining=5){
  if(mode==='new'&&result.has_more&&remaining>1&&version===state.version)await messages('new',remaining-1);
 }
 async function selectRoom(room){
- if(state.busy)return status('Aguarde a confirmação do envio.');if(state.active===room.id)return;if(!confirmDiscard())return;
- clearComposer();state.version++;const version=state.version;state.active=room.id;state.messages.clear();state.lastRead=null;state.older=false;state.detail=null;
+ if(state.busy)return status('Aguarde a confirmação do envio.');if(state.active===room.id){document.documentElement.classList.add('has-chat-room');markRead();return;}if(!confirmDiscard())return;
+ clearComposer();document.documentElement.classList.add('has-chat-room');state.version++;const version=state.version;state.active=room.id;state.messages.clear();state.lastRead=null;state.older=false;state.detail=null;
  $('title').textContent=room.title;$('messages').replaceChildren();$('participants').textContent='Carregando participantes…';$('new-messages').textContent='';$('manage').hidden=true;$('composer').hidden=!state.canWrite;$('read-only').hidden=state.canWrite;renderRooms();
  try{const detail=await rpc('detail',{p_room:room.id});if(version!==state.version)return;state.detail=detail;$('participants').textContent=(detail.members||[]).map(m=>m.name+(m.active?'':' (inativo)')).join(', ');$('manage').hidden=!(state.canWrite&&room.kind==='group'&&detail.room.created_by===state.user);await messages('initial');status('Conversa aberta. As mensagens são atualizadas automaticamente.');}
  catch(error){if(version===state.version)accessError(error);}
@@ -57,8 +62,9 @@ async function selectRoom(room){
 function accessError(error){status(error.message);if(['42501','403'].includes(error.code)||error.status===403){const unavailable=state.active;state.version++;state.active=null;state.rooms=state.rooms.filter(r=>r.id!==unavailable);renderRooms();state.messages.clear();$('messages').replaceChildren();$('composer').hidden=!dirty();$('body').readOnly=true;$('file').disabled=true;$('send').disabled=true;$('manage').hidden=true;$('title').textContent='Conversa indisponível';$('participants').textContent='Seu acesso pode ter sido alterado. Atualize as conversas.';}}
 async function changeClinic(){
  if(state.busy)return;if(state.clinic&&!confirmDiscard()){$('clinic').value=state.clinic;return;}
- if($('room-dialog').open)$('room-dialog').close();state.version++;const version=state.version;state.clinic=$('clinic').value;document.querySelector('header>a').href='../index.html?clinic_id='+encodeURIComponent(state.clinic);state.active=null;state.rooms=[];state.messages.clear();state.roomOffset=0;state.roomHasMore=false;state.lastRead=null;clearComposer();$('messages').replaceChildren();$('composer').hidden=true;$('manage').hidden=true;$('participants').textContent='';$('title').textContent='Escolha uma conversa';$('older').hidden=true;renderRooms();
- try{const result=await rpc('people');if(version!==state.version)return;state.user=result.user_id;state.people=result.people||[];state.canWrite=result.can_write;$('new').disabled=!state.canWrite||state.people.filter(p=>p.id!==state.user).length===0;$('workspace').hidden=false;await rooms();status(state.people.length>1?'Equipe carregada. Conversas e arquivos ficam restritos aos participantes.':'Só você está disponível nesta clínica. Cadastre ou libere o acesso dos colegas para conversar.');}
+ if($('room-dialog').open)$('room-dialog').close();state.version++;const version=state.version;state.clinic=$('clinic').value;document.documentElement.classList.remove('has-chat-room');document.querySelector('header>a').href='../index.html?clinic_id='+encodeURIComponent(state.clinic);state.active=null;state.rooms=[];state.messages.clear();state.roomOffset=0;state.roomHasMore=false;state.lastRead=null;clearComposer();$('messages').replaceChildren();$('composer').hidden=true;$('manage').hidden=true;$('participants').textContent='';$('title').textContent='Escolha uma conversa';$('older').hidden=true;renderRooms();
+ try{const result=await rpc('people');if(version!==state.version)return;state.user=result.user_id;state.people=result.people||[];state.canWrite=result.can_write;
+ if(embedded)window.parent.postMessage({type:'nexodent:chat-context',clinic_id:state.clinic,user_id:state.user,clinic_name:$('clinic').selectedOptions[0]?.textContent},location.origin);$('new').disabled=!state.canWrite||state.people.filter(p=>p.id!==state.user).length===0;$('workspace').hidden=false;await rooms();status(state.people.length>1?'Equipe carregada. Conversas e arquivos ficam restritos aos participantes.':'Só você está disponível nesta clínica. Cadastre ou libere o acesso dos colegas para conversar.');}
  catch(error){if(version===state.version){$('workspace').hidden=true;status(/42883|PGRST202/.test(error.code||'')?'A comunicação ainda precisa ser instalada no servidor. Solicite a ativação ao administrador.':error.message)}}
 }
 function renderPeople(selected=[]){
@@ -85,15 +91,18 @@ $('composer').onsubmit=async e=>{e.preventDefault();if(state.busy||!state.active
  await rpc('send',{p_room:room,p_nonce:state.draft.nonce,p_body:body,p_file:attachment},clinic);if(version!==state.version)return;clearComposer();await messages('new');await rooms();status('Mensagem enviada.');$('body').focus();
  }catch(error){status('Não foi possível confirmar o envio: '+error.message+'. Seu rascunho foi mantido.');}finally{setSending(false);}};
 $('more-rooms').onclick=()=>rooms(true).catch(e=>status(e.message));$('older').onclick=async()=>{$('older').disabled=true;try{await messages('older')}catch(e){status(e.message)}finally{$('older').disabled=false}};
+$('back-rooms').onclick=()=>{document.documentElement.classList.remove('has-chat-room');$('rooms').querySelector('[aria-pressed="true"]')?.focus();};
 $('messages').onscroll=()=>{markRead()};$('clinic').onchange=changeClinic;
 async function init(){
  try{const auth=await cloud.restoreSession();if(!auth){$('login').hidden=false;status('Entre com a sua conta do NexoDent.');return;}
  const clinics=await cloud.request('/rest/v1/rpc/clinic_list',{method:'POST',body:{}});$('clinic').replaceChildren();for(const clinic of clinics||[]){const option=document.createElement('option');option.value=clinic.clinic_id;option.textContent=clinic.nome;$('clinic').append(option)}
  if(!clinics?.length)return status('Sua conta não possui vínculo ativo com uma clínica.');const chosen=new URLSearchParams(location.search).get('clinic_id')||cloud.config?.clinicId;if(clinics.some(c=>c.clinic_id===chosen))$('clinic').value=chosen;
- $('clinic').disabled=false;$('login').hidden=true;await changeClinic();
+ state.lockedClinic=embedded&&clinics.some(c=>c.clinic_id===chosen);$('clinic').disabled=state.lockedClinic;document.documentElement.classList.toggle('chat-clinic-locked',state.lockedClinic);$('login').hidden=true;await changeClinic();
  }catch(error){status(error.message)}}
 $('login-form').onsubmit=async e=>{e.preventDefault();try{await cloud.login($('email').value,$('password').value,false);$('password').value='';await init()}catch(error){status(error.message)}};
-async function sync(){if(document.hidden||state.polling||state.busy||!state.clinic)return;state.polling=true;try{await rooms();await messages('new')}catch(error){accessError(error)}finally{state.polling=false}}
+async function sync(){if(!visible()||state.polling||state.busy||!state.clinic)return;state.polling=true;try{await rooms();await messages('new')}catch(error){accessError(error)}finally{state.polling=false}}
+window.addEventListener('message',e=>{if(!embedded||e.source!==window.parent||e.origin!==location.origin||e.data?.type!=='nexodent:chat-visibility')return;state.embedVisible=e.data.visible===true;if(state.embedVisible){sync();markRead();}});
+document.addEventListener('keydown',e=>{if(embedded&&e.key==='Escape'&&!document.querySelector('dialog[open]')){window.parent.postMessage({type:'nexodent:chat-close'},location.origin);e.preventDefault();}});
 setInterval(sync,8000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});window.addEventListener('online',sync);window.addEventListener('beforeunload',e=>{if(dirty()){e.preventDefault();e.returnValue='';}});
 init();
 })();
