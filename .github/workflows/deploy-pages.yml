@@ -36,6 +36,7 @@ jobs:
           cp -R integracoes _site/integracoes
           cp -R crm _site/crm
           cp -R assinatura _site/assinatura
+          cp -R comunicacao _site/comunicacao
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

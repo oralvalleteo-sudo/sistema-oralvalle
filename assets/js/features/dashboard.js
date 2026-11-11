@@ -44,6 +44,7 @@ function ovSidebar(active){
     <nav class="ov-nav">
       ${item('ag','Agenda')}
       ${item('pac','Pacientes')}
+      ${pmSee('chat')?`<a class="ov-nav-btn" style="text-decoration:none" href="./comunicacao/index.html?clinic_id=${encodeURIComponent(window.OralCloud?.clinicId||'')}" target="_blank" rel="noopener" aria-label="Comunicação da equipe (abre em outra aba)"><span class="ico" aria-hidden="true">💬</span><span>Comunicação</span><span data-chat-unread class="nav-dot" style="${Number(window.NexoChatBadge?.count||0)>0?'':'display:none'}" ${Number(window.NexoChatBadge?.count||0)>0?'':'hidden'}>${window.NexoChatBadge?.label()||''}</span></a>`:''}
       ${pmSee('crm')?`<button class="ov-nav-btn${active==='crm'?' on':''}" data-act="nav" data-t="crm"><span class="ico">${ovIcon('reports')}</span><span>CRM</span></button>`:''}
       ${pmSee('lem')?`<button class="ov-nav-btn${active==='ortho'?' on':''}" data-act="orthonav"><span class="ico">${ovIcon('ortho')}</span><span>Ortodontia</span></button>`:''}
       ${pmSee('lem')?`<button class="ov-nav-btn${active==='impl'?' on':''}" data-act="implnav"><span class="ico">${ovIcon('impl')}</span><span>Implantodontia</span></button>`:''}

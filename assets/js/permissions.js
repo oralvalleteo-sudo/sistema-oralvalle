@@ -1,13 +1,13 @@
 /* As permissões locais controlam a interface, não substituem autorização de servidor. */
 const PM_MODS=[
- ['Clínica',[['ag','Agenda'],['pac','Pacientes'],['crm','CRM'],['lem','Lembretes'],['wa','WhatsApp'],['dt','Dentistas'],['cm','Comissões'],['vd','Vendas e pagamentos recebidos']]],
+ ['Clínica',[['ag','Agenda'],['pac','Pacientes'],['crm','CRM'],['chat','Comunicação da equipe'],['lem','Lembretes'],['wa','WhatsApp'],['dt','Dentistas'],['cm','Comissões'],['vd','Vendas e pagamentos recebidos']]],
  ['Negociação',[['pf','Proposta financeira']]],
  ['Precificação',[['hc','Custo hora clínica'],['pr','Procedimentos'],['mt','Tabela de materiais']]],
  ['Controle',[['bk','Backup e importação de dados']]],
  ['Dentro da ficha do paciente',[['pac.dados','Dados cadastrais'],['pac.anam','Anamnese'],['pac.odo','Evolução'],['pac.orc','Orçamentos'],['pac.trat','Tratamentos'],['pac.pag','Pagamentos'],['pac.agd','Agendamentos'],['pac.arquivos','Radiografias e documentos']]]
 ];
 const PM_TABS=['dados','anam','odo','orc','trat','pag','agd','arquivos'];
-const PM_ORDER=['ag','pac','crm','lem','wa','dt','cm','vd','pf','hc','pr','mt','bk'];
+const PM_ORDER=['ag','pac','crm','chat','lem','wa','dt','cm','vd','pf','hc','pr','mt','bk'];
 const PM_LV={none:0,view:1,edit:2};
 const PM_LAB={none:'Oculto',view:'Só ver',edit:'Ver e alterar'};
 const PM_SAFE=new Set(['actab','logout','nav','svw','ovFinDetail','ovFinPdf','pPage','vPage','otoggle','retall','lemtab','orthowa','implnav','protnav','lemgo','cmdent','cmback','agf','agdate','agtoday','arqt','dent','open','back','tab','copy','owa','print','pdf','printevol','printficha','rxpdf','rxprint','atpdf','atprint','atreset','prprint','prshare','bktxt','bkcopy','bksave','pfOpen','prsearch','avsok','avsgo','avsperm','avstest','savebtn','acpw']);
@@ -26,6 +26,7 @@ function permOf(u,key){
   if(key==='cfg')return 0;
   const p=u.perms;if(!p)return 2;
   const v=p[key];
+  if(key==='chat' && v===undefined)return 2;
   if(key==='crm' && v===undefined)return permOf(u,'pac');
   if(v===undefined)return key.indexOf('.')>0?2:0;
   return PM_LV[v]!==undefined?PM_LV[v]:0;
@@ -68,8 +69,8 @@ function pmAllowed(act,d){
 function pmDeny(){toast(pmCur()===1?'Esta área está em modo somente visualização.':'Você não tem permissão para fazer isso.',3000)}
 function pmCleanSide(h){return h.replace(/<div class="ov-section">[^<]*<\/div>\s*<nav class="ov-nav">\s*<\/nav>/g,'')}
 function pmContaHtml(){return `<div class="ov-page-head"><div><h1>Minha conta</h1><p class="sub">Organize seus dados de acesso por seção.</p></div></div>${acHtml(true)}`}
-function pmDefault(){const p={};pmKeys().forEach(k=>{p[k]=(k==='ag'||k==='pac'||k==='lem'||k.indexOf('pac.')===0)?'view':'none'});return p}
-function pmGet(u,key){if(!u.perms)return 'edit';return u.perms[key]||(key.indexOf('.')>0?'edit':'none')}
+function pmDefault(){const p={};pmKeys().forEach(k=>{p[k]=k==='chat'?'edit':(k==='ag'||k==='pac'||k==='lem'||k.indexOf('pac.')===0)?'view':'none'});return p}
+function pmGet(u,key){if(!u.perms||(key==='chat'&&u.perms.chat===undefined))return 'edit';return u.perms[key]||(key.indexOf('.')>0?'edit':'none')}
 function pmSeg(u,key,label){
   const c=pmGet(u,key);
   return `<div class="up-seg" role="radiogroup" aria-label="${esc(label)}">${['none','view','edit'].map(v=>`<label class="up-opt"><input type="radio" name="up_${u.id}_${key}" data-pmu="${u.id}" data-pmk="${key}" value="${v}"${c===v?' checked':''}><span>${PM_LAB[v]}</span></label>`).join('')}</div>`;

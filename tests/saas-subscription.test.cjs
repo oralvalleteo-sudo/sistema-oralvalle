@@ -9,7 +9,7 @@ test('teste de 7 dias, vencimento no servidor, pagamento idempotente, cancelamen
  for(const file of ['202610140001_relational_clinics.sql','202610290001_nexodent_admin_foundation.sql','202610290002_subscription_foundation.sql','202610290003_trial_requests.sql'])await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
  await db.exec(`create function public.unprotected_demo(p_clinic uuid) returns text language sql security definer as 'select ''secret''::text';grant execute on function public.unprotected_demo(uuid) to authenticated;`);
  await db.exec('alter table nexodent_trial_requests add column activated_clinic_id uuid;alter table nexodent_trial_requests add column activated_at timestamptz;');
- for(const file of ['202611110003_saas_plans_trial.sql','202611110004_saas_billing.sql','202611110005_saas_access_guards.sql','202611110006_saas_admin_discount.sql','202611110007_security_hardening.sql'])await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
+ for(const file of ['202611110003_saas_plans_trial.sql','202611110004_saas_billing.sql','202611110005_saas_access_guards.sql','202611110006_saas_admin_discount.sql','202611110007_security_hardening.sql','202611110008_internal_communication.sql'])await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
  await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())',[USER,'synthetic@example.invalid']);
  await db.query("select set_config('request.jwt.claim.sub',$1,false)",[USER]);
  await db.query("insert into nexodent_trial_requests(nome,clinica,email,whatsapp) values('Sintético','Clínica teste','synthetic@example.invalid','11999999999')");
@@ -24,6 +24,7 @@ test('teste de 7 dias, vencimento no servidor, pagamento idempotente, cancelamen
  await db.query("update nexodent_clinic_subscriptions set trial_ends_at=now()-interval '1 second',trial_started_at=now()-interval '8 days' where clinic_id=$1",[clinic]);
  await assert.rejects(db.query('select clinic_load($1)',[clinic]),e=>e.code==='42501');
  await assert.rejects(db.query('select nexodent_certificate_access($1)',[clinic]),e=>e.code==='42501');
+ await assert.rejects(db.query('select nexodent_chat_people($1)',[clinic]),e=>e.code==='42501');
  assert.equal((await db.query('select nexodent_subscription_portal($1) result',[clinic])).rows[0].result.allowed,false);
  const checkout=(await db.query("select nexodent_prepare_checkout($1,$2,$3,'profissional','monthly','PIX',1,'sandbox') result",[clinic,USER,CLINIC])).rows[0].result;
  assert.equal(checkout.amount_cents,7990);assert.equal(checkout.owned,true);

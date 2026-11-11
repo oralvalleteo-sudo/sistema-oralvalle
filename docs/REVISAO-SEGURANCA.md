@@ -15,6 +15,10 @@ Escopo: código dos dois repositórios, novos fluxos SaaS e pontos de renderiza�
 - Senhas de login são limpas após autenticação. Preferências de plano e idempotência usam fallback em memória quando o armazenamento do navegador é bloqueado.
 - Textos e estados financeiros em português, links de regularização durante suspensão, consentimento de contratação, termos e domínio único. Testes automáticos de qualidade e segurança foram incluídos nos dois repositórios; a publicação manual do sistema depende dos checks.
 
+## Comunicação interna
+
+Conversas usam participação explícita e vínculo ativo da mesma clínica; administradores não recebem acesso automático a conversas privadas de terceiros. Mensagens são texto e os arquivos só são baixados por RPC autorizado, com limite e validação de conteúdo. A migration de comunicação inclui testes de usuários de outra clínica, remoção, desativação, leitura e reenvio idempotente. Ver COMUNICACAO-INTERNA.md para limites e retenção.
+
 ## Necessário validar fora do código
 
 - RLS/grants e RPCs realmente existentes no banco, especialmente extensões ausentes do Git; testar com administrador e funcionário de duas clínicas.
