@@ -25,10 +25,10 @@ class Dependencies(HTMLParser):
         path = (self.page.parent / unquote(parsed.path)).resolve()
         if not path.is_relative_to(root) or not path.is_file():
             missing.append(f'{self.page.relative_to(root)} → {url}')
-for required in ('index.html', 'crm/index.html', 'crm/js/crm.js', 'assets/js/supabase/client.js'):
+for required in ('index.html', 'crm/index.html', 'crm/js/crm.js', 'assets/js/supabase/client.js', 'comunicacao/index.html', 'comunicacao/chat.js', 'assets/js/chat-widget.js', 'assets/js/chat-badge.js', 'assets/css/chat-widget.css'):
     if not (root / required).is_file():
         missing.append(required)
-for relative in ('index.html', 'crm/index.html', 'admin/index.html', 'integracoes/index.html'):
+for relative in ('index.html', 'crm/index.html', 'admin/index.html', 'integracoes/index.html', 'comunicacao/index.html'):
     page = root / relative
     if page.is_file():
         Dependencies(page).feed(page.read_text(encoding='utf-8'))
