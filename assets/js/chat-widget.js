@@ -2,7 +2,7 @@
 (()=>{'use strict';
 if(window.top!==window.self||window.NexoChatWidget)return;
 const script=document.currentScript,root=new URL('../../',script.src),chatURL=new URL('comunicacao/index.html',root),uid=()=>window.OralCloud?.session?.user?.id||'';
-const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('assets/css/chat-widget.css?v=266',root);document.head.append(css);
+const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('assets/css/chat-widget.css?v=267',root);css.onload=()=>layout();document.head.append(css);
 const launcher=document.createElement('button');launcher.id='nexodent-chat-launcher';launcher.type='button';launcher.hidden=true;launcher.setAttribute('aria-label','Abrir chat da equipe');launcher.setAttribute('aria-expanded','false');launcher.setAttribute('aria-controls','nexodent-chat-panel');launcher.title='Chat da equipe';
 const icon=document.createElement('span');icon.setAttribute('aria-hidden','true');icon.textContent='💬';const badge=document.createElement('span');badge.dataset.chatUnread='';badge.hidden=true;badge.setAttribute('aria-hidden','true');launcher.append(icon,badge);
 const panel=document.createElement('section');panel.id='nexodent-chat-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','false');panel.setAttribute('aria-labelledby','nexo-chat-widget-title');
@@ -16,7 +16,12 @@ function pageContext(){let picker=document.querySelector('#clinic');if(!picker){
 function context(){return pageContext()||selectedClinic;}
 window.NexoChatContext={get clinicId(){return context()}};
 window.NexoChatWidget={get isOpen(){return open},isFrameActive:child=>open&&frame?.contentWindow===child,open:openPanel,close:closePanel};
-function bounds(){const v=window.visualViewport,s=getComputedStyle(probe),x=v?.offsetLeft||0,y=v?.offsetTop||0,width=v?.width||innerWidth,height=v?.height||innerHeight;const inset=p=>Math.max(8,(parseFloat(s[p])||0)+8);const left=x+inset('paddingLeft'),top=y+inset('paddingTop'),right=x+width-inset('paddingRight'),bottom=y+height-inset('paddingBottom');return {left,top,right,bottom,maxX:Math.max(left,right-56),maxY:Math.max(top,bottom-56)};}
+function bounds(){
+ // O desktop aplica zoom de 75% no HTML. Converter a janela para coordenadas CSS evita deslocar o botão para o meio da tela.
+ const v=window.visualViewport,s=getComputedStyle(probe),scale=probe.getBoundingClientRect().width/(probe.offsetWidth||1)||1,x=(v?.offsetLeft||0)/scale,y=(v?.offsetTop||0)/scale,width=(v?.width||innerWidth)/scale,height=(v?.height||innerHeight)/scale;
+ const inset=p=>(Math.max(0,parseFloat(s[p])||0)+8)/scale;
+ const left=x+inset('paddingLeft'),top=y+inset('paddingTop'),right=x+width-inset('paddingRight'),bottom=y+height-inset('paddingBottom');return {left,top,right,bottom,maxX:Math.max(left,right-56),maxY:Math.max(top,bottom-56)};}
+
 function clamp(value,min,max){return Math.max(min,Math.min(max,value))}
 function placePanel(){if(!open)return;const b=bounds(),width=Math.min(560,b.right-b.left),above=Math.max(0,point.y-b.top-12),below=Math.max(0,b.bottom-point.y-68),useAbove=above>=below,space=Math.max(above,below);const height=Math.min(720,space>=260?space:b.bottom-b.top);
  let left=point.x+68;if(left+width>b.right)left=point.x-width-12;if(left<b.left)left=clamp(point.x+28-width/2,b.left,b.right-width);

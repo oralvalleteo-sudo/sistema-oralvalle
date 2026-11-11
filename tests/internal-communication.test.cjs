@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const C1='11111111-1111-1111-1111-111111111111',C2='22222222-2222-2222-2222-222222222222';
 const users=['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1','aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2','aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3','aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4'];
 let nonce=0;const key=()=>`00000000-0000-0000-0000-${String(++nonce).padStart(12,'0')}`;
-async function database(){const {PGlite}=await import(process.env.PGLITE_MODULE||'/workspace/.onboarding/pglite/node_modules/@electric-sql/pglite/dist/index.js');const db=new PGlite();await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as 'select nullif(current_setting(''request.jwt.claim.sub'',true),'''')::uuid';`);await db.exec(fs.readFileSync('supabase/migrations/202610140001_relational_clinics.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/202611110008_internal_communication.sql','utf8'));
+async function database(){const {PGlite}=await import(process.env.PGLITE_MODULE||'/workspace/.onboarding/pglite/node_modules/@electric-sql/pglite/dist/index.js');const db=new PGlite();await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as 'select nullif(current_setting(''request.jwt.claim.sub'',true),'''')::uuid';`);await db.exec(fs.readFileSync('supabase/migrations/202610140001_relational_clinics.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/202611110008_internal_communication.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/202611110009_chat_file_limit_10mb.sql','utf8'));
 await db.query('insert into clinics(id,nome) values($1,$3),($2,$4)',[C1,C2,'Clínica A','Clínica B']);
 for(let i=0;i<users.length;i++){await db.query('insert into auth.users(id,email) values($1,$2)',[users[i],`synthetic${i}@example.invalid`]);await db.query('insert into clinic_members(clinic_id,user_id,nome,admin,perms) values($1,$2,$3,$4,null)',[i===3?C2:C1,users[i],`Pessoa ${i+1}`,i===0||i===3]);}
 return db;}
@@ -40,4 +40,11 @@ test('arquivo privado com hash, rejeição de tipo adulterado e limite de envio'
  await login(db,users[0]);await assert.rejects(send(db,room,'',{name:'script.html',mime:'text/html',base64:'AAAA'}));await assert.rejects(send(db,room,'',{name:'fake.pdf',mime:'application/pdf',base64:'AAAA'}));await assert.rejects(send(db,room,'',{...file,name:'../escape.pdf'}));
  await assert.rejects(send(db,room,'',{...file,base64:'A'.repeat(1398108)}));
  const already=Number((await db.query('select count(*) n from nexodent_chat_messages where author_id=$1',[users[0]])).rows[0].n);for(let i=already;i<30;i++)await send(db,room,'Mensagem '+i);await assert.rejects(send(db,room,'Limite excedido'),/Aguarde/);
+ }finally{await db.close()}});
+
+test('anexos de 2 MB e 10 MB, rejeição acima do limite e atualização sem perda',async()=>{const db=await database();try{
+ await login(db,users[0]);const room=await create(db,[users[1]]);
+ for(const size of [2*1024*1024,10*1024*1024]){const data=Buffer.alloc(size,65);data.write('%PDF-1.4');const id=await send(db,room,'',{name:'grande.pdf',mime:'application/pdf',base64:data.toString('base64')});const result=(await db.query('select nexodent_chat_download($1,$2,$3) result',[C1,room,id])).rows[0].result;assert.equal(Buffer.from(result.base64,'base64').length,size);}
+ const over=Buffer.alloc(10*1024*1024+1,65);over.write('%PDF-1.4');await assert.rejects(send(db,room,'',{name:'grande.pdf',mime:'application/pdf',base64:over.toString('base64')}),/10 MB/);
+ await db.exec(fs.readFileSync('supabase/migrations/202611110009_chat_file_limit_10mb.sql','utf8'));assert.equal(Number((await db.query('select count(*) n from nexodent_chat_files')).rows[0].n),2);
  }finally{await db.close()}});

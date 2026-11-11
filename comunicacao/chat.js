@@ -85,7 +85,7 @@ async function download(id,button){const version=state.version,room=state.active
  catch(error){status(error.message)}finally{button.disabled=false;}}
 $('file').onchange=()=>{$('clear-file').hidden=!$('file').files.length};$('clear-file').onclick=()=>{$('file').value='';$('clear-file').hidden=true;};
 $('composer').onsubmit=async e=>{e.preventDefault();if(state.busy||!state.active||!state.canWrite)return;const body=$('body').value,file=$('file').files[0],room=state.active,clinic=state.clinic,version=state.version;
- if(!body.trim()&&!file)return status('Escreva uma mensagem ou selecione um arquivo.');if(file&&file.size>1048576)return status('O arquivo pode ter até 1 MB.');
+ if(!body.trim()&&!file)return status('Escreva uma mensagem ou selecione um arquivo.');if(file&&file.size>10485760)return status('O arquivo pode ter até 10 MB.');
  const fingerprint=JSON.stringify([room,body,file?.name,file?.size,file?.lastModified]);if(state.draft?.fingerprint!==fingerprint)state.draft={fingerprint,nonce:crypto.randomUUID()};setSending(true);status('Enviando…');
  try{let attachment=null;if(file){const bytes=new Uint8Array(await file.arrayBuffer());let text='';for(let i=0;i<bytes.length;i+=8192)text+=String.fromCharCode(...bytes.subarray(i,i+8192));attachment={name:file.name,mime:({pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',txt:'text/plain'})[file.name.split('.').at(-1).toLowerCase()]||'',base64:btoa(text)};}
  await rpc('send',{p_room:room,p_nonce:state.draft.nonce,p_body:body,p_file:attachment},clinic);if(version!==state.version)return;clearComposer();await messages('new');await rooms();status('Mensagem enviada.');$('body').focus();

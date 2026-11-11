@@ -6,7 +6,7 @@ Após a instalação, entrar no NexoDent e abrir **Clínica → Comunicação**.
 
 Escolher a clínica quando houver mais de uma. Nova conversa → Individual → selecionar um colega; ou Grupo → dar um nome e selecionar participantes. Os destinatários são somente usuários ativos dessa clínica. A conversa individual do mesmo par de usuários é reutilizada, sem criar várias cópias.
 
-Mensagens aceitam até 4.000 caracteres. É possível anexar um arquivo de até 1 MB por mensagem, em PDF, PNG, JPG, WebP ou TXT. Mensagens e anexos são compartilhados com todos os participantes da conversa. O criador do grupo pode alterar participantes; novos participantes acessam o histórico, e removidos deixam de acessar. Não existe acesso automático do administrador da clínica às conversas de terceiros.
+Mensagens aceitam até 4.000 caracteres. É possível anexar um arquivo de até 10 MB por mensagem, em PDF, PNG, JPG, WebP ou TXT. Mensagens e anexos são compartilhados com todos os participantes da conversa. O criador do grupo pode alterar participantes; novos participantes acessam o histórico, e removidos deixam de acessar. Não existe acesso automático do administrador da clínica às conversas de terceiros.
 
 A central atualiza conversas a cada 8 segundos enquanto visível. O menu do sistema mostra um contador de mensagens não lidas, atualizado a cada 20 segundos. Não há notificação push com navegador fechado, indicação de presença, áudio/chamada ou confirmação de leitura do destinatário nesta versão. O contador indica o que o próprio usuário ainda não leu.
 
