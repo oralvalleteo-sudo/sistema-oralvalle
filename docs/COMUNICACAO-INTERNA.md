@@ -14,10 +14,10 @@ A central atualiza conversas a cada 8 segundos enquanto visível. O menu do sist
 
 O botão laranja de chat aparece para usuários autenticados na tela principal, CRM, administração, integrações, assinatura, ativação e central de comunicação. Em módulos embutidos existe apenas o botão da janela principal, evitando duplicatas.
 
-- Arrastar por mouse ou toque muda a posição; ela é mantida no navegador para aquele usuário ao mudar de tela. Somente coordenadas são salvas, nunca texto de mensagens ou arquivos.
-- Clicar abre uma janela de chat sobre a tela atual. Fechar esconde o painel, sem interromper o formulário de trabalho nem apagar o rascunho. Trocar a clínica da tela principal mantém janelas de chat separadas em memória.
+- O botão fica fixo no canto inferior direito, com 8 px de distância das bordas e respeito à área segura do celular. Posições antigas salvas são ignoradas.
+- Clicar abre o painel; fechar preserva o rascunho enquanto a página estiver aberta.
 - A janela compacta usa a mesma sessão da página principal, evitando outra instância de renovação de credenciais. Quando a tela informa uma clínica válida, a seleção fica travada a esse contexto no painel. A central completa continua permitindo selecionar as próprias clínicas autorizadas.
-- “Abrir central” abre a página completa em outra aba. “Repor botão” volta ao canto padrão. Escape fecha o painel; com o botão em foco, Alt + setas permite movê-lo pelo teclado.
+- “Abrir central” abre a página completa em outra aba. Escape fecha o painel.
 - A posição é ajustada ao tamanho visível da tela. Painéis fechados/inativos pausam a atualização e não marcam novas mensagens como lidas. Sair ou trocar de conta remove as janelas privadas da sessão anterior.
 - Rascunhos ficam em memória enquanto a página está aberta. Não há garantia de recuperação após recarregar/fechar a página ou sair da conta; o navegador avisa sobre mensagem não enviada ao sair da página.
 
