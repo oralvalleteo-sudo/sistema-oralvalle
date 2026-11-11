@@ -304,7 +304,7 @@ function orcHtml(o){
   ${obAllHtml(o)}${o.itens.map((it,i)=>itemHtml(o,it,i)).join('')}
   <div class="row" style="margin-top:8px"><button class="ghost sm" data-act="addi" data-o="${o.id}">Adicionar item</button></div>
   <div class="row" style="align-items:flex-start"><div><label>Desconto (R$)</label><input data-o="${o.id}" data-f="desc" inputmode="decimal" value="${esc(o.desc)}"></div><div><label>Válido até</label><input type="date" data-o="${o.id}" data-f="val" value="${esc(o.val)}"></div></div>
-  ${nxPayHtml(o)}<label>Condições de pagamento (editável)</label><input data-o="${o.id}" data-f="cond" placeholder="Ex.: entrada + 3x no cartão" value="${esc(o.cond)}">
+  ${nxPayHtml(o)}${budgetBillingHtml(o)}<label>Condições de pagamento (editável)</label><input data-o="${o.id}" data-f="cond" placeholder="Ex.: entrada + 3x no cartão" value="${esc(o.cond)}">
   <div data-sum>${orcSum(o)}</div>
   <div class="row" style="margin-top:12px;flex-wrap:wrap"><button type="button" class="sm" data-act="orcsave" data-o="${o.id}">Salvar orçamento</button><button type="button" class="ghost sm" data-act="orccollapse" data-o="${o.id}">Recolher orçamento ↑</button><button class="ghost sm" data-act="copy" data-o="${o.id}">Copiar texto</button><button class="ghost sm" data-act="owa" data-o="${o.id}">WhatsApp</button><button class="sm" data-act="pdf" data-o="${o.id}">Baixar PDF</button><button class="ghost sm" data-act="print" data-o="${o.id}">Imprimir</button><button class="danger sm" data-act="rmorc" data-o="${o.id}">${delArm==='orc:'+o.id?'Confirmar exclusão':'Excluir orçamento / proposta'}</button></div></div>`:''}</div>`;
 }
