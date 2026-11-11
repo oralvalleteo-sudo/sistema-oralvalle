@@ -2,7 +2,7 @@
  const $=id=>document.getElementById(id); const message=t=>$('message').textContent=t;
  async function activate(){
    const result=await OralCloud.request('/rest/v1/rpc/nexodent_activate_approved_trial',{method:'POST',body:{}});
-   message('Teste ativado! Seus 15 dias começaram agora. Acesse o Nexodent com esta conta.');
+   message('Teste ativado! Seus 7 dias começaram agora. Acesse o Nexodent com esta conta.');
    return result;
  }
  $('register').onclick=async()=>{

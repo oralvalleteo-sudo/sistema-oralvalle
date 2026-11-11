@@ -4,7 +4,8 @@ const CLIENT_ID = Deno.env.get('GOOGLE_ADS_CLIENT_ID')!;
 const CLIENT_SECRET = Deno.env.get('GOOGLE_ADS_CLIENT_SECRET')!;
 const ENC_KEY = Deno.env.get('GOOGLE_ADS_ENCRYPTION_KEY')!;
 const APP_ORIGIN = Deno.env.get('NEXODENT_APP_ORIGIN')!;
-const API_VERSION = 'v26';
+const API_VERSION = Deno.env.get('GOOGLE_ADS_API_VERSION') || 'v26';
+const DEVELOPER_TOKEN = Deno.env.get('GOOGLE_ADS_DEVELOPER_TOKEN') || '';
 
 function cors() {
   return {
@@ -76,6 +77,7 @@ async function googleRequest(path: string, accessToken: string, method = 'GET', 
     method,
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      'developer-token': DEVELOPER_TOKEN,
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -144,7 +146,8 @@ Deno.serve(async req => {
     }
     const refreshToken = await decrypt(credentials[0].refresh_token_cipher);
     const accessToken = await getAccessToken(refreshToken);
-    const accounts = await loadAccounts(accessToken);
+    if (!DEVELOPER_TOKEN) return reply(503, { error: 'A plataforma precisa configurar o acesso à API Google Ads.' });
+    const accounts = (await loadAccounts(accessToken)).filter((account: any) => !account.manager);
 
     if (action === 'list') {
       return reply(200, { accounts, count: accounts.length, api_version: API_VERSION });

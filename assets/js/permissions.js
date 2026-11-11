@@ -15,6 +15,11 @@ const PM_FREE_IDS=new Set(['q','pfQ','pendOnly','cmm']);
 const pmKeys=()=>PM_MODS.flatMap(g=>g[1].map(x=>x[0]));
 function pmUser(){return ME?(AUTH.users.find(x=>x.id===ME.id)||ME):null}
 function permOf(u,key){
+  const subscription=window.NexoSubscription,s=subscription?.subscription;
+  if(s?.billing_enforced&&s.status!=='exempt'){
+    const feature=['crm','pf'].includes(key)?'crm':['wa'].includes(key)?'integrations':['cm'].includes(key)?'team':['vd','hc','mt','pac.pag'].includes(key)?'finance':['pac.orc'].includes(key)?'budgets':['pac.anam','pac.odo','pac.trat','pac.arquivos'].includes(key)?'records':'core';
+    const plan=subscription.plans?.find(p=>p.code===s.plan_code);if(!subscription.allowed||!plan?.features?.[feature])return 0;
+  }
   if(!u)return 0;if(u.admin)return 2;
   if(key==='inicio')key='ag';
   if(key==='conta')return 2;
@@ -32,9 +37,9 @@ function pmTabLvl(tab){
   if(viaPf)return tab==='orc'?pmLvl('pf'):0;
   return Math.min(pmLvl('pac'),permOf(pmUser(),'pac.'+tab));
 }
-const pmTabOk=k=>{const u=pmUser();return !u||u.admin||pmTabLvl(k)>=1};
+const pmTabOk=k=>{const u=pmUser();return !u||pmTabLvl(k)>=1};
 function pmCur(){
-  const u=pmUser();if(!u||u.admin)return 2;
+  const u=pmUser();if(!u)return 2;
   if(view.id)return pmTabLvl(view.tab);
   return pmLvl((view.h==='ortho'||view.h==='impl'||view.h==='prot')?'lem':view.h||'pac');
 }

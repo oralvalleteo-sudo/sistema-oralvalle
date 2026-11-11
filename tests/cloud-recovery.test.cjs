@@ -55,6 +55,7 @@ test('a failed clinic load keeps the app locked and retries reads without anothe
   const lock = {
     innerHTML: '',
     remove() {},
+    querySelectorAll(selector) { return selector==='input[type="password"]'&&this.innerHTML.includes('id="cloudPassword"')?[elements.get('cloudPassword')]:[]; },
     querySelector(selector) {
       if (selector === 'input') return this.innerHTML.includes('id="cloudEmail"') ? elements.get('cloudEmail') : null;
       if (!elements.has(selector)) elements.set(selector, control());
@@ -64,7 +65,7 @@ test('a failed clinic load keeps the app locked and retries reads without anothe
   elements.set('app', { innerHTML: '', style: {} });
   elements.set('lock', lock);
   elements.set('cloudEmail', { ...control(), value: 'synthetic@example.invalid' });
-  elements.set('cloudPassword', { value: 'synthetic' });
+  elements.set('cloudPassword', { ...control(),value:'synthetic',type:'password',style:{},parentNode:{insertBefore(){}} });
   elements.set('cloudKeep', { checked: true });
   let failLoad = true;
   const database = { p: [{ id: 1 }] };
@@ -74,7 +75,7 @@ test('a failed clinic load keeps the app locked and retries reads without anothe
       enabled: true, config: {}, keep: true,
       restoreSession: async () => null,
       login: async () => { calls.push('login'); },
-      request: async () => [{ clinic_id: 'clinic', user_id: 'user', nome: 'Synthetic' }],
+      request: async path => path.includes('nexodent_subscription_portal')?{allowed:true,subscription:null,plans:[]}:[{ clinic_id: 'clinic', user_id: 'user', nome: 'Synthetic' }],
     },
     OralCloudData: {
       members: async () => [member], prepareDefaults() {}, currentRevision: () => "1",
@@ -92,7 +93,7 @@ test('a failed clinic load keeps the app locked and retries reads without anothe
     unlock() { context.LOCKED = false; calls.push('unlock'); },
     document: {
       getElementById: () => null, addEventListener() {}, removeEventListener() {},
-      createElement: () => ({ setAttribute() {}, replaceChildren() {}, appendChild() {} }),
+      createElement: () => ({ style:{},setAttribute() {}, replaceChildren() {}, appendChild() {},addEventListener(){} }),
       body: { appendChild() {}, classList: { add() {}, remove() {} } },
     },
   });

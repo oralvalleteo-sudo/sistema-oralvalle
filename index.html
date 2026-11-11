@@ -47,7 +47,7 @@
       @media(max-width:600px){.ov-splash-logo{width:88px;height:88px}.ov-splash-caption{text-align:center;font-size:11px}}
     </style>
   <link rel="stylesheet" href="assets/css/nexodent-crm-embed.css?build=260"></head>
-  <body>
+  <body><a href="./assinatura/index.html" style="position:fixed;right:12px;bottom:12px;z-index:9999;background:#fff;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font:13px system-ui">Minha assinatura</a>
     <!-- Tela neutra de abertura: somente a marca, sem informações clínicas. -->
     <div id="ov-startup-shell" role="status" aria-live="polite" aria-label="Carregando Nexodent">
       <div class="nexo-splash-brand"><img class="ov-splash-logo" src="./assets/img/nexodent-symbol.png" alt="Nexodent" /></div>
@@ -57,7 +57,7 @@
     <div id="printarea"></div>
     <!-- Scripts clássicos mantêm a abertura local, sem servidor ou compilação. -->
     <script defer src="./assets/js/state.js?build=260"></script>
-    <script defer src="./assets/js/utils.js?build=260"></script>
+    <script defer src="./assets/js/utils.js?build=262"></script>
     <script defer src="./assets/js/storage.js?build=260"></script>
     <script defer src="./assets/js/auth.js?build=260"></script>
     <script defer src="./assets/js/calculations.js?build=260"></script>
@@ -66,10 +66,10 @@
     <script defer src="./assets/js/features/patients.js?build=261"></script>
     <script defer src="./assets/js/features/treatments.js?build=260"></script>
     <script defer src="./assets/js/features/prescriptions.js?build=260"></script>
-    <script defer src="./assets/js/features/certificates.js?build=260"></script>
-    <script defer src="./assets/js/features/budget-documents.js?build=260"></script>
+    <script defer src="./assets/js/features/certificates.js?build=262"></script>
+    <script defer src="./assets/js/features/budget-documents.js?build=262"></script>
     <script defer src="./assets/js/features/budget-print.js?build=260"></script>
-    <script defer src="./assets/js/features/pdf.js?build=260"></script>
+    <script defer src="./assets/js/features/pdf.js?build=262"></script>
     <script defer src="./assets/js/features/catalogs.js?build=260"></script>
     <script defer src="./assets/js/features/dentists.js?build=260"></script>
     <script defer src="./assets/js/features/appointments.js?build=272"></script>
@@ -90,17 +90,17 @@
     <script defer src="./assets/js/features/nexo-payment-plan.js?build=260"></script>
     <script defer src="./assets/js/features/notifications.js?build=260"></script>
     <script defer src="./assets/js/oralvalle-push-client.js?build=260"></script>
-    <script defer src="./assets/js/permissions.js?build=272"></script>
+    <script defer src="./assets/js/permissions.js?build=262"></script>
     <script defer src="./assets/js/supabase/config.js?build=260"></script>
-    <script defer src="./assets/js/supabase/client.js?build=260"></script>
+    <script defer src="./assets/js/supabase/client.js?build=262"></script>
     <script defer src="./assets/js/supabase/data.js?build=260"></script>
     <script defer src="./assets/js/nexo-modules.js?build=260"></script>
-    <script defer src="./assets/js/supabase/integration.js?build=272"></script>
+    <script defer src="./assets/js/supabase/integration.js?build=262"></script>
     <script defer src="./assets/js/features/cloud-files.js?build=260"></script>
     <script defer src="./assets/js/features/signature-pdf-upload.js?build=260"></script>
     <script defer src="./assets/js/features/patient-audit.js?build=260"></script>
     <script defer src="./assets/js/features/whatsapp-free.js?build=260"></script>
-    <script defer src="./assets/js/features/signatures.js?build=260"></script>
+    <script defer src="./assets/js/features/signatures.js?build=262"></script>
     <script defer src="./assets/js/features/document-signing.js?build=260"></script>
     <script defer src="./assets/js/features/imported-pdf-signing.js?build=260"></script>
     <link rel="stylesheet" href="./assets/css/ortho-photos.css?build=260">
@@ -111,7 +111,7 @@
     <script>
     /* Atualização segura do PWA: sem apagar dados locais nem forçar recarga durante edição. */
     (() => {
-      const build = '261';
+      const build = '262';
       let pending = false;
       let busy = false;
       const btn = document.createElement('button');
@@ -237,5 +237,5 @@
       setInterval(()=>{if(!document.hidden)check();},120000);
     })();
     </script>
-  </body>
+  <script src="./assets/js/subscription-access.js?v=saas7"></script></body>
 </html>

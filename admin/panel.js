@@ -25,13 +25,15 @@
       days=Number(raw);
       if(!Number.isInteger(days)||days<0||days>365){alert('Informe de 0 a 365 dias.');return;}
     }
+    if(action==='discount'){const raw=prompt('Desconto percentual para novas contratações (0 a 99). Não altera cobranças recorrentes existentes:','0');if(raw===null)return;days=Number(raw);if(!Number.isInteger(days)||days<0||days>99){alert('Informe de 0 a 99%');return;}}
     reason=prompt('Justificativa da alteração (obrigatória):','');
     if(reason===null)return;
     reason=reason.trim();
     if(reason.length<5){alert('Informe uma justificativa com pelo menos 5 caracteres.');return;}
     if(!confirm('Confirmar alteração de assinatura da clínica '+c.nome+'?'))return;
     try{
-      await OralCloud.request('/rest/v1/rpc/nexodent_admin_manage_subscription',{method:'POST',body:{p_clinic:c.id,p_action:action,p_days:days,p_until:until,p_reason:reason}});
+      if(action==='discount')await OralCloud.request('/rest/v1/rpc/nexodent_admin_set_discount',{method:'POST',body:{p_clinic:c.id,p_percent:days,p_reason:reason}});
+      else await OralCloud.request('/rest/v1/rpc/nexodent_admin_manage_subscription',{method:'POST',body:{p_clinic:c.id,p_action:action,p_days:days,p_until:until,p_reason:reason}});
       await load();
     }catch(err){alert('Não foi possível alterar a assinatura: '+err.message);}
   }
@@ -48,7 +50,7 @@
         const td=document.createElement('td');td.textContent=value??'—';tr.appendChild(td);
       }
       const td=document.createElement('td');td.className='actions';
-      for(const [label,action] of [['+ Dias','extend'],['Definir data','set_date'],['Sem vencimento','permanent'],['Tolerância','grace'],['Suspender','suspend'],['Reativar','reactivate']]){
+      for(const [label,action] of [['+ Dias','extend'],['Definir data','set_date'],['Sem vencimento','permanent'],['Tolerância','grace'],['Desconto','discount'],['Suspender','suspend'],['Reativar','reactivate']]){
         const b=document.createElement('button');b.type='button';b.className='secondary action';b.textContent=label;
         b.addEventListener('click',async()=>{b.disabled=true;try{await manageSubscription(c,action)}finally{b.disabled=false}});
         td.appendChild(b);

@@ -231,6 +231,9 @@
     const clinic = configured ? clinics.find(item => item.clinic_id === configured) : clinics.length === 1 ? clinics[0] : null;
     if (!clinic) throw new Error('Defina clinicId no arquivo de configuração: há mais de uma clínica ou o vínculo não corresponde.');
     OralCloud.clinicId = clinic.clinic_id;
+    const subscription = await OralCloud.request('/rest/v1/rpc/nexodent_subscription_portal', {method:'POST',body:{p_clinic:clinic.clinic_id}});
+    window.NexoSubscription = subscription;
+    if (!subscription.allowed) { location.assign('./assinatura/index.html?clinic_id='+encodeURIComponent(clinic.clinic_id)); throw new Error('SUBSCRIPTION_REQUIRED: regularize sua assinatura'); }
     // Members and clinic data are independent reads. Start both together to
     // avoid an unnecessary network round trip during login.
     const membersPromise = OralCloudData.members();

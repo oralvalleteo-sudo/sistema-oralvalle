@@ -36,6 +36,7 @@
       error.status = response.status;
       error.details = data?.details;
       error.hint = data?.hint;
+      if(String(error.message).includes('SUBSCRIPTION_REQUIRED')){global.dispatchEvent?.(new CustomEvent('nexodent:subscription-required'));error.message='Sua assinatura precisa ser regularizada ou o recurso exige outro plano.';}
       throw error;
     }
     return data;

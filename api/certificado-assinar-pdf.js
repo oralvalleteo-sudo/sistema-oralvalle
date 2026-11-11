@@ -21,6 +21,7 @@ module.exports=async function handler(req,res){
   const v=await fetch(base.replace(/\/$/,'')+'/auth/v1/user',{headers:{apikey:anon,Authorization:auth},signal:AbortSignal.timeout(8000)});
   if(!v.ok)return res.status(401).json({error:'Sessão inválida'});
   const user=await v.json();if(!user.id)return res.status(401).json({error:'Sessão inválida'});
+  if(!(await require('./clinic-access')(req,base,anon,auth)))return res.status(403).json({error:'Sem acesso aos documentos desta clínica. Verifique permissões e assinatura.'});
   const {pdfBase64,pfxBase64,password,acknowledge}=req.body||{};
   if(acknowledge!==true||typeof password!=='string'||!password||password.length>512)return res.status(400).json({error:'Confirme a autorização do titular e informe a senha'});
   const pdf=decode(pdfBase64,MAX_PDF),p12=decode(pfxBase64,MAX_P12);

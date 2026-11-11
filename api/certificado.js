@@ -16,6 +16,7 @@ module.exports = async function handler(req, res) {
     if (!verify.ok) return res.status(401).json({error:'Sessão inválida'});
     const user = await verify.json();
     if (!user.id) return res.status(401).json({error:'Sessão inválida'});
+    if(!(await require('./clinic-access')(req,base,anon,auth)))return res.status(403).json({error:'Sem acesso aos documentos desta clínica. Verifique permissões e assinatura.'});
     const {pfxBase64, password} = req.body || {};
     if (typeof pfxBase64 !== 'string' || typeof password !== 'string' || pfxBase64.length > Math.ceil(MAX*4/3)+8 || password.length>512) return res.status(400).json({error:'Dados inválidos ou arquivo acima de 1 MB'});
     if (!/^[A-Za-z0-9+/]+={0,2}$/.test(pfxBase64)) return res.status(400).json({error:'Arquivo inválido'});

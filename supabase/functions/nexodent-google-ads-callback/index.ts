@@ -23,10 +23,10 @@ Deno.serve(async(req)=>{
  if(!state||!code)return redirect(false);
  try{
   const stateHash=await sha(state);
-  const rows=await db('nexodent_google_oauth_states?state_hash=eq.'+encodeURIComponent(stateHash)+'&select=clinic_id,user_id,verifier_cipher,expires_at');
+  const rows=await db('nexodent_google_oauth_states?state_hash=eq.'+encodeURIComponent(stateHash)+'&select=clinic_id,user_id,verifier_cipher,expires_at','DELETE');
   if(rows.length!==1||new Date(rows[0].expires_at).getTime()<Date.now())return redirect(false);
   // Consumir estado antes da troca do código: proteção contra replay.
-  await db('nexodent_google_oauth_states?state_hash=eq.'+encodeURIComponent(stateHash),'DELETE');
+  // DELETE retorna e consome o estado atomicamente; callbacks concorrentes não o reutilizam.
   const verifier=await unseal(rows[0].verifier_cipher);
   const body=new URLSearchParams({code,client_id:CLIENT_ID,client_secret:CLIENT_SECRET,redirect_uri:CALLBACK,grant_type:'authorization_code',code_verifier:verifier});
   const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});

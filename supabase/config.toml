@@ -1,0 +1,26 @@
+# Chamadas externas do Google; autenticadas por state OAuth ou chave por clínica.
+[functions.nexodent-google-ads-callback]
+verify_jwt = false
+[functions.nexodent-google-leads-webhook]
+verify_jwt = false
+# Estas funções validam a sessão no Supabase Auth e o administrador ativo.
+[functions.nexodent-google-ads-start]
+verify_jwt = false
+[functions.nexodent-google-ads-accounts]
+verify_jwt = false
+[functions.nexodent-google-leads-setup]
+verify_jwt = false
+[functions.nexodent-meta-connect-start]
+verify_jwt = false
+[functions.nexodent-meta-connect-callback]
+verify_jwt = false
+[functions.nexodent-meta-connect-assets]
+verify_jwt = false
+[functions.nexodent-meta-webhook]
+verify_jwt = false
+[functions.nexodent-billing]
+verify_jwt = false
+[functions.nexodent-billing-webhook]
+verify_jwt = false
+[functions.nexodent-billing-reconcile]
+verify_jwt = false

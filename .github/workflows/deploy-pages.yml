@@ -11,7 +11,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    uses: ./.github/workflows/quality.yml
   publish:
+    needs: validate
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -30,6 +33,9 @@ jobs:
           cp apple-touch-icon.png icon-192.png icon-512.png _site/
           cp -R assets _site/assets
           cp -R admin _site/admin
+          cp -R integracoes _site/integracoes
+          cp -R crm _site/crm
+          cp -R assinatura _site/assinatura
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -104,7 +104,7 @@ async function pdfOrc(p,o){
   }catch(e){console.error(e);toast('Não foi possível gerar o PDF. Use Copiar texto.',3500)}
 }
 
-function clLogoSrc(){const c=db.cl||{};return c.logo||CL_LOGO}
+function clLogoSrc(){const c=db.cl||{};return safeImageSrc(c.logo)||CL_LOGO}
 function pdfLogo(doc,x,y){
   const c=db.cl||{};
   if(c.semLogo)return;
@@ -130,7 +130,7 @@ function cfgHtml(){
   return `<div class="cfg-page"><div class="ov-page-head"><div><h1>Configurações</h1><p class="sub">Logo e dados da empresa usados no sistema, orçamentos, receituários, atestados e fichas impressas.</p></div></div>
   ${cfgTabs}${T==='financeiro'?ovFinanceSettings():''}${T==='acesso'?pmCardHtml():''}${T==='visual'?`<section class="card cfg-card"><h2>Modo de aparência</h2><p class="note">O NexoDent utiliza sempre o modo claro, independentemente da aparência do Windows ou navegador.</p></section><section class="card cfg-card"><h2>Cor do sistema</h2><label for="cfgColor">Escolha a cor principal</label><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><input id="cfgColor" type="color" value="${esc(window.oralValleLocalAccent ? window.oralValleLocalAccent() : '#ff7a00')}" style="width:70px;height:48px;padding:3px;min-height:48px"><span class="note" style="margin:0">A cor será aplicada aos botões, destaques e cabeçalho do sistema.</span></div><button class="ghost sm" data-act="cfgcolorreset" style="margin-top:10px">Restaurar cor laranja padrão</button></section>
   <section class="card cfg-card"><h2>Ícone no topo do sistema</h2>
-    <div class="cfg-logo"><div class="cfg-logo-prev"><img src="${cl.icone||''}" alt="Ícone atual" ${cl.icone?'':'style="display:none"'}></div>
+    <div class="cfg-logo"><div class="cfg-logo-prev"><img src="${safeImageSrc(cl.icone)}" alt="Ícone atual" ${cl.icone?'':'style="display:none"'}></div>
     <div style="flex:1;min-width:200px"><label for="cfgIcon" style="margin-top:0">Enviar ícone (PNG ou WebP com transparência; JPG não mantém fundo transparente)</label><input id="cfgIcon" type="file" accept="image/png,image/jpeg,image/webp">
     <p class="note" style="margin:6px 0 0">Este ícone aparece ao lado do nome da empresa no topo. Você pode configurá-lo separadamente da logo usada nos documentos.</p>
     ${cl.icone?'<button class="ghost sm" data-act="cfgiconrm" style="margin-top:8px">Remover ícone personalizado</button>':'<p class="note" style="margin:6px 0 0">Usando o ícone padrão ou a logo já cadastrada.</p>'}</div></div>

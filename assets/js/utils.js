@@ -1,6 +1,17 @@
 /* ===== utilidades ===== */
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Endereços de arquivos não são HTML: rejeita javascript, SVG e atributos injetados.
+function safeImageSrc(value){
+ const source=typeof value==='string'?value:'';
+ return /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(source)?source:'';
+}
+function safeAttachmentUrl(value){
+ const source=typeof value==='string'?value:'';
+ if(safeImageSrc(source)||/^data:application\/pdf;base64,[A-Za-z0-9+/]+={0,2}$/.test(source))return source;
+ try{const url=new URL(source);if(url.protocol==='blob:'&&source.startsWith('blob:'+location.origin+'/'))return url.href;}catch{}
+ return '';
+}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const num=v=>{if(typeof v==='number')return isFinite(v)?v:0;let t=String(v==null?'':v).replace(/[^\d,.\-]/g,'');if(t.indexOf(',')>-1)t=t.replace(/\./g,'').replace(',','.');const n=parseFloat(t);return isFinite(n)?n:0};
 const r2=n=>Math.round((n+Number.EPSILON)*100)/100;

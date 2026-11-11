@@ -1,0 +1,22 @@
+name: Validar sistema e segurança
+on:
+  push:
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-fund
+      - run: npm audit --audit-level=high
+      - name: Instalar PostgreSQL isolado para testes
+        run: npm install --prefix "$RUNNER_TEMP/nexodent-pglite" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.14
+      - name: Validar fluxos e acesso
+        run: PGLITE_MODULE="$RUNNER_TEMP/nexodent-pglite/node_modules/@electric-sql/pglite/dist/index.js" node --test tests/*.test.cjs
