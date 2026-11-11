@@ -9,7 +9,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Nexodent" />
-    <meta name="theme-color" content="#c56800" />
+    <meta name="theme-color" content="#fbfbfd" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="color-scheme" content="light" />
     <meta name="supported-color-schemes" content="light" />
@@ -19,7 +19,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=068" />
     <link rel="shortcut icon" href="./favicon.ico?v=068" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=068" />
-    <link rel="manifest" href="./manifest.webmanifest?v=164" />
+    <link rel="manifest" href="./manifest.webmanifest?v=269" />
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./assets/css/legacy-1.css?build=260" />
     <link rel="stylesheet" href="./assets/css/legacy-2.css?build=260" />
@@ -46,7 +46,7 @@
       @media(prefers-reduced-motion:reduce){.ov-splash-logo{animation:none}}
       @media(max-width:600px){.ov-splash-logo{width:88px;height:88px}.ov-splash-caption{text-align:center;font-size:11px}}
     </style>
-  <link rel="stylesheet" href="assets/css/nexodent-crm-embed.css?build=260"></head>
+  <link rel="stylesheet" href="assets/css/nexodent-crm-embed.css?build=260"><link rel="stylesheet" href="./assets/css/header-notifications.css?build=269"></head>
   <body>
     <!-- Tela neutra de abertura: somente a marca, sem informações clínicas. -->
     <div id="ov-startup-shell" role="status" aria-live="polite" aria-label="Carregando Nexodent">
@@ -89,7 +89,7 @@
     <script defer src="./assets/js/features/events.js?build=260"></script>
     <script defer src="./assets/js/features/nexo-payment-plan.js?build=260"></script>
     <script defer data-nexodent-sound="true" src="./assets/js/notification-sound.js?build=268"></script>
-    <script defer src="./assets/js/features/notifications.js?build=268"></script>
+    <script defer src="./assets/js/features/notifications.js?build=269"></script>
     <script defer src="./assets/js/oralvalle-push-client.js?build=268"></script>
     <script defer src="./assets/js/permissions.js?build=272"></script>
     <script defer src="./assets/js/supabase/config.js?build=260"></script>
@@ -112,7 +112,7 @@
     <script>
     /* Atualização segura do PWA: sem apagar dados locais nem forçar recarga durante edição. */
     (() => {
-      const build = '268';
+      const build = '269';
       let pending = false;
       let busy = false;
       const btn = document.createElement('button');
