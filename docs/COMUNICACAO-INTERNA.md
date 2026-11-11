@@ -45,3 +45,7 @@ Para validar a interface, com Playwright e Chromium disponíveis: `node tests/br
 Histórico é paginado. A primeira versão não oferece edição/exclusão de mensagens, pesquisa textual, encaminhamento, gravação de áudio, videoconferência, envio por WhatsApp ou e-mail, nem comunicação entre clínicas. Não há arquivamento/exclusão de anexos pela interface ou transferência de criador de grupo. Retenção, eventual expansão da quota e administração de grupos sem criador ativo devem ser tratados pelo operador com procedimento autorizado, sem editar/destruir histórico cegamente.
 
 Os testes usam banco isolado e navegador local. Nenhuma mensagem foi enviada a usuários reais e a migration não foi aplicada ao Supabase de produção nesta entrega. Publicar apenas a página não instala as funções de conversa.
+
+## Avisos sonoros
+
+Novas mensagens e avisos de agenda emitem um sinal curto, após a primeira interação no sistema. O chat oferece “Som ligado/desligado”; a preferência vale para o usuário naquele aparelho. Ao ligar, toca um teste. O histórico carregado ao entrar e as próprias mensagens não disparam o som. Sinais próximos são agrupados por 2 segundos para evitar repetição entre abas. O contador consulta novas mensagens a cada 20 segundos; abas em segundo plano podem ser limitadas pelo navegador. Com o sistema fechado, o som das notificações Push depende do navegador, volume e configurações do aparelho.

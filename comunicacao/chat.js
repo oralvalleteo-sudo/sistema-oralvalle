@@ -47,7 +47,8 @@ async function messages(mode='new',remaining=5){
  const args={p_room:room};if(mode==='older'&&ids.length)args.p_before=ids[0];else if(mode==='new'&&ids.length)args.p_after=ids.at(-1);
  const result=await rpc('messages_page',args,clinic);if(version!==state.version)return;
  if(mode==='initial'||mode==='older')state.older=result.has_more;$('older').hidden=!state.older;
- let added=0;for(const message of result.messages||[])if(!state.messages.has(message.id)){state.messages.set(message.id,message);added++;}
+ let incoming=false,added=0;for(const message of result.messages||[])if(!state.messages.has(message.id)){state.messages.set(message.id,message);added++;if(message.author_id!==state.user)incoming=true;}
+ if(mode==='new'&&incoming){try{(embedded?window.parent:window).NexoNotificationSound?.play();}catch{}}
  if(added||mode==='initial'){renderMessages(mode);if(mode==='new'&&added)$('new-messages').textContent=added+' nova(s) mensagem(ns).';}
  await markRead();
  if(mode==='new'&&result.has_more&&remaining>1&&version===state.version)await messages('new',remaining-1);

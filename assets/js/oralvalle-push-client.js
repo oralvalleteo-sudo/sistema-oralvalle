@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   // Substitua APENAS pelo valor Public Key gerado no seu computador.
+  const workerURL=new URL('../../sw.js',document.currentScript.src).href;
   const VAPID_PUBLIC_KEY = 'BD-S_MitPiKJLbbsv2BlZnq7Ko9QOchv9SBluTG29CLGv8G2tMf9N7zH3RXKM--ul1urnTOGUfDuXWbcrB5TjSE';
   function keyBytes(base64url) {
     const padded = (base64url + '='.repeat((4 - base64url.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
@@ -17,7 +18,7 @@
     }
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('Permissão de notificações não concedida.');
-    const registration = await navigator.serviceWorker.register('/sw.js');
+    const registration = await navigator.serviceWorker.register(workerURL);
     await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
     if (!subscription) {
@@ -46,7 +47,7 @@
     if (Notification.permission === 'denied') return { active: false, label: 'Notificações bloqueadas' };
     if (Notification.permission !== 'granted') return { active: false, label: 'Notificações desativadas' };
     try {
-      const registration = await navigator.serviceWorker.getRegistration('/sw.js');
+      const registration = await navigator.serviceWorker.getRegistration(workerURL);
       const subscription = registration && await registration.pushManager.getSubscription();
       return subscription ? { active: true, label: 'Push ativado neste aparelho' }
         : { active: false, label: 'Push não cadastrado neste aparelho' };

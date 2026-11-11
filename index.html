@@ -88,8 +88,9 @@
     <script defer src="./assets/js/features/budget-billing.js?build=261"></script>
     <script defer src="./assets/js/features/events.js?build=260"></script>
     <script defer src="./assets/js/features/nexo-payment-plan.js?build=260"></script>
-    <script defer src="./assets/js/features/notifications.js?build=260"></script>
-    <script defer src="./assets/js/oralvalle-push-client.js?build=260"></script>
+    <script defer data-nexodent-sound="true" src="./assets/js/notification-sound.js?build=268"></script>
+    <script defer src="./assets/js/features/notifications.js?build=268"></script>
+    <script defer src="./assets/js/oralvalle-push-client.js?build=268"></script>
     <script defer src="./assets/js/permissions.js?build=272"></script>
     <script defer src="./assets/js/supabase/config.js?build=260"></script>
     <script defer src="./assets/js/supabase/client.js?build=260"></script>
@@ -111,7 +112,7 @@
     <script>
     /* Atualização segura do PWA: sem apagar dados locais nem forçar recarga durante edição. */
     (() => {
-      const build = '267';
+      const build = '268';
       let pending = false;
       let busy = false;
       const btn = document.createElement('button');
@@ -237,5 +238,5 @@
       setInterval(()=>{if(!document.hidden)check();},120000);
     })();
     </script>
-  <script src="./assets/js/chat-widget.js?build=267"></script></body>
+  <script src="./assets/js/chat-widget.js?build=268"></script></body>
 </html>

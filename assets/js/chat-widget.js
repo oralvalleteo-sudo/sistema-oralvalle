@@ -7,7 +7,10 @@ const launcher=document.createElement('button');launcher.id='nexodent-chat-launc
 const icon=document.createElement('span');icon.setAttribute('aria-hidden','true');icon.textContent='💬';const badge=document.createElement('span');badge.dataset.chatUnread='';badge.hidden=true;badge.setAttribute('aria-hidden','true');launcher.append(icon,badge);
 const panel=document.createElement('section');panel.id='nexodent-chat-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','false');panel.setAttribute('aria-labelledby','nexo-chat-widget-title');
 const toolbar=document.createElement('div');toolbar.className='nexo-chat-toolbar';const title=document.createElement('h2');title.id='nexo-chat-widget-title';title.textContent='Chat da equipe';const full=document.createElement('a');full.href=chatURL.href;full.target='_blank';full.rel='noopener';full.textContent='Abrir central';
-const closeButton=document.createElement('button');closeButton.type='button';closeButton.textContent='✕';closeButton.setAttribute('aria-label','Fechar chat');toolbar.append(title,full,closeButton);panel.append(toolbar);
+const closeButton=document.createElement('button');closeButton.type='button';closeButton.textContent='✕';closeButton.setAttribute('aria-label','Fechar chat');const soundButton=document.createElement('button');soundButton.type='button';soundButton.title='Ativar ou silenciar avisos sonoros neste aparelho';
+function soundLabel(){const enabled=window.NexoNotificationSound?.enabled()!==false;soundButton.textContent=enabled?'🔔 Som ligado':'🔕 Som desligado';soundButton.setAttribute('aria-pressed',String(enabled));soundButton.setAttribute('aria-label',enabled?'Silenciar notificações':'Ativar som das notificações');}
+soundButton.onclick=async event=>{const sound=window.NexoNotificationSound;if(!sound)return;sound.setEnabled(!sound.enabled());if(sound.enabled()){await sound.unlock(event);sound.play();}soundLabel();};window.addEventListener('nexodent:sound-change',soundLabel);soundLabel();
+toolbar.append(title,full,soundButton,closeButton);panel.append(toolbar);
 const probe=document.createElement('div');probe.id='nexodent-chat-safearea';document.body.append(probe,panel,launcher);
 let user='',point={x:0,y:0},frame=null,frameClinic=null,selectedClinic=null,open=false;
 const frames=[];
@@ -51,5 +54,6 @@ window.addEventListener('nexodent:chat-unread',e=>{if(!open&&/^\d+$/.test(String
 window.addEventListener('resize',layout);window.visualViewport?.addEventListener('resize',layout);window.visualViewport?.addEventListener('scroll',layout);
 window.addEventListener('nexodent:clinic-data-loaded',session);document.addEventListener('visibilitychange',()=>{if(!document.hidden){session();layout();}});
 setInterval(session,1000);session();layout();
-if(!window.NexoChatBadge&&!document.querySelector('script[data-nexodent-chat-badge]')){const shared=document.createElement('script');shared.dataset.nexodentChatBadge='true';shared.src=new URL('assets/js/chat-badge.js?v=widget1',root);document.body.append(shared);}
+if(!window.NexoNotificationSound&&!document.querySelector('script[data-nexodent-sound]')){const audioScript=document.createElement('script');audioScript.dataset.nexodentSound='true';audioScript.src=new URL('assets/js/notification-sound.js?build=268',root);document.body.append(audioScript);}
+if(!window.NexoChatBadge&&!document.querySelector('script[data-nexodent-chat-badge]')){const shared=document.createElement('script');shared.dataset.nexodentChatBadge='true';shared.src=new URL('assets/js/chat-badge.js?v=268',root);document.body.append(shared);}
 })();
