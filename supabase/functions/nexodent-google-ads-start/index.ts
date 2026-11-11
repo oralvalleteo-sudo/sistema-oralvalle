@@ -13,7 +13,7 @@ async function key(){if(!/^[a-f0-9]{64}$/i.test(ENC_KEY||''))throw Error('GOOGLE
 async function seal(s:string){const iv=random(12),data=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},await key(),enc.encode(s)));return b64(iv)+'.'+b64(data)}
 function cors(req:Request){const origin=req.headers.get('origin')||'';const allowed=Deno.env.get('NEXODENT_APP_ORIGIN')||'';return {'Access-Control-Allow-Origin':origin===allowed?origin:allowed,'Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS','Vary':'Origin'}}
 async function db(path:string,method='GET',body?:unknown){const r=await fetch(URL_BASE+'/rest/v1/'+path,{method,headers:{'apikey':SERVICE_KEY,'Authorization':'Bearer '+SERVICE_KEY,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw Error('Banco de dados indisponível ('+r.status+')');return await r.json()}
-function reply(req:Request,status:number,obj:unknown){return new Response(JSON.stringify(obj),{status,headers:{...cors(req),'Content-Type':'application/json'}})}
+function reply(req:Request,status:number,obj:unknown){return new Response(JSON.stringify(obj),{status,headers:{...cors(req),'Content-Type':'application/json','Cache-Control':'no-store'}})}
 Deno.serve(async(req)=>{
  if(req.method==='OPTIONS')return new Response(null,{headers:cors(req)});
  if(req.method!=='POST')return reply(req,405,{error:'Método inválido'});
@@ -30,5 +30,5 @@ Deno.serve(async(req)=>{
   await db('nexodent_google_oauth_states','POST',{state_hash:await sha(state),clinic_id:clinic,user_id:user.id,verifier_cipher:await seal(verifier),expires_at:new Date(Date.now()+10*60*1000).toISOString()});
   const p=new URLSearchParams({client_id:CLIENT_ID,redirect_uri:CALLBACK,response_type:'code',scope:'https://www.googleapis.com/auth/adwords',access_type:'offline',prompt:'consent',state,code_challenge:challenge,code_challenge_method:'S256'});
   return reply(req,200,{authorization_url:'https://accounts.google.com/o/oauth2/v2/auth?'+p});
- }catch(e){console.error('google start',e);return reply(req,500,{error:'Falha ao iniciar autorização. Confira a configuração das funções.'})}
+ }catch(e){console.error('google start failed');return reply(req,500,{error:'Falha ao iniciar autorização. Confira a configuração das funções.'})}
 });

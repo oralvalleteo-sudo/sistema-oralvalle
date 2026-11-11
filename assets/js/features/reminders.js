@@ -86,7 +86,7 @@ function retHtml(){
   const row=(p,last)=>{
     const tel=String(p.tel||'').replace(/\D/g,''),rec=retRecente(p);
     return `<div class="ret-it"><div class="ret-i"><strong>${esc(p.nome)}</strong><small>${last?'Última visita: '+esc(fd(last))+' · há '+mesesDesde(last)+' meses':'Nenhuma consulta registrada'}${tel?' · '+esc(p.tel):' · sem telefone'}</small>${rec?`<span class="badge stt-ok" style="margin-top:4px">Contatado em ${esc(fd(p.retCont))}</span>`:''}</div>
-    <div class="ret-act">${tel?`<button class="sm" data-act="retwa" data-id="${p.id}">WhatsApp</button>`:''}<button class="ghost sm" data-act="retok" data-id="${p.id}">${rec?'Contatar de novo':'Marcar contatado'}</button><button class="ghost sm" data-act="open" data-id="${p.id}">Ver ficha</button></div></div>`;
+    <div class="ret-act">${tel?`<button class="sm" data-act="retwa" data-id="${esc(p.id)}">WhatsApp</button>`:''}<button class="ghost sm" data-act="retok" data-id="${esc(p.id)}">${rec?'Contatar de novo':'Marcar contatado'}</button><button class="ghost sm" data-act="open" data-id="${esc(p.id)}">Ver ficha</button></div></div>`;
   };
   return `<section class="card ret-card"><h2>Pacientes sem retorno há mais de ${N} meses${out.length?` (${out.length})`:''}</h2>
   <p class="sub" style="margin:0 0 6px">Pacientes sem consulta marcada para o futuro e com a última visita há ${N} meses ou mais. Quem foi contatado nos últimos 30 dias vai para o fim da lista. O prazo e a mensagem ficam em Configurações > Empresa.</p>
@@ -151,12 +151,12 @@ function lembretesHtml(){
         const cls=x.feito?' done':'';
         return `<article class="ov-reminder-item${cls}">
           <div class="ov-reminder-top">
-            <input class="ov-reminder-check" type="checkbox" data-lem-check="${x.id}" ${x.feito?'checked':''} aria-label="Concluir lembrete">
+            <input class="ov-reminder-check" type="checkbox" data-lem-check="${esc(x.id)}" ${x.feito?'checked':''} aria-label="Concluir lembrete">
             <div class="ov-reminder-title">${esc(x.titulo||'Lembrete sem título')}</div>
           </div>
           <div class="ov-reminder-meta"><span class="ov-reminder-pill">${esc(x.tipo||'Geral')}</span><span class="ov-reminder-pill">${esc(when)}</span></div>
           ${x.obs?`<div class="ov-reminder-note">${esc(x.obs)}</div>`:''}
-          <div class="ov-reminder-actions"><button class="ghost sm" data-act="togglelem" data-id="${x.id}">${x.feito?'Reabrir':'Concluir'}</button><button class="danger sm" data-act="rmlem" data-id="${x.id}">${delArm===x.id?'Confirmar exclusão':'Excluir'}</button></div>
+          <div class="ov-reminder-actions"><button class="ghost sm" data-act="togglelem" data-id="${esc(x.id)}">${x.feito?'Reabrir':'Concluir'}</button><button class="danger sm" data-act="rmlem" data-id="${esc(x.id)}">${delArm===x.id?'Confirmar exclusão':'Excluir'}</button></div>
         </article>`;}).join('')}</div>`:
       `<div class="ov-reminder-empty"><strong>${T==='todos'?'Nenhum lembrete cadastrado':'Nenhum lembrete em '+T}</strong>Use o formulário ao lado para escrever um lembrete.</div>`}
     </section>
@@ -176,7 +176,7 @@ function listHtml(){
   const tot=db.p.filter(p=>!p.arq).length;
   if(!tot)return '<div class="empty">Nenhum paciente cadastrado ainda.</div>';
   if(!l.length)return '<div class="empty">Nenhum paciente encontrado.</div>';
-  return l.map(p=>`<button class="pt" data-act="open" data-id="${p.id}"><span>${esc(p.nome)}<small>${esc(pvFmtTel(p.tel)||'Sem telefone')}</small></span><span class="badge">${p.orcs.length} orç.</span></button>`).join('');
+  return l.map(p=>`<button class="pt" data-act="open" data-id="${esc(p.id)}"><span>${esc(p.nome)}<small>${esc(pvFmtTel(p.tel)||'Sem telefone')}</small></span><span class="badge">${p.orcs.length} orç.</span></button>`).join('');
 }
 // Pacientes com procedimentos clínicos ainda não concluídos (independente de pagamentos).
 function nexoTratamentoPendente(p){
@@ -208,7 +208,7 @@ function homePac(){
   const pageSize=50, pages=Math.max(1,Math.ceil(filtered.length/pageSize));
   view.pPage=Math.min(Math.max(0,Number(view.pPage)||0),pages-1);
   const pageRows=filtered.slice(view.pPage*pageSize,(view.pPage+1)*pageSize);
-  const rows=pageRows.length?pageRows.map(p=>`<button class="ov-patient-row" data-act="open" data-id="${p.id}"><span class="nd-patient-identity"><span class="ov-patient-row-name">${esc(p.nome)}</span><small>☎ ${esc(pvFmtTel(p.tel)||'Sem telefone')}</small></span><span class="nd-patient-info"><span>Orçamentos</span><strong>${Array.isArray(p.orcs)?p.orcs.length:0}</strong></span><span class="nd-patient-info"><span>Financeiro</span><strong class="${pendingIds.has(p.id)?'nd-status-pending':'nd-status-clear'}">${pendingIds.has(p.id)?'Pagamento pendente':'Sem pendência registrada'}</strong></span><span class="ov-patient-arrow">›</span></button>`).join(''):`<div class="ov-patient-empty">${active.length?'Nenhum paciente encontrado.':(archivedMode?'Nenhum paciente arquivado.':'Nenhum paciente cadastrado ainda.')}</div>`;
+  const rows=pageRows.length?pageRows.map(p=>`<button class="ov-patient-row" data-act="open" data-id="${esc(p.id)}"><span class="nd-patient-identity"><span class="ov-patient-row-name">${esc(p.nome)}</span><small>☎ ${esc(pvFmtTel(p.tel)||'Sem telefone')}</small></span><span class="nd-patient-info"><span>Orçamentos</span><strong>${Array.isArray(p.orcs)?p.orcs.length:0}</strong></span><span class="nd-patient-info"><span>Financeiro</span><strong class="${pendingIds.has(p.id)?'nd-status-pending':'nd-status-clear'}">${pendingIds.has(p.id)?'Pagamento pendente':'Sem pendência registrada'}</strong></span><span class="ov-patient-arrow">›</span></button>`).join(''):`<div class="ov-patient-empty">${active.length?'Nenhum paciente encontrado.':(archivedMode?'Nenhum paciente arquivado.':'Nenhum paciente cadastrado ainda.')}</div>`;
   const pager=filtered.length>pageSize?`<div class="row ov-patient-pager" style="justify-content:space-between;margin-top:12px"><span class="note" style="margin:0">Página ${view.pPage+1} de ${pages} · ${filtered.length} pacientes</span><span class="row" style="flex:none;gap:6px"><button class="ghost sm" data-act="pPage" data-p="${view.pPage-1}"${view.pPage===0?' disabled':''}>Anterior</button><button class="ghost sm" data-act="pPage" data-p="${view.pPage+1}"${view.pPage>=pages-1?' disabled':''}>Próxima</button></span></div>`:'';
   return `<div class="ov-patients-page">
     <div class="ov-page-head nd-patient-hero"><span class="nd-patient-hero-icon" aria-hidden="true">♧</span><div><h1>Pacientes</h1><p class="sub">Cadastro, histórico e acompanhamento de tratamentos.</p></div><span class="nd-patient-hero-decoration" aria-hidden="true">✧</span></div>

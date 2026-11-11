@@ -381,7 +381,7 @@ const A={
     db.p.forEach(p=>{if(p.evol)p.evol=p.evol.filter(e=>!(e.auto&&e.vid===d.id))});
     db.vd=db.vd.filter(x=>x.id!==d.id);save();render()}),
   rcv:(b,d)=>{
-    const v=db.vd.find(x=>x.id===d.id),inp=document.querySelector(`[data-rcv="${d.id}"]`),f=document.querySelector(`[data-rcvf="${d.id}"]`),val=num(inp.value);
+    const v=db.vd.find(x=>x.id===d.id),inp=document.querySelector(`[data-rcv="${esc(d.id)}"]`),f=document.querySelector(`[data-rcvf="${esc(d.id)}"]`),val=num(inp.value);
     if(!(val>0)){toast('Informe o valor recebido');return}
     if(val>saldoV(v)+0.005){toast('Valor maior que o saldo ('+brl(saldoV(v))+')',3000);return}
     v.pg.push(ovFeeMake(val,f.value,tdy()));save();render();toast('Recebimento registrado')},
@@ -391,15 +391,15 @@ const A={
   dtarq:(b,d)=>{const x=db.dt.find(y=>y.id===d.id);x.ativo=x.ativo===false;save();render()},
   rmdt:(b,d)=>arm(d.id,()=>{db.dt=db.dt.filter(x=>x.id!==d.id);save();render()}),
   cpay:(b,d)=>{
-    const inp=document.querySelector(`[data-cpv="${d.id}"]`),val=num(inp.value),t=dtTot(d.id);
+    const inp=document.querySelector(`[data-cpv="${esc(d.id)}"]`),val=num(inp.value),t=dtTot(d.id);
     if(!(val>0)){toast('Informe o valor pago');return}
     if(val>t.apagar+0.005){toast('Valor maior que o saldo a pagar ('+brl(t.apagar)+')',3000);return}
-    const dI=document.querySelector(`[data-cpd="${d.id}"]`),oI=document.querySelector(`[data-cpo="${d.id}"]`);
+    const dI=document.querySelector(`[data-cpd="${esc(d.id)}"]`),oI=document.querySelector(`[data-cpo="${esc(d.id)}"]`);
     db.cp.push({id:uid(),dt:d.id,data:(dI&&dI.value)||tdy(),valor:r2(val),obs:oI?oI.value.trim():''});save();render();toast('Pagamento registrado')},
   rmcp:(b,d)=>arm(d.id,()=>{db.cp=db.cp.filter(c=>c.id!==d.id);save();render()}),
   addpr:()=>{const n={id:uid(),nome:'Novo procedimento',min:'30',mat:'',lab:'',custo:'',par:'',parTipo:'reais',preco:'',parc:false,mats:[]};db.pr.unshift(n);view.prOpen=n.id;save();render()},
   addmt:()=>{const nome=$('mtn').value.trim(),preco=num($('mtp').value),qtd=num($('mtq').value)||1,stock=num($('mts').value),val=$('mtv').value;if(!nome){toast('Digite o nome do material');return}if(!(preco>0)){toast('Informe o preço da embalagem');return}if(stock<0||!Number.isFinite(stock)){toast('Quantidade em estoque inválida');return}db.mt.push({id:uid(),nome,un:$('mtu').value,preco:String(preco),qtd:String(qtd),val:'',ret:false,lotes:stock>0?[{id:uid(),qtd:String(stock),val,ret:false}]:[]});save();render();toast('Material cadastrado')},
-  addmtlot:(b,d)=>{const m=db.mt.find(y=>y.id===d.id),q=document.querySelector(`[data-newlot-q="${d.id}"]`),v=document.querySelector(`[data-newlot-v="${d.id}"]`);if(!m||!q)return;const n=num(q.value);if(!(n>0)||!Number.isFinite(n)){toast('Informe a quantidade do lote');return}m.lotes=m.lotes||[];m.lotes.push({id:uid(),qtd:String(n),val:v?.value||'',ret:false});save();render();toast('Lote adicionado')},
+  addmtlot:(b,d)=>{const m=db.mt.find(y=>y.id===d.id),q=document.querySelector(`[data-newlot-q="${esc(d.id)}"]`),v=document.querySelector(`[data-newlot-v="${esc(d.id)}"]`);if(!m||!q)return;const n=num(q.value);if(!(n>0)||!Number.isFinite(n)){toast('Informe a quantidade do lote');return}m.lotes=m.lotes||[];m.lotes.push({id:uid(),qtd:String(n),val:v?.value||'',ret:false});save();render();toast('Lote adicionado')},
   togglemtlot:(b,d)=>{const m=db.mt.find(y=>y.id===d.id),l=m?.lotes?.find(x=>x.id===d.r);if(!l)return;l.ret=!l.ret;save();render();toast(l.ret?'Lote retirado do estoque':'Lote reativado')},
   retmt:(b,d)=>{const m=db.mt.find(y=>y.id===d.id);if(!m)return;const l=(m.lotes||[]).filter(x=>!x.ret).sort((a,b)=>(a.val||'9999').localeCompare(b.val||'9999'))[0];if(l)l.ret=true;else m.ret=true;save();render();toast('Lote retirado do estoque')},
   repmt:(b,d)=>{const m=db.mt.find(y=>y.id===d.id);if(!m)return;m.ret=false;save();render();toast('Material reativado')},

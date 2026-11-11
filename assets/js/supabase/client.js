@@ -6,9 +6,11 @@
   let keep = false;
   let refreshing = null;
   let recovery = false;
+  let sessionEpoch = 0;
 
   function storeSession(value, persistent) {
     if (value && !value.expires_at) value.expires_at = Math.floor(Date.now() / 1000) + Number(value.expires_in || 3600);
+    sessionEpoch++;
     session = value;
     keep = persistent;
     localStorage.removeItem(sessionKey);
@@ -43,10 +45,15 @@
 
   async function refresh() {
     if (!session?.refresh_token) throw new Error('Entre novamente para acessar a clínica.');
-    if (!refreshing) {
-      refreshing = send('/auth/v1/token?grant_type=refresh_token', {
+    const epoch = sessionEpoch;
+    if (!refreshing || refreshing.epoch !== epoch) {
+      const job = send('/auth/v1/token?grant_type=refresh_token', {
         method: 'POST', body: { refresh_token: session.refresh_token },
-      }).then(data => { storeSession(data, keep); return data; }).finally(() => { refreshing = null; });
+      }).then(data => {
+        if (sessionEpoch !== epoch) throw new Error('A sessão mudou durante a renovação.');
+        storeSession(data, keep); return data;
+      }).finally(() => { if (refreshing === job) refreshing = null; });
+      job.epoch = epoch; refreshing = job;
     }
     return refreshing;
   }
@@ -73,6 +80,9 @@
     }
     try {
       const user = await request('/auth/v1/user');
+      if(!session || (session.user?.id && session.user.id!==user.id))throw new Error('A sessão mudou durante a verificação.');
+      session.user=user;
+      (keep ? localStorage : sessionStorage).setItem(sessionKey,JSON.stringify(session));
       return { user, keep, recovery };
     } catch (error) {
       // Falha de rede não deve eliminar uma sessão recuperável.
@@ -82,9 +92,11 @@
   }
 
   async function login(email, password, persistent) {
+    const epoch=++sessionEpoch;
     const data = await send('/auth/v1/token?grant_type=password', {
       method: 'POST', body: { email, password },
     });
+    if(sessionEpoch!==epoch)throw new Error('Uma nova tentativa de acesso foi iniciada.');
     storeSession(data, persistent);
     return data.user;
   }
@@ -100,8 +112,9 @@
   }
 
   async function logout() {
-    try { if (session) await request('/auth/v1/logout', { method: 'POST', body: {} }); }
-    finally { storeSession(null, false); cloud.clinicId = null; recovery = false; }
+    const token=session?.access_token;
+    storeSession(null,false);cloud.clinicId=null;recovery=false;
+    if(token)await send('/auth/v1/logout?scope=local',{method:'POST',body:{}},token);
   }
 
   async function recover(email) {

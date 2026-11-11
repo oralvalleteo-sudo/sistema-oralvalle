@@ -84,15 +84,15 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
   if(t.id==='mtq-search'){view.mtq=t.value;render();setTimeout(()=>{const e=$('mtq-search');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}},0);return}
   if(t.dataset.mtl){const m=db.mt.find(y=>y.id===t.dataset.mtl),l=m?.lotes?.find(x=>x.id===t.dataset.lid);if(!l)return;if(t.dataset.lf==='qtd'){const n=Number(t.value);if(!Number.isFinite(n)||n<0){toast('Quantidade inválida');return}l.qtd=String(n)}else l.val=t.value;save();render();return}
   if(t.dataset.mt){const m=db.mt.find(y=>y.id===t.dataset.mt),f=t.dataset.f;if(!m)return;m[f]=(f==='nome'||f==='un'||f==='val')?t.value:t.value.replace(',','.');
-    if(f==='val'){m.ret=false;const tg=document.querySelector(`[data-mtv="${m.id}"]`),stt=mtStatus(m);if(tg){tg.className='val-tag '+stt.k;tg.textContent=stt.k==='sem'?'Sem validade cadastrada':stt.txt+(m.val?' · '+fd(m.val):'')}const al=$('valAlert');if(al)al.innerHTML=valAlertHtml();save();return}
+    if(f==='val'){m.ret=false;const tg=document.querySelector(`[data-mtv="${esc(m.id)}"]`),stt=mtStatus(m);if(tg){tg.className='val-tag '+stt.k;tg.textContent=stt.k==='sem'?'Sem validade cadastrada':stt.txt+(m.val?' · '+fd(m.val):'')}const al=$('valAlert');if(al)al.innerHTML=valAlertHtml();save();return}
     db.pr.forEach(x=>{if((x.mats||[]).some(r=>r.mid===m.id)){syncMat(x)}});
-    const bd=document.querySelector(`[data-mtc="${m.id}"]`);if(bd)bd.textContent=brl4(mtUnit(m))+' / '+m.un;save();return}
+    const bd=document.querySelector(`[data-mtc="${esc(m.id)}"]`);if(bd)bd.textContent=brl4(mtUnit(m))+' / '+m.un;save();return}
   if(t.dataset.pm){const x=db.pr.find(y=>y.id===t.dataset.pm),r=x&&(x.mats||[]).find(y=>y.id===t.dataset.mr);if(!r)return;r.q=t.value.replace(',','.');syncMat(x);
-    const m=mtBy(r.mid),sb=document.querySelector(`[data-pms="${r.id}"]`);if(sb)sb.textContent=brl(m?mtUnit(m)*num(r.q):0);
-    const tt=document.querySelector(`[data-pmt="${x.id}"] span:last-child`);if(tt)tt.textContent=brl(matCost(x));
-    const rs=document.querySelector(`[data-pres="${x.id}"]`);if(rs)rs.innerHTML=prRes(x);save();return}
-  if(t.dataset.pc){const x=db.pr.find(y=>y.id===t.dataset.pc);x.parc=t.checked;const r=document.querySelector(`[data-pres="${x.id}"]`);if(r)r.innerHTML=prRes(x);save();return}
-  if(t.dataset.p){const x=db.pr.find(y=>y.id===t.dataset.p),f=t.dataset.f;x[f]=f==='nome'?t.value:t.value.replace(',','.');if(f==='parTipo'){view.prOpen=x.id;save();render();return}const r=document.querySelector(`[data-pres="${x.id}"]`);if(r)r.innerHTML=prRes(x);save();return}
+    const m=mtBy(r.mid),sb=document.querySelector(`[data-pms="${esc(r.id)}"]`);if(sb)sb.textContent=brl(m?mtUnit(m)*num(r.q):0);
+    const tt=document.querySelector(`[data-pmt="${esc(x.id)}"] span:last-child`);if(tt)tt.textContent=brl(matCost(x));
+    const rs=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(rs)rs.innerHTML=prRes(x);save();return}
+  if(t.dataset.pc){const x=db.pr.find(y=>y.id===t.dataset.pc);x.parc=t.checked;const r=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(r)r.innerHTML=prRes(x);save();return}
+  if(t.dataset.p){const x=db.pr.find(y=>y.id===t.dataset.p),f=t.dataset.f;x[f]=f==='nome'?t.value:t.value.replace(',','.');if(f==='parTipo'){view.prOpen=x.id;save();render();return}const r=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(r)r.innerHTML=prRes(x);save();return}
   if(t.dataset.h){db.hc[t.dataset.h]=t.value.replace(',','.');$('hcr').innerHTML=hcRes(hcCalc(db.hc));const tf=$('hcfx');if(tf)tf.textContent=brl(hcFix(db.hc));save();return}
   if(!p)return;
   if(t.dataset.k&&(t.dataset.k==='nome'||t.dataset.k==='cpf')){
@@ -104,7 +104,7 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
   if(t.dataset.k){p[t.dataset.k]=t.value;if(t.dataset.k==='nome'){const h=document.querySelector('h1');if(h)h.firstChild.textContent=t.value}}
   else if(t.dataset.a){p.anam[t.dataset.a]=t.value}
   else if(t.dataset.c){p.anam.c[t.dataset.c]=t.checked;t.parentNode.classList.toggle('on',t.checked)}
-  else if(t.dataset.tr){const x=(p.trat||[]).find(y=>y.id===t.dataset.tr);if(x&&!x.vid){const f=t.dataset.f;x[f]=(f==='valor'||f==='custo')?t.value.replace(',','.'):t.value;trGrp(x,f);syncTratToItem(p,x);const c=document.querySelector(`[data-trc="${x.id}"]`);if(c)c.textContent=trCom(x);save()}}
+  else if(t.dataset.tr){const x=(p.trat||[]).find(y=>y.id===t.dataset.tr);if(x&&!x.vid){const f=t.dataset.f;x[f]=(f==='valor'||f==='custo')?t.value.replace(',','.'):t.value;trGrp(x,f);syncTratToItem(p,x);const c=document.querySelector(`[data-trc="${esc(x.id)}"]`);if(c)c.textContent=trCom(x);save()}}
   else if(t.dataset.o){
     const o=getO(p,t.dataset.o),f=t.dataset.f;
     if(f==='status'){

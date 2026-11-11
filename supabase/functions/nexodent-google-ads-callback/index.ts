@@ -16,17 +16,25 @@ async function db(path:string,method='GET',body?:unknown){const r=await fetch(UR
 function reply(req:Request,status:number,obj:unknown){return new Response(JSON.stringify(obj),{status,headers:{...cors(req),'Content-Type':'application/json'}})}
 function unb64(s:string){const t=s.replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(t),c=>c.charCodeAt(0))}
 async function unseal(s:string){const [iv,data]=s.split('.');return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(iv)},await key(),unb64(data)))}
-function redirect(ok:boolean){const base=Deno.env.get('NEXODENT_APP_ORIGIN')!;return Response.redirect(base+'/integracoes/index.html?google_ads='+(ok?'authorized':'error'),303)}
+function redirect(ok:boolean){
+ const origin=Deno.env.get('NEXODENT_APP_ORIGIN')||'';let base:URL;
+ try{base=new URL(Deno.env.get('NEXODENT_APP_URL')||origin);if(base.protocol!=='https:'||base.origin!==new URL(origin).origin)throw Error('Invalid app URL');}catch{return new Response('Endereço do NexoDent não configurado',{status:503});}
+ if(!Deno.env.get('NEXODENT_APP_URL')&&base.hostname.endsWith('.github.io'))base.pathname='/sistema-oralvalle/';
+ if(!base.pathname.endsWith('/'))base.pathname+='/';
+ const target=new URL('integracoes/index.html',base);target.searchParams.set('google_ads',ok?'authorized':'error');return Response.redirect(target.href,303);
+}
 Deno.serve(async(req)=>{
  if(req.method!=='GET')return new Response('Método inválido',{status:405});
  const url=new URL(req.url);const state=url.searchParams.get('state')||'';const code=url.searchParams.get('code')||'';
- if(!state||!code)return redirect(false);
+ if(!/^[A-Za-z0-9_-]{43}$/.test(state)||!code||code.length>4096)return redirect(false);
  try{
   const stateHash=await sha(state);
-  const rows=await db('nexodent_google_oauth_states?state_hash=eq.'+encodeURIComponent(stateHash)+'&select=clinic_id,user_id,verifier_cipher,expires_at');
+  // DELETE com representação consome o estado atomicamente: apenas uma requisição recebe os dados.
+  const rows=await db('nexodent_google_oauth_states?state_hash=eq.'+encodeURIComponent(stateHash)+'&select=clinic_id,user_id,verifier_cipher,expires_at','DELETE');
   if(rows.length!==1||new Date(rows[0].expires_at).getTime()<Date.now())return redirect(false);
-  // Consumir estado antes da troca do código: proteção contra replay.
-  await db('nexodent_google_oauth_states?state_hash=eq.'+encodeURIComponent(stateHash),'DELETE');
+  // A autorização pode ter sido revogada enquanto o administrador estava no Google.
+  const members=await db('clinic_members?clinic_id=eq.'+encodeURIComponent(rows[0].clinic_id)+'&user_id=eq.'+encodeURIComponent(rows[0].user_id)+'&admin=eq.true&active=eq.true&select=user_id');
+  if(!members.length)return redirect(false);
   const verifier=await unseal(rows[0].verifier_cipher);
   const body=new URLSearchParams({code,client_id:CLIENT_ID,client_secret:CLIENT_SECRET,redirect_uri:CALLBACK,grant_type:'authorization_code',code_verifier:verifier});
   const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
@@ -35,5 +43,5 @@ Deno.serve(async(req)=>{
   await db('nexodent_google_ads_credentials?on_conflict=clinic_id','POST',{clinic_id:rows[0].clinic_id,user_id:rows[0].user_id,refresh_token_cipher:await seal(result.refresh_token),updated_at:new Date().toISOString()});
   await db('nexodent_channel_connections?on_conflict=clinic_id,provider','POST',{clinic_id:rows[0].clinic_id,provider:'google_ads',status:'pending',external_account_label:'Autorizado — seleção de conta pendente',updated_at:new Date().toISOString()});
   return redirect(true);
- }catch(e){console.error('google callback',e);return redirect(false)}
+ }catch(e){console.error('google callback failed');return redirect(false)}
 });

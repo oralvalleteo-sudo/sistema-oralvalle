@@ -61,7 +61,7 @@ function rxHtml(p){
   return `<section class="card rx-card"><h2>Receituário</h2><p class="sub">Escolha o modelo: nome, CPF, data e dentista já entram automaticamente no documento.</p>
   <label for="rxModelo">Modelo</label><select id="rxModelo"><option value=""${!st.model?' selected':''}>Selecione um modelo de receita</option>${RX_MODELOS.map(m=>`<option value="${m[0]}"${st.model===m[0]?' selected':''}>${m[1]}</option>`).join('')}</select>
   <div class="row"><div><label for="rxDent">Dentista</label><select id="rxDent">${dentOpts(st.dt,'Sem dentista')}</select></div><div><label for="rxData">Data</label><input id="rxData" type="date" value="${esc(st.data)}"></div></div>
-  ${dd?`<label for="rxCro">CRO do dentista</label><input id="rxCro" data-d="${dd.id}" data-f="cro" value="${esc(dd.cro||'')}" placeholder="Ex.: CRO-MG 12345" autocomplete="off">`:''}
+  ${dd?`<label for="rxCro">CRO do dentista</label><input id="rxCro" data-d="${esc(dd.id)}" data-f="cro" value="${esc(dd.cro||'')}" placeholder="Ex.: CRO-MG 12345" autocomplete="off">`:''}
   <div class="rx-dados"><div><small>Paciente</small><b>${esc(p.nome)}</b></div><div><small>CPF</small><b>${esc(p.cpf||'não informado')}</b></div><div><small>Nascimento</small><b>${p.nasc?esc(fd(p.nasc)):'não informado'}</b></div><div><small>Telefone</small><b>${esc(p.tel||'não informado')}</b></div></div>
   ${av.length?`<div class="rx-aviso">${av.map(x=>'<div>⚠ '+esc(x)+'</div>').join('')}</div>`:''}
   <label for="rxTexto">Prescrição${custom?' (seu modelo salvo)':''} - pode editar</label><textarea id="rxTexto" rows="10" spellcheck="false" placeholder="Selecione um modelo acima ou escreva uma prescrição personalizada.">${esc(st.texto)}</textarea>

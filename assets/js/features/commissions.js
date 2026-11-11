@@ -21,7 +21,7 @@ function comHtml(){
       const total=sum(vm,'rep');
       const production=sum(vm,'valor');
       const patients=new Set(vm.map(v=>v.pid)).size;
-      return `<button class="card" data-act="cmdent" data-id="${d.id}" type="button" style="width:100%;text-align:left;margin:0 0 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px"><span><strong>${esc(d.nome)}</strong>${d.ativo===false?' <span class="badge">arquivado</span>':''}<br><span class="note" style="margin:2px 0 0">${vm.length} procedimento(s) · ${patients} paciente(s) · produção ${brl(production)}</span></span><span style="text-align:right"><strong style="color:var(--ac)">${brl(total)}</strong><br><span class="note" style="margin:2px 0 0">Comissão gerada</span></span></button>`;
+      return `<button class="card" data-act="cmdent" data-id="${esc(d.id)}" type="button" style="width:100%;text-align:left;margin:0 0 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px"><span><strong>${esc(d.nome)}</strong>${d.ativo===false?' <span class="badge">arquivado</span>':''}<br><span class="note" style="margin:2px 0 0">${vm.length} procedimento(s) · ${patients} paciente(s) · produção ${brl(production)}</span></span><span style="text-align:right"><strong style="color:var(--ac)">${brl(total)}</strong><br><span class="note" style="margin:2px 0 0">Comissão gerada</span></span></button>`;
     }).join('');
     h+=`</div>`;
     return h+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">${stat('A pagar agora (todos)',ds.reduce((a,d)=>a+dtTot(d.id).apagar,0))}${stat('Prevista, aguardando pacientes',ds.reduce((a,d)=>a+dtTot(d.id).prev,0))}</div>`;
@@ -38,8 +38,8 @@ function comHtml(){
   <div class="tot" style="font-size:15px;font-weight:600"><span>Prevista, aguardando pacientes (geral)</span><span>${brl(t.prev)}</span></div>
   ${t.exc>0?rw('Pago adiantado (geral)',brl(t.exc)):''}
   <div class="tot" style="color:var(--ac)"><span>A pagar agora (geral)</span><span>${brl(t.apagar)}</span></div>
-  ${t.apagar>0?`<div class="row" style="margin-top:8px"><input data-cpv="${d.id}" inputmode="decimal" value="${t.apagar.toFixed(2)}" aria-label="Valor a pagar"><button data-act="cpay" data-id="${d.id}">Registrar pagamento</button></div>`:'<p class="note" style="margin:8px 0 0">Nada a pagar agora.</p>'}
-  ${pm.length?pm.map(c=>`<div class="pg"><span>${fd(c.data)} · pagamento${c.obs?' ('+esc(c.obs)+')':''}</span><span>${brl(c.valor)} <button class="danger sm" data-act="rmcp" data-id="${c.id}" aria-label="Remover pagamento">${delArm===c.id?'Confirmar':'×'}</button></span></div>`).join(''):''}
+  ${t.apagar>0?`<div class="row" style="margin-top:8px"><input data-cpv="${esc(d.id)}" inputmode="decimal" value="${t.apagar.toFixed(2)}" aria-label="Valor a pagar"><button data-act="cpay" data-id="${esc(d.id)}">Registrar pagamento</button></div>`:'<p class="note" style="margin:8px 0 0">Nada a pagar agora.</p>'}
+  ${pm.length?pm.map(c=>`<div class="pg"><span>${fd(c.data)} · pagamento${c.obs?' ('+esc(c.obs)+')':''}</span><span>${brl(c.valor)} <button class="danger sm" data-act="rmcp" data-id="${esc(c.id)}" aria-label="Remover pagamento">${delArm===c.id?'Confirmar':'×'}</button></span></div>`).join(''):''}
   <details open><summary>Comissionamentos do mês (${vm.length})</summary>${vm.length?vm.map(v=>`<div class="pg"><span>${fd(v.data)} · ${esc(pName(v.pid))}<br>${esc(v.proc||'Atendimento')} · ${brl(v.valor)} · ${esc(dName(v.dt))}</span><span style="text-align:right"><strong>${brl(v.rep)}</strong><br>${Math.round(Math.min(1,recebido(v)/(num(v.valor)||1))*100)}% recebido</span></div>`).join(''):'<p class="note" style="margin:0">Nenhum comissionamento neste mês.</p>'}</details></div>`;
   return h;
 }

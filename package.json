@@ -4,13 +4,21 @@
   "version": "205.0.0",
   "type": "commonjs",
   "dependencies": {
-    "node-forge": "^1.4.3",
-    "pdf-lib": "^1.17.1",
-    "@signpdf/signpdf": "^3.2.5",
+    "@signpdf/placeholder-pdf-lib": "^3.2.5",
     "@signpdf/signer-p12": "^3.2.5",
-    "@signpdf/placeholder-pdf-lib": "^3.2.5"
+    "@signpdf/signpdf": "^3.2.5",
+    "node-forge": "^1.4.3",
+    "pdf-lib": "^1.17.1"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "playwright": "1.62.1"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "test:browser": "node tests/browser/system-checkup.cjs && node tests/browser/chat-widget.cjs && node tests/browser/chat-navigation.cjs && node tests/browser/presential-signing.cjs"
   }
 }

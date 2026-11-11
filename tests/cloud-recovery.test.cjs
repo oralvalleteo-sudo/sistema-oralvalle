@@ -55,6 +55,7 @@ test('a failed clinic load keeps the app locked and retries reads without anothe
   const lock = {
     innerHTML: '',
     remove() {},
+    querySelectorAll() { return []; },
     querySelector(selector) {
       if (selector === 'input') return this.innerHTML.includes('id="cloudEmail"') ? elements.get('cloudEmail') : null;
       if (!elements.has(selector)) elements.set(selector, control());
@@ -86,7 +87,7 @@ test('a failed clinic load keeps the app locked and retries reads without anothe
     },
     $: name => elements.get(name), toast() {}, pmCardHtml() {}, bkHtml() {},
     clearTimeout() {}, clearInterval() {}, setInterval() { return 1; }, idleT: null, topCl: () => ({ marca: 'Synthetic', sub: '' }),
-    esc: text => text, location: { hash: '' }, window: { addEventListener() {}, removeEventListener() {}, dispatchEvent() {} },
+    esc: text => text, URLSearchParams, location: { hash: '', search: '' }, window: { addEventListener() {}, removeEventListener() {}, dispatchEvent() {} },
     CustomEvent: class CustomEvent { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
     A: {}, AUTH: { users: [] }, lastSaved: null, LOCKED: true, db: { initial: true }, migrate: value => value,
     unlock() { context.LOCKED = false; calls.push('unlock'); },
