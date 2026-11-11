@@ -32,7 +32,7 @@ function placePanel(){if(!open)return;const b=bounds(),width=Math.min(560,b.righ
  panel.style.left=left+'px';panel.style.top=clamp(top,b.top,b.bottom-height)+'px';panel.style.width=width+'px';panel.style.height=height+'px';}
 function layout(){const b=bounds();point={x:b.maxX,y:b.maxY};launcher.style.left=point.x+'px';launcher.style.top=point.y+'px';placePanel();}
 function visibility(){for(const entry of frames)entry.node.contentWindow?.postMessage({type:'nexodent:chat-visibility',visible:open&&entry.node===frame},location.origin);}
-function frameURL(clinic){const url=new URL(chatURL);url.searchParams.set('embedded','1');if(clinic)url.searchParams.set('clinic_id',clinic);return url;}
+function frameURL(clinic){const url=new URL(chatURL);url.searchParams.set('embedded','1');url.searchParams.set('compact','1');if(clinic)url.searchParams.set('clinic_id',clinic);return url;}
 function openPanel(){if(!uid())return;const clinic=context();
  // Trocar de clínica oculta a janela anterior; não descarta sua mensagem em edição.
  let entry=frames.find(item=>item.node===frame&&(clinic===null||item.clinic===clinic||item.requested===clinic))||frames.find(item=>item.clinic===clinic||item.requested===clinic);

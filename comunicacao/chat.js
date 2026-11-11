@@ -1,10 +1,11 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),embedded=new URLSearchParams(location.search).get('embedded')==='1'&&window.parent!==window;
+const compact=embedded&&new URLSearchParams(location.search).get('compact')==='1';
 let cloud=window.OralCloud;
-if(embedded){document.documentElement.classList.add('chat-embedded');try{if(window.parent.location.origin===location.origin&&window.parent.OralCloud)cloud=window.parent.OralCloud;}catch{}}
+if(embedded){document.documentElement.classList.add(compact?'chat-embedded':'chat-in-system');try{if(window.parent.location.origin===location.origin&&window.parent.OralCloud)cloud=window.parent.OralCloud;}catch{}}
 
 const state={clinic:null,user:null,canWrite:false,people:[],rooms:[],active:null,messages:new Map(),detail:null,version:0,busy:false,polling:false,older:false,roomOffset:0,roomHasMore:false,lastRead:null,reading:false,draft:null,lockedClinic:false,embedVisible:true};
-function visible(){if(document.hidden)return false;if(!embedded)return true;try{return state.embedVisible&&window.parent.NexoChatWidget?.isOpen!==false&&window.parent.NexoChatWidget?.isFrameActive?.(window)!==false;}catch{return false}}
+function visible(){if(document.hidden)return false;if(!compact)return true;try{return state.embedVisible&&window.parent.NexoChatWidget?.isOpen!==false&&window.parent.NexoChatWidget?.isFrameActive?.(window)!==false;}catch{return false}}
 window.NexoChatEmbedded={hasDraft:()=>dirty()};
 const status=text=>{$('status').textContent=text};
 const rpc=(name,body={},clinic=state.clinic)=>cloud.request('/rest/v1/rpc/nexodent_chat_'+name,{method:'POST',body:{p_clinic:clinic,...body}});
@@ -102,8 +103,8 @@ async function init(){
  }catch(error){status(error.message)}}
 $('login-form').onsubmit=async e=>{e.preventDefault();try{await cloud.login($('email').value,$('password').value,false);$('password').value='';await init()}catch(error){status(error.message)}};
 async function sync(){if(!visible()||state.polling||state.busy||!state.clinic)return;state.polling=true;try{await rooms();await messages('new')}catch(error){accessError(error)}finally{state.polling=false}}
-window.addEventListener('message',e=>{if(!embedded||e.source!==window.parent||e.origin!==location.origin||e.data?.type!=='nexodent:chat-visibility')return;state.embedVisible=e.data.visible===true;if(state.embedVisible){sync();markRead();}});
-document.addEventListener('keydown',e=>{if(embedded&&e.key==='Escape'&&!document.querySelector('dialog[open]')){window.parent.postMessage({type:'nexodent:chat-close'},location.origin);e.preventDefault();}});
+window.addEventListener('message',e=>{if(!compact||e.source!==window.parent||e.origin!==location.origin||e.data?.type!=='nexodent:chat-visibility')return;state.embedVisible=e.data.visible===true;if(state.embedVisible){sync();markRead();}});
+document.addEventListener('keydown',e=>{if(compact&&e.key==='Escape'&&!document.querySelector('dialog[open]')){window.parent.postMessage({type:'nexodent:chat-close'},location.origin);e.preventDefault();}});
 setInterval(sync,8000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});window.addEventListener('online',sync);window.addEventListener('beforeunload',e=>{if(dirty()){e.preventDefault();e.returnValue='';}});
 init();
 })();
