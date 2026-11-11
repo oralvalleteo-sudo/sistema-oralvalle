@@ -106,13 +106,13 @@
     <script defer src="./assets/js/features/imported-pdf-signing.js?build=260"></script>
     <link rel="stylesheet" href="./assets/css/ortho-photos.css?build=260">
     <script defer src="./assets/js/features/ortho-photos.js?build=260"></script>
-    <script defer src="./assets/js/app.js?build=260"></script>
+    <script defer src="./assets/js/app.js?build=272"></script>
     <script defer src="./assets/js/monitoring/client-errors.js?build=260"></script>
     <script>if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(console.warn));</script>
     <script>
     /* Atualização segura do PWA: sem apagar dados locais nem forçar recarga durante edição. */
     (() => {
-      const build = '271';
+      const build = '272';
       let pending = false;
       let busy = false;
       const btn = document.createElement('button');
@@ -238,5 +238,5 @@
       setInterval(()=>{if(!document.hidden)check();},120000);
     })();
     </script>
-  <script src="./assets/js/chat-widget.js?build=271"></script></body>
+  <script src="./assets/js/chat-widget.js?build=272"></script></body>
 </html>

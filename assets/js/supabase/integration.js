@@ -227,7 +227,7 @@
     const clinics = await OralCloud.request('/rest/v1/rpc/clinic_list', { method: 'POST', body: {} });
     if (!Array.isArray(clinics) || !clinics.length)
       throw new Error('Sua conta ainda não tem acesso à clínica. Confirme seu e-mail e peça ao administrador Ricardo Silva que aprove seu cadastro em Configurações → Acessos.');
-    const configured = OralCloud.config.clinicId;
+    const configured = new URLSearchParams(location.search).get('clinic_id') || OralCloud.config.clinicId;
     const clinic = configured ? clinics.find(item => item.clinic_id === configured) : clinics.length === 1 ? clinics[0] : null;
     if (!clinic) throw new Error('Defina clinicId no arquivo de configuração: há mais de uma clínica ou o vínculo não corresponde.');
     OralCloud.clinicId = clinic.clinic_id;

@@ -16,9 +16,9 @@ function ovSaveNavigation() {
   } catch (_) {}
 }
 function ovRestoreNavigation() {
-  // Ao entrar no sistema, abrir sempre a Agenda, sem restaurar paciente/aba anterior.
+  // Agenda por padrão; links explícitos para Comunicação abrem a aba interna, sem restaurar paciente anterior.
   view.id = null;
-  view.h = 'ag';
+  view.h = new URLSearchParams(location.search).get('tab') === 'chat' ? 'chat' : 'ag';
   q = '';
 }
 window.addEventListener('pagehide', ovSaveNavigation);
@@ -51,6 +51,11 @@ function render() {
 	applyRO();
 	ovSaveNavigation();
 }
+
+window.NexoOpenCommunication = function(){
+  if(LOCKED||!ME)return false;
+  view.h='chat';view.id=null;render();topo();return true;
+};
 
 // Este arquivo é carregado por último: todas as telas e ações já estão disponíveis.
 if (!window.OralCloud?.enabled) load();

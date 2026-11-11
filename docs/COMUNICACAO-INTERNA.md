@@ -2,7 +2,7 @@
 
 ## Uso
 
-Após a instalação, entrar no NexoDent e abrir **Controle → Comunicação**, junto de Backup e Configurações. A central abre na área de conteúdo do próprio sistema, mantendo o cabeçalho e o menu. Também é acessível por `/comunicacao/index.html`. Reutiliza a sessão de login; se ela tiver expirado, solicita autenticação.
+Após a instalação, entrar no NexoDent e abrir **Controle → Comunicação**, junto de Backup e Configurações. A central abre na área de conteúdo do próprio sistema, mantendo o cabeçalho e o menu. O botão “Abrir central” usa essa mesma aba interna. Links antigos para `/comunicacao/index.html` são encaminhados para `index.html?tab=chat`, preservando o cabeçalho e o menu. Reutiliza a sessão de login; se ela tiver expirado, solicita autenticação.
 
 Escolher a clínica quando houver mais de uma. Nova conversa → Individual → selecionar um colega; ou Grupo → dar um nome e selecionar participantes. Os destinatários são somente usuários ativos dessa clínica. A conversa individual do mesmo par de usuários é reutilizada, sem criar várias cópias.
 
