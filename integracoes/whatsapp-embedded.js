@@ -1,18 +1,19 @@
 (()=>{'use strict';
+const MODULE_VERSION=284,LOADER_KEY='__nexoWhatsAppEmbeddedLoader284';
 let sdkPromise=null,active=false,hostPromise=null;
-const moduleUrl=document.currentScript?.src||(location.protocol==='https:'?new URL('whatsapp-embedded.js?build=283',location.href).href:'');
+const moduleUrl=document.currentScript?.src||(location.protocol==='https:'?new URL('whatsapp-embedded.js?build=284',location.href).href:'');
 async function mainWindow(){
  if(window.top===window)return null;
  let host;try{host=window.top;if(host.location.origin!==location.origin)throw new Error('origin');}catch{throw new Error('Abra as integrações na janela principal do NexoDent para autorizar o WhatsApp.');}
- if(host.NexoWhatsAppEmbedded?.connect)return host;
- if(host.__nexoWhatsAppEmbeddedLoader)return host.__nexoWhatsAppEmbeddedLoader;
+ if(host.NexoWhatsAppEmbedded?.connect){if(host.NexoWhatsAppEmbedded.version!==MODULE_VERSION)throw new Error('Atualize a página inteira do NexoDent para conectar o WhatsApp do celular.');return host;}
+ if(host[LOADER_KEY])return host[LOADER_KEY];
  if(!hostPromise)hostPromise=new Promise((resolve,reject)=>{
   const script=host.document.createElement('script');script.src=moduleUrl;script.async=true;
   const timeout=setTimeout(fail,15000);
-  function fail(){clearTimeout(timeout);script.remove();delete host.__nexoWhatsAppEmbeddedLoader;hostPromise=null;reject(new Error('Não foi possível preparar a autorização na janela principal. Atualize o NexoDent e tente novamente.'));}
-  script.onload=()=>{clearTimeout(timeout);if(host.NexoWhatsAppEmbedded?.connect)resolve(host);else fail();};script.onerror=fail;host.document.head.append(script);
+  function fail(){clearTimeout(timeout);script.remove();delete host[LOADER_KEY];hostPromise=null;reject(new Error('Não foi possível preparar a autorização na janela principal. Atualize o NexoDent e tente novamente.'));}
+  script.onload=()=>{clearTimeout(timeout);if(host.NexoWhatsAppEmbedded?.connect&&host.NexoWhatsAppEmbedded.version===MODULE_VERSION)resolve(host);else fail();};script.onerror=fail;host.document.head.append(script);
  });
- host.__nexoWhatsAppEmbeddedLoader=hostPromise;
+ host[LOADER_KEY]=hostPromise;
  return hostPromise;
 }
 let sdkReady=false;
@@ -109,5 +110,5 @@ async function connect(config,cloud,clinic,currentClinic,mode='cloud'){
   });
  }finally{active=false;}
 }
-window.NexoWhatsAppEmbedded=Object.freeze({connect});
+window.NexoWhatsAppEmbedded=Object.freeze({connect,version:MODULE_VERSION,supportsCoexistence:true});
 })();

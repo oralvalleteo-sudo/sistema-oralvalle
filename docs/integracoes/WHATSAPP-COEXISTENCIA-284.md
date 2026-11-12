@@ -1,4 +1,4 @@
-# Coexistência com WhatsApp Business no celular — build 283
+# Coexistência com WhatsApp Business no celular — build 284
 
 O responsável confirmou que deseja preservar o mesmo número no aplicativo WhatsApp Business e que a opção Conectar à plataforma abre um leitor de QR no celular. O fluxo anterior solicitava cadastro Cloud padrão (featureType vazio), sem selecionar a experiência específica de coexistência.
 
@@ -9,6 +9,8 @@ O responsável confirmou que deseja preservar o mesmo número no aplicativo What
 - Aceita o retorno FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING, além de FINISH, somente no modo de coexistência. Os IDs continuam sendo validados no servidor contra a WABA/número acessíveis pelo token oficial; evento de origem desconhecida não cria vínculo.
 - QR code é fornecido pela Meta em sua janela durante o fluxo, quando disponível para a conta. Não é gerado, capturado ou armazenado pelo NexoDent.
 - Erro 2655115, cancelamento ou retorno sem número não provocam fallback, migração, exclusão ou registro automático do telefone. O fluxo padrão Cloud continua disponível apenas por escolha explícita.
+
+- Uma checagem de versão recusa agentes antigos e pede atualização da página inteira, evitando que a escolha de coexistência seja ignorada por código anterior.
 
 ## Limites e ativação
 

@@ -80,6 +80,7 @@ async function connectWhatsapp(){
   const response=await cloud.request('/functions/v1/nexodent-whatsapp-connect-start',{method:'POST',body:{clinic_id:selectedClinic,flow:'embedded'}});
   if(clinic.value!==selectedClinic)throw new Error('A clínica mudou. Inicie a conexão novamente.');
   if(!window.NexoWhatsAppEmbedded?.connect)throw new Error('Atualize a página para carregar a conexão WhatsApp.');
+  if(mode==='coexistence'&&!window.NexoWhatsAppEmbedded.supportsCoexistence)throw new Error('Atualize a página para carregar a conexão com o WhatsApp do celular.');
   whatsappMsg.textContent='Preparando a janela de autorização da Meta…';
   const result=await window.NexoWhatsAppEmbedded.connect(response,cloud,selectedClinic,()=>clinic.value,mode);
   await refresh();whatsappMsg.textContent=(result.phone_number?'Número '+result.phone_number+' autorizado. ':'')+'Falta validar o webhook para receber mensagens.';
