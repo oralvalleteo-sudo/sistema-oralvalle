@@ -18,9 +18,14 @@ jobs:
     timeout-minutes: 25
 
     steps:
+      - uses: actions/checkout@v4
+      - name: Testar tratamento seguro da conexao
+        run: python3 -m unittest discover -s tests/python -v
+
       - name: Verificar configuracao
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
         run: |
           test -n "$DATABASE_URL" || {
@@ -44,28 +49,9 @@ jobs:
       - name: Conferir conexao sem mostrar senha
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          python3 - <<'PY'
-          import os
-          from urllib.parse import urlsplit
-
-          conexao = urlsplit(os.environ["DATABASE_URL"])
-
-          print("Usuario:", conexao.username)
-          print("Servidor:", conexao.hostname)
-          print("Porta:", conexao.port)
-
-          if conexao.username != "postgres.ldfhcaztdnoqjxtflmud":
-              raise SystemExit("ERRO: usuario incorreto")
-
-          if conexao.hostname != "aws-0-us-east-1.pooler.supabase.com":
-              raise SystemExit("ERRO: servidor incorreto")
-
-          if conexao.port != 5432:
-              raise SystemExit("ERRO: porta incorreta")
-
-          print("Configuracao da conexao confirmada.")
-          PY
+          python3 scripts/backup_connection.py --check
 
       - name: Instalar ferramentas
         run: |
@@ -81,6 +67,7 @@ jobs:
       - name: Exportar e criptografar banco
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
         run: |
           set -euo pipefail
@@ -94,16 +81,8 @@ jobs:
 
           echo "Iniciando exportacao do banco..."
 
-          docker run --rm \
-            --env DATABASE_URL \
-            --volume "$RUNNER_TEMP/backup:/backup" \
-            postgres:17 \
-            pg_dump \
-              --dbname="$DATABASE_URL" \
-              --format=custom \
-              --no-owner \
-              --no-acl \
-              --file=/backup/oralvalle.dump
+          trap 'rm -f "$DUMP"' EXIT
+          python3 scripts/backup_connection.py
 
           test -s "$DUMP"
 
