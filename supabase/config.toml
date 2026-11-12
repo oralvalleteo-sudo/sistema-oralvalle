@@ -1,0 +1,6 @@
+# These two functions validate authorization themselves. Callback is invoked by Meta, not a logged-in browser.
+[functions.nexodent-whatsapp-connect-start]
+verify_jwt = false
+
+[functions.nexodent-whatsapp-connect-callback]
+verify_jwt = false

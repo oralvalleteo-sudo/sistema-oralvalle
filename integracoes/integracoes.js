@@ -17,7 +17,7 @@ async function refresh(){
   let googleState='disconnected',whatsappState='disconnected';
   for(const row of rows||[]){if(!providers.includes(row.provider))continue;const labels={connected:'Conectado',pending:'Em configuração',error:'Requer atenção',disconnected:'Não conectado'};setBadge(row.provider,row.status,labels[row.status]||'Não conectado');if(row.provider==='whatsapp_business'){whatsappState=row.status;if(row.status==='connected'&&whatsappMsg)whatsappMsg.textContent='Número conectado: '+(row.external_account_label||'WhatsApp Business')+'.';}
   if(row.provider==='google_ads'){googleState=row.status;if(row.status==='connected'&&row.external_account_label)googleInfo('Conta vinculada: '+row.external_account_label+'.');}}
-  if(whatsappBtn){whatsappBtn.textContent=whatsappState==='connected'?'WhatsApp conectado':'Conectar WhatsApp';whatsappBtn.disabled=whatsappState==='connected';if(whatsappState!=='connected'&&whatsappMsg)whatsappMsg.textContent='Conexão oficial disponível após configurar a autorização Meta no servidor.';}
+  if(whatsappBtn){whatsappBtn.textContent=whatsappState==='connected'?'WhatsApp conectado':'Conectar WhatsApp';whatsappBtn.disabled=whatsappState==='connected';if(whatsappState!=='connected'&&whatsappMsg)whatsappMsg.textContent=whatsappState==='pending'?'Autorização recebida. Falta vincular o número e validar o webhook; o recebimento de mensagens ainda não está ativo.':'Conecte sua conta empresarial para iniciar a autorização oficial.';}
   if(picker)picker.hidden=googleState!=='pending';
   if(googleState==='pending')googleInfo('Autorização Google concluída. Falta selecionar a conta de anúncios da clínica.');
   setStatus('Status carregado.');
@@ -73,12 +73,15 @@ async function connectMeta(){
 async function connectWhatsapp(){
  if(!clinic.value)return whatsappMsg.textContent='Selecione uma clínica.';
  if(location.protocol!=='https:')return whatsappMsg.textContent='Abra o NexoDent em HTTPS.';
+ const selectedClinic=clinic.value;
  whatsappBtn.disabled=true;whatsappMsg.textContent='Verificando a integração oficial…';
  try{
-  const response=await cloud.request('/functions/v1/nexodent-whatsapp-connect-start',{method:'POST',body:{clinic_id:clinic.value}});
-  if(!response?.authorization_url||!/^https:\/\/(www\.)?facebook\.com\//.test(response.authorization_url))throw new Error('O serviço Meta não retornou uma autorização válida.');
+  const response=await cloud.request('/functions/v1/nexodent-whatsapp-connect-start',{method:'POST',body:{clinic_id:selectedClinic}});
+  if(clinic.value!==selectedClinic)throw new Error('A clínica mudou. Inicie a conexão novamente.');
+  let target;try{target=new URL(response?.authorization_url||'');}catch{throw new Error('O serviço Meta não retornou uma autorização válida.');}
+  if(target.protocol!=='https:'||!['www.facebook.com','facebook.com'].includes(target.hostname)||target.username||target.password)throw new Error('O serviço Meta não retornou uma autorização válida.');
   window.top.location.assign(response.authorization_url);
- }catch(e){whatsappMsg.textContent='Conexão ainda indisponível: '+(e.status===404?'é necessário publicar e configurar a função de autorização Meta no Supabase.':e.message);whatsappBtn.disabled=false;}
+ }catch(e){whatsappMsg.textContent='Conexão ainda indisponível: '+(e.status===404?'publique a função nexodent-whatsapp-connect-start no Supabase.':e instanceof TypeError||/failed to fetch|networkerror|load failed/i.test(e.message||'')?'O navegador não conseguiu alcançar o serviço WhatsApp. É necessário conferir a publicação da função e a origem HTTPS permitida no Supabase; se estiver sem internet, tente novamente após reconectar.':e.message);whatsappBtn.disabled=false;}
 }
 async function init(){
  if(!cloud?.enabled){setStatus('Supabase não configurado.');return}
@@ -94,6 +97,8 @@ async function init(){
   loadBtn.addEventListener('click',loadAccounts);saveBtn.addEventListener('click',saveAccount);
   const query=new URLSearchParams(location.search);if(query.has('google_ads')){googleInfo(query.get('google_ads')==='authorized'?'Autorização Google recebida. Agora vamos selecionar a conta de anúncios.':'Autorização não concluída. Confira o acesso e tente novamente.');history.replaceState(null,'',location.pathname)}
   await refresh();
+  const whatsappResult=new URLSearchParams(location.search).get('whatsapp');
+  if(whatsappResult&&whatsappMsg){const messages={authorized:'Autorização Meta recebida. Falta vincular o número e validar o webhook para receber mensagens.',cancelled:'Autorização cancelada. Você pode tentar novamente.',configuration_required:'O administrador precisa concluir a configuração Meta no servidor.',error:'Não foi possível validar a autorização Meta. Tente novamente.'};whatsappMsg.textContent=messages[whatsappResult]||messages.error;history.replaceState(null,'',location.pathname);}
  }catch(e){setStatus('Não foi possível validar o acesso: '+e.message)}
 }
 init();

@@ -33,7 +33,7 @@
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (_) {}
     if (!response.ok) {
-      const error = new Error(data?.message || data?.msg || data?.error_description || 'Falha na conexão com Supabase.');
+      const error = new Error(data?.message || data?.msg || data?.error_description || (typeof data?.error === 'string' ? data.error : '') || 'Falha na conexão com Supabase.');
       error.code = data?.code || data?.error_code || String(response.status);
       error.status = response.status;
       error.details = data?.details;
