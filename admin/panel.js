@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+  let epoch=0;
   const $ = id => document.getElementById(id);
   const showError = e => { $('error').textContent = e?.message || 'Não foi possível entrar.'; };
   const formatDate = value => value ? new Date(value).toLocaleDateString('pt-BR',{timeZone:'UTC'}) : '—';
@@ -63,8 +64,10 @@
   const cycleLabels={monthly:'Mensal',quarterly:'Trimestral',yearly:'Anual',free:'Gratuito'};
   async function rpc(name,body={}) { return OralCloud.request('/rest/v1/rpc/'+name,{method:'POST',body}); }
   async function loadCommercial(){
+    const current=epoch;
     try{
       const data=await rpc('nexodent_admin_commercial_overview');
+      if(current!==epoch)return;
       const plans=data.plans||[], payments=data.payments||[];
       $('plans').replaceChildren();
       for(const p of plans){
@@ -98,7 +101,7 @@
         }tr.appendChild(td);$('payments').appendChild(tr);
       }
       $('received-total').textContent=money(received/100);$('open-total').textContent=money(open/100);$('overdue-total').textContent=money(overdue/100);
-    }catch(e){console.error('Comercial indisponível:',e);$('plans').textContent='Não foi possível carregar planos: '+e.message;}
+    }catch(e){if(current!==epoch)return;console.error('Comercial indisponível:',e);$('plans').textContent='Não foi possível carregar planos: '+e.message;}
   }
   $('create-plan').addEventListener('click',async()=>{
     const name=$('plan-name').value.trim(),cycle=$('plan-cycle').value,amount=Number($('plan-price').value),modules=$('plan-modules').value.split(',').map(x=>x.trim()).filter(Boolean);
@@ -114,6 +117,7 @@
 
   const moduleNames={agenda:'Agenda',pacientes:'Pacientes',financeiro:'Financeiro',comissoes:'Comissões',whatsapp:'WhatsApp',documentos:'Documentos',relatorios:'Relatórios'};
   async function loadModules(){
+    const current=epoch;
     const select=$('module-clinic'),previous=select.value;
     select.replaceChildren();
     for(const c of window.nexoClinics||[]){const opt=document.createElement('option');opt.value=c.id;opt.textContent=c.nome;select.appendChild(opt);}
@@ -121,11 +125,12 @@
     const name=id=>(window.nexoClinics||[]).find(c=>c.id===id)?.nome||id;
     try{
       const data=await rpc('nexodent_admin_module_overview');
+      if(current!==epoch)return;
       $('module-overrides').replaceChildren();$('module-audit').replaceChildren();
       for(const item of data.overrides||[]){const tr=document.createElement('tr');for(const value of [name(item.clinic_id),moduleNames[item.module_key]||item.module_key,item.enabled?'Liberado':'Restrito',formatDateTime(item.changed_at)]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td)}$('module-overrides').appendChild(tr)}
       for(const item of data.audit||[]){const tr=document.createElement('tr');for(const value of [formatDateTime(item.changed_at),name(item.clinic_id),moduleNames[item.module_key]||item.module_key,item.new_enabled?'Liberado':'Restrito',item.reason]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td)}$('module-audit').appendChild(tr)}
       $('module-message').textContent='Preferências carregadas. Restrições ainda não são aplicadas ao NexoDent.';
-    }catch(e){$('module-message').textContent='Não foi possível carregar as preferências: '+e.message;}
+    }catch(e){if(current!==epoch)return;$('module-message').textContent='Não foi possível carregar as preferências: '+e.message;}
   }
   $('module-save').addEventListener('click',async()=>{
     const clinic=$('module-clinic').value,reason=$('module-reason').value.trim();
@@ -137,12 +142,14 @@
   });
 
   async function loadMonitoring(){
+    const current=epoch;
     const set=(id,value)=>{ $(id).textContent=value; };
     set('health-site',navigator.onLine?'Página carregada; navegador online':'Página carregada; navegador offline');
     set('health-auth','Verificando…');set('health-alerts','Verificando…');
     $('admin-alerts').replaceChildren();
     try {
       const rows=await rpc('nexodent_admin_alerts',{p_days:Number($('alert-days').value)});
+      if(current!==epoch)return;
       set('health-auth','Sessão autorizada para consultas administrativas');
       set('health-alerts','Consulta concluída');
       const names={suspended:'Suspensa',overdue:'Vencida / em atraso',expiring:'Próxima do vencimento',other:'Verificar situação'};
@@ -155,6 +162,7 @@
       }
       if(!rows?.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Nenhum alerta no período selecionado.';tr.appendChild(td);$('admin-alerts').appendChild(tr);}
     }catch(e){
+      if(current!==epoch)return;
       set('health-auth','Não foi possível confirmar');set('health-alerts','Falha: '+e.message);
     }
     set('health-time','Última verificação: '+new Date().toLocaleString('pt-BR'));
@@ -163,18 +171,22 @@
   $('alert-days').addEventListener('change',loadMonitoring);
 
   async function load() {
+    const current=++epoch;
     const result = await OralCloud.request('/rest/v1/rpc/nexodent_admin_overview', {method:'POST',body:{}});
+    if(current!==epoch)return;
+    $('login').style.display='none';$('app').style.display='block';$('logout').hidden=false;
     $('total').textContent = result.total_clinicas;
     $('members').textContent = result.total_vinculos;
     $('trials').textContent = result.em_teste ?? 0;
     $('active').textContent = result.assinaturas_ativas ?? 0;
     window.nexoClinics = result.clinicas || [];
     renderClinics();
-    await loadCommercial();
-    await loadModules();
-    await loadMonitoring();
+    window.dispatchEvent(new Event('nexo-admin:ready'));
+    await Promise.allSettled([loadCommercial(),loadModules(),loadMonitoring()]);
+    if(current!==epoch)return;
     try {
       const history = await OralCloud.request('/rest/v1/rpc/nexodent_admin_subscription_history',{method:'POST',body:{}});
+      if(current!==epoch)return;
       $('audit').replaceChildren();
       for(const item of history || []){
         const tr=document.createElement('tr');
@@ -183,8 +195,9 @@
         }
         $('audit').appendChild(tr);
       }
-    }catch(err){$('audit').replaceChildren();const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='Histórico indisponível: '+err.message;tr.appendChild(td);$('audit').appendChild(tr);}
-    const requests = await OralCloud.request('/rest/v1/rpc/nexodent_admin_trial_requests', {method:'POST',body:{}});
+    }catch(err){if(current!==epoch)return;$('audit').replaceChildren();const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='Histórico indisponível: '+err.message;tr.appendChild(td);$('audit').appendChild(tr);}
+    try { const requests = await OralCloud.request('/rest/v1/rpc/nexodent_admin_trial_requests', {method:'POST',body:{}});
+    if(current!==epoch)return;
     $('requests').replaceChildren();
     for (const r of requests || []) {
       const tr = document.createElement('tr');
@@ -203,17 +216,22 @@
       }
       tr.appendChild(td);$('requests').appendChild(tr);
     }
-    $('login').style.display = 'none'; $('app').style.display = 'block'; $('logout').hidden = false;
+    } catch(err){if(current===epoch)$('requests').textContent='Solicitações indisponíveis. As demais áreas continuam acessíveis.';}
   }
   $('login').addEventListener('submit', async e => {
     e.preventDefault(); $('error').textContent = '';
     const btn = e.currentTarget.querySelector('button'); btn.disabled = true;
     try { await OralCloud.login($('email').value.trim(), $('password').value, false); await load(); }
-    catch (err) { showError(err); await OralCloud.logout().catch(() => {}); }
+    catch (err) { clearPanel();showError(err); await OralCloud.logout().catch(() => {}); }
     finally { btn.disabled = false; }
   });
-  $('logout').addEventListener('click', async () => {
-    await OralCloud.logout(); $('app').style.display = 'none'; $('login').style.display = 'block'; $('logout').hidden = true;
-  });
+  function clearPanel(){
+    epoch++;window.nexoClinics=[];window.dispatchEvent(new Event('nexo-admin:signed-out'));
+    for(const id of ['clinics','plans','payments','audit','requests','module-overrides','module-audit','admin-alerts','payment-clinic','module-clinic'])$(id).replaceChildren();
+    for(const id of ['total','members','trials','active','received-total','open-total','overdue-total'])$(id).textContent='—';
+    $('password').value='';$('app').style.display = 'none'; $('login').style.display = 'block'; $('logout').hidden = true;
+  }
+  $('logout').addEventListener('click',async()=>{clearPanel();await OralCloud.logout().catch(()=>{});});
+  window.addEventListener('nexo-admin:reload',()=>load().catch(error=>{clearPanel();showError(error);}));
   OralCloud.restoreSession().then(session => { if (session) return load(); }).catch(showError);
 })();
