@@ -4,8 +4,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),fs=require
  await page.route('https://nested.invalid/**',route=>{
   const path=new URL(route.request().url()).pathname;
   if(path.endsWith('whatsapp-embedded.js'))return route.fulfill({contentType:'text/javascript; charset=utf-8',body:fs.readFileSync('integracoes/whatsapp-embedded.js','utf8')});
-  return route.fulfill({contentType:'text/html; charset=utf-8',body:path==='/index.html'?'<main>Aplicativo</main><iframe src="/crm/index.html"></iframe>':path==='/crm/index.html'?'<iframe src="/integracoes/index.html"></iframe>':'<main>Integrações</main><script src="/integracoes/whatsapp-embedded.js?build=281"></script>'});
+  return route.fulfill({contentType:'text/html; charset=utf-8',body:path==='/index.html'?'<main>Aplicativo</main><iframe src="/crm/index.html"></iframe>':path==='/crm/index.html'?'<iframe src="/integracoes/index.html"></iframe>':'<main>Integrações</main><script src="/integracoes/whatsapp-embedded.js?build=282"></script>'});
  });
+ await page.route('https://connect.facebook.net/**',r=>r.fulfill({headers:{'Access-Control-Allow-Origin':'*'},contentType:'text/javascript',body:'queueMicrotask(()=>window.fbAsyncInit?.());'}));
  await page.goto('https://nested.invalid/index.html');
  const frame=page.frames().find(f=>f.url().includes('/integracoes/'));await frame.waitForFunction(()=>!!window.NexoWhatsAppEmbedded);
  await page.evaluate(()=>{window.OralCloud={session:{user:{id:'u'}}};window.rootSdkCalls=0;window.FB={init:()=>{rootSdkCalls++;},login:(cb)=>{window.rootCallback=cb;}};});
