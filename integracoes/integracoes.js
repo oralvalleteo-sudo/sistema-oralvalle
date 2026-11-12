@@ -15,9 +15,10 @@ async function refresh(){
  try{
   const rows=await cloud.request('/rest/v1/nexodent_channel_connections?clinic_id=eq.'+encodeURIComponent(id)+'&select=provider,status,external_account_label,external_account_id,updated_at');
   let googleState='disconnected',whatsappState='disconnected';
-  for(const row of rows||[]){if(!providers.includes(row.provider))continue;const labels={connected:'Conectado',pending:'Em configuração',error:'Requer atenção',disconnected:'Não conectado'};setBadge(row.provider,row.status,labels[row.status]||'Não conectado');if(row.provider==='whatsapp_business'){whatsappState=row.status;if(row.status==='connected'&&whatsappMsg)whatsappMsg.textContent='Número conectado: '+(row.external_account_label||'WhatsApp Business')+'.';}
-  if(row.provider==='google_ads'){googleState=row.status;if(row.status==='connected'&&row.external_account_label)googleInfo('Conta vinculada: '+row.external_account_label+'.');}}
+  for(const row of rows||[]){if(!providers.includes(row.provider))continue;const labels={connected:'Conectado',pending:'Em configuração',error:'Requer atenção',disconnected:'Não conectado'};setBadge(row.provider,row.status,row.provider==='google_ads'&&row.status==='connected'?'Conta vinculada':labels[row.status]||'Não conectado');if(row.provider==='whatsapp_business'){whatsappState=row.status;if(row.status==='connected'&&whatsappMsg)whatsappMsg.textContent='Número conectado: '+(row.external_account_label||'WhatsApp Business')+'.';}
+  if(row.provider==='google_ads'){googleState=row.status;if(row.status==='connected'&&row.external_account_label)googleInfo('Conta vinculada: '+row.external_account_label+'. Esse vínculo não confirma o recebimento de leads. Confira a captação pelo formulário do site ou pelo WhatsApp.');}}
   if(whatsappBtn){whatsappBtn.textContent=whatsappState==='connected'?'WhatsApp conectado':'Conectar WhatsApp';whatsappBtn.disabled=whatsappState==='connected';if(whatsappState!=='connected'&&whatsappMsg)whatsappMsg.textContent=whatsappState==='pending'?'Autorização recebida. Falta vincular o número e validar o webhook; o recebimento de mensagens ainda não está ativo.':'Conecte sua conta empresarial para iniciar a autorização oficial.';}
+  if(connectBtn)connectBtn.textContent=googleState==='connected'?'Autorizar Google novamente':'Conectar Google Ads';
   if(picker)picker.hidden=googleState!=='pending';
   if(googleState==='pending')googleInfo('Autorização Google concluída. Falta selecionar a conta de anúncios da clínica.');
   setStatus('Status carregado.');
