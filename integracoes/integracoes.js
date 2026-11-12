@@ -76,11 +76,13 @@ async function connectWhatsapp(){
  const selectedClinic=clinic.value;
  whatsappBtn.disabled=true;whatsappMsg.textContent='Verificando a integração oficial…';
  try{
-  const response=await cloud.request('/functions/v1/nexodent-whatsapp-connect-start',{method:'POST',body:{clinic_id:selectedClinic}});
+  const response=await cloud.request('/functions/v1/nexodent-whatsapp-connect-start',{method:'POST',body:{clinic_id:selectedClinic,flow:'embedded'}});
   if(clinic.value!==selectedClinic)throw new Error('A clínica mudou. Inicie a conexão novamente.');
-  let target;try{target=new URL(response?.authorization_url||'');}catch{throw new Error('O serviço Meta não retornou uma autorização válida.');}
-  if(target.protocol!=='https:'||!['www.facebook.com','facebook.com'].includes(target.hostname)||target.username||target.password)throw new Error('O serviço Meta não retornou uma autorização válida.');
-  window.top.location.assign(response.authorization_url);
+  if(!window.NexoWhatsAppEmbedded?.connect)throw new Error('Atualize a página para carregar a conexão WhatsApp.');
+  const result=await window.NexoWhatsAppEmbedded.connect(response,cloud,selectedClinic,()=>clinic.value);
+  await refresh();whatsappMsg.textContent=(result.phone_number?'Número '+result.phone_number+' autorizado. ':'')+'Falta validar o webhook para receber mensagens.';
+  whatsappBtn.disabled=false;
+
  }catch(e){whatsappMsg.textContent='Conexão ainda indisponível: '+(e.status===404?'publique a função nexodent-whatsapp-connect-start no Supabase.':e instanceof TypeError||/failed to fetch|networkerror|load failed/i.test(e.message||'')?'O navegador não conseguiu alcançar o serviço WhatsApp. É necessário conferir a publicação da função e a origem HTTPS permitida no Supabase; se estiver sem internet, tente novamente após reconectar.':e.message);whatsappBtn.disabled=false;}
 }
 async function init(){

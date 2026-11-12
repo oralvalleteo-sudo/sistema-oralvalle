@@ -28,7 +28,8 @@ Deno.serve(async req=>{
   const clinic=input?.clinic_id;if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clinic||''))return reply(400,{error:'Clínica inválida.'});
   if(!user?.id||!await admin(clinic,user.id))return reply(403,{error:'Somente administradores ativos da clínica podem conectar o WhatsApp.'});
   const state=b64(crypto.getRandomValues(new Uint8Array(32)));
-  await db('nexodent_whatsapp_oauth_states','POST',{state_hash:await hash(state),clinic_id:clinic,user_id:user.id,expires_at:new Date(Date.now()+600000).toISOString()});
+  await db('nexodent_whatsapp_oauth_states','POST',{state_hash:await hash(state),clinic_id:clinic,user_id:user.id,expires_at:new Date(Date.now()+600000).toISOString(),flow:input.flow==='embedded'?'embedded':'redirect'});
+  if(input.flow==='embedded')return reply(200,{flow:'embedded',app_id:APP_ID,config_id:CONFIG,version:VERSION,state,expires_in:600});
   const params=new URLSearchParams({client_id:APP_ID,redirect_uri:CALLBACK,response_type:'code',config_id:CONFIG,state});
   return reply(200,{authorization_url:'https://www.facebook.com/'+VERSION+'/dialog/oauth?'+params});
  }catch{return reply(503,{code:'WHATSAPP_BACKEND_UNAVAILABLE',error:'Não foi possível preparar a autorização. Confira a migration e a configuração WhatsApp no servidor.'});}
