@@ -21,6 +21,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Conferir CSS inicial gerado
+        run: |
+          python3 scripts/build_shell_css.py
+          git diff --exit-code -- assets/css/app-shell.css
       - run: npm ci --ignore-scripts
       - name: Testar funcionalidades e proteção no banco isolado
         run: npm test

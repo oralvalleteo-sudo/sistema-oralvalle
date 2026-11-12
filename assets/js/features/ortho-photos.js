@@ -8,9 +8,27 @@ const previews=new Map();
 const previewQueue=[];
 const previewPending=new Set();
 let previewActive=0;
+const observedPreviews=new WeakSet(),previewObservers=new Set();
+const sharedPreviews=new Map();
+let photoContext='';
+function ensurePhotoContext(){
+ const current=String(window.OralCloud?.clinicId||'local')+':'+String(window.OralCloud?.session?.user?.id||'local');
+ if(current===photoContext)return;
+ photoContext=current;cache.clear();previews.clear();sharedPreviews.clear();previewQueue.length=0;previewPending.clear();
+ for(const observer of previewObservers)observer.disconnect();
+ previewObservers.clear();
+}
+async function sharedPreview(job){
+ const token=job.context.replace(/:[^:]+$/,'')+':'+job.rowId;
+ if(sharedPreviews.has(token))return sharedPreviews.get(token);
+ const task=(async()=>{const full=await OralCloudData.file(job.id,job.rowId);return mini(full?.dados?.data);})();
+ sharedPreviews.set(token,task);
+ try{const thumb=await task;if(sharedPreviews.get(token)===task){sharedPreviews.set(token,Promise.resolve(thumb));while(sharedPreviews.size>200)sharedPreviews.delete(sharedPreviews.keys().next().value);}return thumb;}
+ catch(error){if(sharedPreviews.get(token)===task)sharedPreviews.delete(token);throw error;}
+}
 
 const key=(p,scope='ortho')=>
- String(window.OralCloud?.clinicId||'local')+':'+String(p.id)+':'+scope;
+ String(window.OralCloud?.clinicId||'local')+':'+String(window.OralCloud?.session?.user?.id||'local')+':'+String(p.id)+':'+scope;
 
 const category=scope=>({
  patient:'Imagem clínica',
@@ -65,6 +83,7 @@ function getPhotos(p,scope){
 }
 
 function scheduleLegacyPreviews(id,scope){
+ for(const observer of previewObservers)if(!observer.photoTarget?.isConnected){observer.disconnect();previewObservers.delete(observer);}
  const p=db.p.find(x=>String(x.id)===String(id));
  if(!p||!window.OralCloud?.enabled)return;
  const k=key(p,scope),state=cache.get(k);
@@ -74,26 +93,44 @@ function scheduleLegacyPreviews(id,scope){
   .filter(el=>el.dataset.orthoGallery===String(id)&&scopeOf(el)===scope&&el.getClientRects().length);
  if(!roots.length)return;
 
- for(const f of state.photos){
-  if(f.thumb||!f._rowId)continue;
+ const enqueue=(f)=>{
+  if(!f||f.thumb||!f._rowId)return;
   const token=k+':'+f._rowId;
-  if(previewPending.has(token))continue;
+  if(previewPending.has(token)||previews.has(token))return;
   previewPending.add(token);
-  previewQueue.push({id,scope,rowId:f._rowId,token});
+  previewQueue.push({id,scope,rowId:f._rowId,token,context:k});
+  pumpPreviews();
+ };
+ for(const root of roots){
+  for(const button of root.querySelectorAll('[data-ortho-index]')){
+   const f=state.photos[Number(button.dataset.orthoIndex)];
+   if(!f||f.thumb||!f._rowId)continue;
+   if(!window.IntersectionObserver){enqueue(f);continue;}
+   if(observedPreviews.has(button))continue;
+   observedPreviews.add(button);
+   const observer=new IntersectionObserver(entries=>{
+    if(!entries.some(entry=>entry.isIntersecting))return;
+    observer.disconnect();previewObservers.delete(observer);
+    const current=db.p.find(x=>String(x.id)===String(id));
+    if(current&&key(current,scope)===k)enqueue(f);
+   },{rootMargin:'180px'});
+   observer.photoTarget=button;previewObservers.add(observer);observer.observe(button);
+  }
  }
+
  pumpPreviews();
 }
 
 function pumpPreviews(){
- while(previewActive<3&&previewQueue.length){
+ while(previewActive<2&&previewQueue.length){
   const job=previewQueue.shift();
   previewActive++;
   (async()=>{
    try{
-    const full=await OralCloudData.file(job.id,job.rowId);
-    const data=full?.dados?.data;
-    if(!data||!String(data).startsWith('data:image/'))return;
-    const thumb=await mini(data);
+    const patient=db.p.find(x=>String(x.id)===String(job.id));
+    if(!patient||key(patient,job.scope)!==job.context)return;
+    const thumb=await sharedPreview(job);
+    if(key(patient,job.scope)!==job.context)return;
     if(!thumb)return;
     previews.set(job.token,thumb);
 
@@ -134,6 +171,8 @@ document.addEventListener('toggle',e=>{
 },true);
 
 function gallery(p,scope='ortho'){
+ ensurePhotoContext();
+ setTimeout(()=>scheduleLegacyPreviews(p.id,scope),0);
  const k=key(p,scope),state=cache.get(k);
  if(window.OralCloud?.enabled&&!state)load(p,scope);
 
@@ -357,7 +396,7 @@ function managePhotos(id,scope='ortho'){
  <div class="ortho-select-grid">
  ${photos.map((f,i)=>`<label class="ortho-select-item">
  <input type="checkbox" value="${i}" aria-label="Selecionar foto ${i+1}">
- <img src="${safe(f.thumb||previews.get(k+':'+(f._rowId||f.id))||f.data||'')}" alt="Foto ${i+1}" loading="lazy">
+ <img src="${safe(f.thumb||previews.get(k+':'+(f._rowId||f.id))||f.data||'')}" alt="Foto ${i+1}" loading="lazy" decoding="async">
  <span>${safe(f.nome||'Foto '+(i+1))}</span></label>`).join('')}
  </div>
  <div class="ortho-select-footer">
@@ -508,7 +547,7 @@ document.addEventListener('click',async e=>{
  role="dialog" aria-modal="true"
  aria-label="Foto do paciente">
  <button type="button" class="ortho-close">Fechar ✕</button>
- <img alt="Foto do paciente ampliada" src="${safe(f.data)}">
+ <img decoding="async" alt="Foto do paciente ampliada" src="${safe(f.data)}">
  <small>${safe(f.nome||'Foto do paciente')}</small>
  </div>`;
 

@@ -75,7 +75,7 @@ function topCl(){return Object.assign({},CL_DEF,db.cl||{})}
 function ovTop(){
   return `<header class="ov-top"><button type="button" class="ov-mobile-menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="oral-mobile-nav">☰ <span>Menu</span></button>
     <div class="ov-brand">
-      <img class="nexo-header-symbol" src="./assets/img/nexodent-symbol.png" alt="" />
+      <img class="nexo-header-symbol" src="./assets/img/nexodent-symbol.png?v=276" alt="" />
       <div class="nexo-header-name"><strong>Nexodent</strong><small>Sistema de Gestão Odontológica</small></div>
     </div>
     <div class="ov-user">
