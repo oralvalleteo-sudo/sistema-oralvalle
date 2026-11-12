@@ -1,6 +1,6 @@
 (()=>{'use strict';
 let sdkPromise=null,active=false,hostPromise=null;
-const moduleUrl=document.currentScript?.src||(location.protocol==='https:'?new URL('whatsapp-embedded.js?build=282',location.href).href:'');
+const moduleUrl=document.currentScript?.src||(location.protocol==='https:'?new URL('whatsapp-embedded.js?build=283',location.href).href:'');
 async function mainWindow(){
  if(window.top===window)return null;
  let host;try{host=window.top;if(host.location.origin!==location.origin)throw new Error('origin');}catch{throw new Error('Abra as integrações na janela principal do NexoDent para autorizar o WhatsApp.');}
@@ -42,13 +42,14 @@ function loadSdk(){
  });return sdkPromise;
 }
 
-async function connect(config,cloud,clinic,currentClinic){
+async function connect(config,cloud,clinic,currentClinic,mode='cloud'){
+ if(!['cloud','coexistence'].includes(mode))throw new Error('Escolha como deseja conectar o WhatsApp.');
  const host=await mainWindow();
  if(host){
   const owner=cloud.session?.user?.id;
   return host.NexoWhatsAppEmbedded.connect(config,cloud,clinic,()=>{
    try{let frameWindow=window;while(frameWindow!==host){if(!frameWindow.frameElement?.isConnected)return null;frameWindow=frameWindow.parent;}if(host.OralCloud&&host.OralCloud.session?.user?.id!==owner)return null;return currentClinic();}catch{return null;}
-  });
+  },mode);
  }
  if(active)throw new Error('Já existe uma autorização em andamento.');
  if(config?.flow!=='embedded'||!/^\d+$/.test(config.app_id||'')||!/^\d+$/.test(config.config_id||'')||!/^v\d+\.\d+$/.test(config.version||'')||! /^[A-Za-z0-9_-]{43}$/.test(config.state||''))throw new Error('Atualize as funções WhatsApp no Supabase para o cadastro incorporado.');
@@ -59,7 +60,7 @@ async function connect(config,cloud,clinic,currentClinic){
   return await new Promise((resolve,reject)=>{
    let code='',ids=null,finished=false,sending=false,waitingTimer=null,openingTimer=null;
    const dialog=document.createElement('dialog'),title=document.createElement('h2'),text=document.createElement('p'),proceed=document.createElement('button'),cancel=document.createElement('button');
-   title.textContent='Conectar WhatsApp';text.textContent='Continue na Meta para escolher a empresa e o número que deseja autorizar nesta clínica.';
+   title.textContent=mode==='coexistence'?'Conectar WhatsApp do celular':'Conectar WhatsApp';text.textContent=mode==='coexistence'?'Na Meta, conecte o WhatsApp Business que você já usa. Quando a Meta exibir o QR code, leia pelo celular em Configurações → Conta → Conectar à plataforma do WhatsApp Business.':'Continue na Meta para escolher a empresa e o número que deseja autorizar nesta clínica.';
    proceed.textContent='Continuar na Meta';cancel.textContent='Cancelar';proceed.type=cancel.type='button';proceed.className=cancel.className='cta';
    for(const button of [proceed,cancel])Object.assign(button.style,{border:'1px solid #cbd3dc',borderRadius:'8px',padding:'10px 14px',marginRight:'6px',cursor:'pointer',background:'#fff',color:'#23344c'});
    Object.assign(proceed.style,{background:'#e96500',borderColor:'#e96500',color:'#fff'});
@@ -77,8 +78,10 @@ async function connect(config,cloud,clinic,currentClinic){
     let data=event.data;try{if(typeof data==='string'){if(data.length>20000)return;data=JSON.parse(data);}}catch{return;}
     if(data?.type!=='WA_EMBEDDED_SIGNUP')return;
     clearTimeout(openingTimer);
-    if(data.event==='CANCEL'||data.event==='ERROR')return done(new Error('Cadastro WhatsApp não concluído. Você pode tentar novamente.'));
-    if(data.event!=='FINISH')return;
+    if(data.event==='ERROR'){const code=String(data.data?.error_code||data.data?.error?.code||'');return done(new Error(code==='2655115'?'A Meta recusou compartilhar esta conta com parceiro (2655115). Não exclua seu número; precisamos verificar a elegibilidade da conta e do aplicativo Meta.':'A Meta não concluiu o cadastro WhatsApp. Você pode tentar novamente.'));}
+    if(data.event==='CANCEL')return done(new Error('Cadastro WhatsApp cancelado. Você pode tentar novamente.'));
+    if(data.event==='FINISH_ONLY_WABA')return done(new Error('A Meta retornou a empresa, mas não o número. Conclua a escolha do número antes de conectar.'));
+    if(data.event!=='FINISH'&&!(mode==='coexistence'&&data.event==='FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'))return;
     const waba=data.data?.waba_id,phone=data.data?.phone_number_id;
     if(!/^\d{1,40}$/.test(waba||'')||!/^\d{1,40}$/.test(phone||''))return done(new Error('Conclua a seleção do número no cadastro da Meta.'));
     ids={waba_id:String(waba),phone_number_id:String(phone)};finish();
@@ -98,7 +101,7 @@ async function connect(config,cloud,clinic,currentClinic){
      code=response.authResponse.code;
      if(!ids)waitingTimer=setTimeout(()=>done(new Error('A Meta não informou o número selecionado. Conclua o cadastro e tente novamente.')),30000);
      finish();
-    },{config_id:config.config_id,response_type:'code',override_default_response_type:true,extras:{setup:{},featureType:'',sessionInfoVersion:'3'}});}catch(error){done(new Error('Não foi possível abrir a autorização Meta. Tente novamente.'));}
+    },{config_id:config.config_id,response_type:'code',override_default_response_type:true,extras:{setup:{},featureType:mode==='coexistence'?'whatsapp_business_app_onboarding':'',sessionInfoVersion:'3'}});}catch(error){done(new Error('Não foi possível abrir a autorização Meta. Tente novamente.'));}
    };
    cancel.onclick=()=>{if(!sending)done(new Error('Autorização cancelada.'));};dialog.addEventListener('cancel',event=>{event.preventDefault();if(sending)return;done(new Error('Autorização cancelada.'));});
    Object.assign(dialog.style,{maxWidth:'460px',width:'calc(100% - 48px)',border:'1px solid #dfe3e8',borderRadius:'14px',padding:'24px',fontFamily:'system-ui,sans-serif'});

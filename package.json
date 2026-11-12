@@ -19,6 +19,6 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "test:browser": "node tests/browser/system-checkup.cjs && node tests/browser/chat-widget.cjs && node tests/browser/chat-navigation.cjs && node tests/browser/presential-signing.cjs && node tests/browser/privacy.cjs && node tests/browser/photo-performance.cjs && node tests/browser/whatsapp-connection.cjs && node tests/browser/whatsapp-embedded.cjs && node tests/browser/whatsapp-nested.cjs && node tests/browser/whatsapp-sdk-loading.cjs"
+    "test:browser": "node tests/browser/system-checkup.cjs && node tests/browser/chat-widget.cjs && node tests/browser/chat-navigation.cjs && node tests/browser/presential-signing.cjs && node tests/browser/privacy.cjs && node tests/browser/photo-performance.cjs && node tests/browser/whatsapp-connection.cjs && node tests/browser/whatsapp-embedded.cjs && node tests/browser/whatsapp-nested.cjs && node tests/browser/whatsapp-sdk-loading.cjs && node tests/browser/whatsapp-coexistence.cjs"
   }
 }

@@ -74,13 +74,14 @@ async function connectWhatsapp(){
  if(!clinic.value)return whatsappMsg.textContent='Selecione uma clínica.';
  if(location.protocol!=='https:')return whatsappMsg.textContent='Abra o NexoDent em HTTPS.';
  const selectedClinic=clinic.value;
+ const mode=document.getElementById('whatsapp-mode')?.value||'coexistence';
  whatsappBtn.disabled=true;whatsappMsg.textContent='Verificando a integração oficial…';
  try{
   const response=await cloud.request('/functions/v1/nexodent-whatsapp-connect-start',{method:'POST',body:{clinic_id:selectedClinic,flow:'embedded'}});
   if(clinic.value!==selectedClinic)throw new Error('A clínica mudou. Inicie a conexão novamente.');
   if(!window.NexoWhatsAppEmbedded?.connect)throw new Error('Atualize a página para carregar a conexão WhatsApp.');
   whatsappMsg.textContent='Preparando a janela de autorização da Meta…';
-  const result=await window.NexoWhatsAppEmbedded.connect(response,cloud,selectedClinic,()=>clinic.value);
+  const result=await window.NexoWhatsAppEmbedded.connect(response,cloud,selectedClinic,()=>clinic.value,mode);
   await refresh();whatsappMsg.textContent=(result.phone_number?'Número '+result.phone_number+' autorizado. ':'')+'Falta validar o webhook para receber mensagens.';
   whatsappBtn.disabled=false;
 
