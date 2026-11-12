@@ -4,6 +4,7 @@
 'use strict';
 
 const cache=new Map(),busy=new Set();
+const uploadedThumbs=new Map();
 const previews=new Map();
 const previewQueue=[];
 const previewPending=new Set();
@@ -14,7 +15,7 @@ let photoContext='';
 function ensurePhotoContext(){
  const current=String(window.OralCloud?.clinicId||'local')+':'+String(window.OralCloud?.session?.user?.id||'local');
  if(current===photoContext)return;
- photoContext=current;cache.clear();previews.clear();sharedPreviews.clear();previewQueue.length=0;previewPending.clear();
+ photoContext=current;cache.clear();previews.clear();uploadedThumbs.clear();sharedPreviews.clear();previewQueue.length=0;previewPending.clear();
  for(const observer of previewObservers)observer.disconnect();
  previewObservers.clear();
 }
@@ -122,7 +123,7 @@ function scheduleLegacyPreviews(id,scope){
 }
 
 function pumpPreviews(){
- while(previewActive<2&&previewQueue.length){
+ while(previewActive<3&&previewQueue.length){
   const job=previewQueue.shift();
   previewActive++;
   (async()=>{
@@ -201,11 +202,12 @@ function gallery(p,scope='ortho'){
  data-photo-scope="${safe(scope)}"
  data-ortho-index="${i}"
  aria-label="Ampliar foto ${i+1}">
- <img src="${safe(f.thumb||previews.get(k+':'+(f._rowId||f.id))||f.data||'')}"
+ <img src="${safe(f.thumb||previews.get(k+':'+(f._rowId||f.id))||f.data||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Crect width=%2290%22 height=%2290%22 fill=%22%23f0f2f5%22/%3E%3C/svg%3E')}"
  alt="Foto do paciente ${i+1}" loading="lazy" decoding="async">
  </button></div>`).join('')}
  ${!photos.length?`<small>${state?.loading?'Carregando fotos...':state?.error?safe(state.error):'Nenhuma foto adicionada.'}</small>`:''}
  </div>
+ <small>Novas fotos são otimizadas para carregar mais rápido. Guarde os originais da câmera quando precisar deles.</small>
  <small class="ortho-status" aria-live="polite">${safe(state?.status||'')}${working?' Aguarde a conclusão.':''}</small>
  </div>`;
 }
@@ -230,7 +232,7 @@ async function load(p,scope='ortho'){
   }).map(r=>({
    ...r.dados,
    _rowId:r.id,
-   thumb:r.dados.thumb||previews.get(k+':'+r.id)||'',
+   thumb:r.dados.thumb||previews.get(k+':'+r.id)||uploadedThumbs.get(k+':'+r.dados?.id)||'',
    data:''
   }));
 
@@ -254,7 +256,7 @@ function refresh(id,scope='ortho'){
  setTimeout(()=>scheduleLegacyPreviews(id,scope),0);
 }
 
-const MAX_BYTES=1.5*1024*1024;
+const MAX_BYTES=450*1024;
 
 async function preparePhoto(file){
  if(!['image/jpeg','image/png','image/webp'].includes(file.type))
@@ -273,7 +275,7 @@ async function preparePhoto(file){
   const ctx=canvas.getContext('2d');
   if(!ctx)throw Error('Não foi possível processar a foto.');
 
-  for(const maxSide of [1280,1050,850,650]){
+  for(const maxSide of [1600,1280,1050]){
    const scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
    canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
    canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
@@ -281,7 +283,7 @@ async function preparePhoto(file){
    ctx.fillRect(0,0,canvas.width,canvas.height);
    ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-   for(const quality of [.76,.64,.52]){
+   for(const quality of [.82,.74,.66]){
     const data=canvas.toDataURL('image/jpeg',quality);
     if(Math.floor((data.length-data.indexOf(',')-1)*3/4)<=MAX_BYTES)
      return {
@@ -341,8 +343,10 @@ async function upload(input){
      dataEnvio:hojeBR()
     };
 
-    if(window.OralCloud?.enabled)
+    if(window.OralCloud?.enabled){
      await OralCloudSync.fileOperation(p.id,'append',{file:record});
+     uploadedThumbs.set(k+':'+record.id,thumb);
+    }
     else{
      (p.arquivos=p.arquivos||[]).push(record);
      save();
@@ -396,7 +400,7 @@ function managePhotos(id,scope='ortho'){
  <div class="ortho-select-grid">
  ${photos.map((f,i)=>`<label class="ortho-select-item">
  <input type="checkbox" value="${i}" aria-label="Selecionar foto ${i+1}">
- <img src="${safe(f.thumb||previews.get(k+':'+(f._rowId||f.id))||f.data||'')}" alt="Foto ${i+1}" loading="lazy" decoding="async">
+ <img src="${safe(f.thumb||previews.get(k+':'+(f._rowId||f.id))||f.data||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Crect width=%2290%22 height=%2290%22 fill=%22%23f0f2f5%22/%3E%3C/svg%3E')}" alt="Foto ${i+1}" loading="lazy" decoding="async">
  <span>${safe(f.nome||'Foto '+(i+1))}</span></label>`).join('')}
  </div>
  <div class="ortho-select-footer">

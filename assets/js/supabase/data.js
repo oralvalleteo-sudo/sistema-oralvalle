@@ -388,16 +388,27 @@
       return rows;
     });
   }
+  let activeFileReads = 0;
+  const waitingFileReads = [];
   async function file(patientId, rowId) {
-    const clinic = cloud().clinicId;
-    return enqueue(async () => {
-      const current = loaded(clinic);
-      const row = await rowChunks(clinic, current.revision, 'patient_files', rowId);
+    const clinic = cloud().clinicId, user = cloud().session?.user?.id;
+    if (activeFileReads >= 3) await new Promise(resolve => waitingFileReads.push(resolve));
+    else activeFileReads++;
+    try {
+      // Wait for writes already queued; independent files may then read concurrently.
+      await pending;
+      const current = loaded(clinic), revision = current.revision;
+      if (cloud().session?.user?.id !== user) throw fail('CLINIC_CHANGED', 'A conta mudou durante a leitura.');
+      const row = await rowChunks(clinic, revision, 'patient_files', rowId);
+      if (loaded(clinic) !== current || current.revision !== revision || cloud().session?.user?.id !== user)
+        throw fail('40001', 'Os dados mudaram durante a leitura. Abra a fotografia novamente.');
       if (row.parent_id !== current.patients.get(JSON.stringify(patientId)))
         throw fail('INVALID_RESPONSE', 'Arquivo não pertence ao paciente.');
-      loaded(clinic);
       return row;
-    });
+    } finally {
+      const next = waitingFileReads.shift();
+      if (next) next(); else activeFileReads--;
+    }
   }
   async function changeFile(patientId, operation, data) {
     const captured = copy(data);
