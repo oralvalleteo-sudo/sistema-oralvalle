@@ -301,15 +301,17 @@
     if (!lock) { lock = document.createElement('div'); lock.id = 'lock'; document.body.appendChild(lock); }
     const clinic = topCl();
     const warning = message ? `<div class="lk-err" role="alert">${esc(message)}</div>` : '';
+    const legalLinks='<nav aria-label="Informações legais" style="margin-top:18px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap"><a href="./legal/privacidade.html" target="_blank" rel="noopener">Privacidade</a><a href="./legal/cookies.html" target="_blank" rel="noopener">Cookies e armazenamento</a><a href="./legal/direitos.html" target="_blank" rel="noopener">Seus direitos</a><a href="./legal/termos.html" target="_blank" rel="noopener">Termos de uso</a></nav>';
+    const legalNotice='<p style="font-size:13px">Antes de cadastrar, consulte o aviso de privacidade. O cadastro não autoriza publicidade. '+(window.NexoLegalAcceptance?.active()?'<label><input type="checkbox" id="cloudTerms" required> Li e aceito os <a href="./legal/termos.html" target="_blank" rel="noopener">termos de uso</a>.</label>':'Os termos de contratação estão em revisão; não há contratação paga por este cadastro.')+'</p>';
     const email = '<label for="cloudEmail">E-mail</label><input id="cloudEmail" type="email" autocomplete="username" autocapitalize="none" required>';
     let body;
     if (mode === 'checking') body = `<h1>Restaurando acesso</h1><p class="lk-t" role="status">Verificando sua sessão e carregando a clínica…</p>`;
     else if (mode === 'load') body = `<h1>Carregar clínica</h1>${warning}<button type="submit">Tentar carregar novamente</button><button type="button" class="lk-link" data-cloud-back>Voltar ao login</button>`;
-    else if (mode === 'signup') body = `<h1>Criar conta</h1><p class="lk-t">Cadastre seu acesso. O administrador precisará autorizar sua entrada na clínica.</p>${warning}<label for="cloudName">Nome completo</label><input id="cloudName" autocomplete="name" required>${email}<label for="cloudPassword">Senha (mínimo 6 caracteres)</label><input id="cloudPassword" type="password" autocomplete="new-password" minlength="6" required><label for="cloudRepeat">Repita a senha</label><input id="cloudRepeat" type="password" autocomplete="new-password" minlength="6" required><button type="submit">Cadastrar</button><button type="button" class="lk-link" data-cloud-back>Já tenho conta. Entrar</button>`;
+    else if (mode === 'signup') body = `<h1>Criar conta</h1><p class="lk-t">Cadastre seu acesso. O administrador precisará autorizar sua entrada na clínica.</p>${warning}${legalNotice}<label for="cloudName">Nome completo</label><input id="cloudName" autocomplete="name" required>${email}<label for="cloudPassword">Senha (mínimo 6 caracteres)</label><input id="cloudPassword" type="password" autocomplete="new-password" minlength="6" required><label for="cloudRepeat">Repita a senha</label><input id="cloudRepeat" type="password" autocomplete="new-password" minlength="6" required><button type="submit">Cadastrar</button><button type="button" class="lk-link" data-cloud-back>Já tenho conta. Entrar</button>`;
     else if (mode === 'recover') body = `<h1>Redefinir senha</h1><p class="lk-t">Enviaremos um link para o e-mail cadastrado no Supabase.</p>${warning}${email}<button type="submit">Enviar link</button><button type="button" class="lk-link" data-cloud-back>Voltar</button>`;
     else if (mode === 'password') body = `<h1>Definir senha</h1>${warning}<label for="cloudPassword">Nova senha</label><input id="cloudPassword" type="password" autocomplete="new-password" minlength="6" required><label for="cloudRepeat">Repita a senha</label><input id="cloudRepeat" type="password" autocomplete="new-password" minlength="6" required><button type="submit">Salvar senha</button>`;
     else body = `<h1>Entrar</h1><p class="lk-t">Entre com seu acesso da clínica no Supabase.</p>${warning}${email}<label for="cloudPassword">Senha</label><input id="cloudPassword" type="password" autocomplete="current-password" required><label class="lk-chk"><input id="cloudKeep" type="checkbox"> Manter conectado neste aparelho</label><button type="submit">Entrar</button><button type="button" class="lk-link" data-cloud-signup>Criar conta</button><button type="button" class="lk-link" data-cloud-forgot>Esqueci a senha</button>`;
-    lock.innerHTML = `<div class="lk-box"><div class="lk-brand"><strong>${esc(clinic.marca)}</strong><span>${esc(clinic.sub)}</span></div><form>${body}</form></div>`;
+    lock.innerHTML = `<div class="lk-box"><div class="lk-brand"><strong>${esc(clinic.marca)}</strong><span>${esc(clinic.sub)}</span></div><form>${body}</form>${legalLinks}</div>`;
     // Controle visual de senha: não interfere na autenticação nem no valor digitado.
     lock.querySelectorAll('input[type="password"]').forEach(input => {
       const wrapper = document.createElement('span');
@@ -354,7 +356,8 @@
           const error = pwOk(password, $('cloudRepeat').value);
           if (!nome) throw new Error('Preencha seu nome.');
           if (error) throw new Error(error);
-          await OralCloud.signup(nome, $('cloudEmail').value.trim(), password);
+          const acceptance=window.NexoLegalAcceptance?.metadata($('cloudTerms')?.checked);
+          await OralCloud.signup(nome, $('cloudEmail').value.trim(), password,acceptance);
           history.replaceState(null, '', location.pathname + location.search);
           cloudLock('login', 'Solicitação de cadastro enviada. Se necessário, confirme seu e-mail. Para acessar a clínica, peça ao administrador que autorize sua conta. Se já possui conta, entre ou recupere sua senha.');
         } else if (mode === 'recover') {

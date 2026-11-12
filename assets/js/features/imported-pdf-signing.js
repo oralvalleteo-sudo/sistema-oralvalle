@@ -6,7 +6,7 @@ const loadPdfLib=()=>new Promise((resolve,reject)=>{
  const existing=document.querySelector('script[data-nexo-pdflib]');
  if(existing){existing.addEventListener('load',()=>resolve(window.PDFLib));existing.addEventListener('error',()=>reject(Error('Biblioteca PDF indisponível')));return;}
  const s=document.createElement('script');s.dataset.nexoPdflib='1';
- s.src='https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+ s.src=new URL('assets/vendor/pdf-lib-1.17.1.min.js',document.baseURI).href;
  s.onload=()=>window.PDFLib?resolve(window.PDFLib):reject(Error('Biblioteca PDF indisponível'));
  s.onerror=()=>reject(Error('Não foi possível carregar a biblioteca PDF'));
  document.head.append(s);

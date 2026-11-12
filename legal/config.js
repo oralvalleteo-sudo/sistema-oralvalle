@@ -1,0 +1,1 @@
+window.NexoLegalConfig=Object.freeze({"accountTerms": {"id": "account_terms", "version": "2026-11-11.1", "sha256": "b18c863a6961328de477711305a1f2d8e98d6c8bf9f601bcbe7bb0f0046e6ec9", "published": false, "scope": "account", "path": "legal/termos.html"}});

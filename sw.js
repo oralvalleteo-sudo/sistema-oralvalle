@@ -1,11 +1,10 @@
 /* Oral Valle — recebimento de notificações Web Push. */
 self.addEventListener('push', (event) => {
-  let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch (_) { data = { body: event.data?.text() || '' }; }
-  const title = String(data.title || 'Nexodent — Horário chegando');
+  // Não exibir no sistema operacional o texto clínico recebido no payload.
+  const title = 'NexoDent — Aviso de agenda';
   const options = {
-    body: String(data.body || 'Você tem um atendimento próximo.'),
-    tag: String(data.tag || 'oralvalle-' + Date.now()),
+    body: 'Há uma atualização na agenda. Abra o sistema para consultar os detalhes.',
+    tag: 'nexodent-agenda',
     data: { url: self.registration.scope },
     icon: new URL('apple-touch-icon.png',self.registration.scope).href,
     silent: false,

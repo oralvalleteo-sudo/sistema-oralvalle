@@ -9,9 +9,7 @@ const OV_NAV_KEY = 'oralvalle:navigation:v1';
 function ovSaveNavigation() {
   if (LOCKED || !ME) return;
   try {
-    const state = { h: view.h, id: view.id, tab: view.tab, agDate: view.agDate,
-      sv: view.sv, ag: view.ag, // A pesquisa de pacientes não é armazenada na sessão.
-      clinicId: window.OralCloud?.clinicId || null, userId: ME.id || null };
+    const state = { h: view.h, clinicId: window.OralCloud?.clinicId || null, userId: ME.id || null };
     sessionStorage.setItem(OV_NAV_KEY, JSON.stringify(state));
   } catch (_) {}
 }

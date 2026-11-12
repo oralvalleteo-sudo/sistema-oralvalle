@@ -101,13 +101,17 @@
     return data.user;
   }
 
-  async function signup(nome, email, password) {
+  async function signup(nome, email, password, legalAcceptance) {
+    if(legalAcceptance){
+      const docs=await send('/rest/v1/rpc/nexodent_legal_catalog',{method:'POST',body:{}});
+      if(!Array.isArray(docs)||!docs.some(doc=>doc.document===legalAcceptance.document&&doc.version===legalAcceptance.version&&doc.sha256===legalAcceptance.sha256&&doc.scope==='account'))throw new Error('Os termos ainda não estão disponíveis no servidor. O cadastro não foi enviado.');
+    }
     const redirect = /^https?:$/.test(location.protocol)
       ? '?redirect_to=' + encodeURIComponent(location.origin + location.pathname + location.search)
       : '';
     // O nome é apenas informação de perfil, nunca autorização ou vínculo com a clínica.
     await send('/auth/v1/signup' + redirect, {
-      method: 'POST', body: { email, password, data: { nome } },
+      method: 'POST', body: { email, password, data: { nome, ...(legalAcceptance?{legal_acceptance:legalAcceptance}:{}) } },
     });
   }
 

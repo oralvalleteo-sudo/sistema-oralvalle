@@ -21,6 +21,8 @@ document.addEventListener('pointerdown',avsUnlock,true);document.addEventListene
 function avsBeep(){if(window.NexoNotificationSound){window.NexoNotificationSound.play();return;}const c=avsAudio();if(!c)return;try{[[0,880],[.3,1100],[.6,880]].forEach(([dl,fr])=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=fr;o.connect(g);g.connect(c.destination);const t=c.currentTime+dl;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.45,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.24);o.start(t);o.stop(t+.27)})}catch(e){}}
 async function avsNotify(title,body,tag){
   if(!('Notification' in window)||Notification.permission!=='granted')return false;
+  // A faixa interna pode mostrar o paciente; a notificação do aparelho permanece genérica.
+  title='NexoDent — Aviso de agenda';body='Há uma atualização na agenda. Abra o sistema para consultar os detalhes.';tag='nexodent-agenda';
   const opt={body,tag,vibrate:[200,100,200,100,200],requireInteraction:true,renotify:true};
   try{if('serviceWorker' in navigator){const r=await navigator.serviceWorker.getRegistration();if(r){await r.showNotification(title,opt);return true}}}catch(e){}
   try{new Notification(title,opt);return true}catch(e){}

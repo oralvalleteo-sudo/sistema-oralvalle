@@ -1,0 +1,14 @@
+{
+  "purpose": "Bibliotecas e fontes hospedadas na própria origem, com licenças incluídas. Atualizar hashes conscientemente ao atualizar uma dependência.",
+  "packages": {
+    "Figtree": "5.3.0",
+    "pdf-lib": "1.17.1"
+  },
+  "files": {
+    "assets/css/local-fonts.css": "5855f90e8c3540a464a879af8755d72e2bb31461b7495348f3cf61e6494dca34",
+    "assets/fonts/LICENSE-Figtree.txt": "ee23e6c84000126692e112ff067b456470493349f993ceaa8b4d3766dd6fad5d",
+    "assets/fonts/figtree-latin-variable.woff2": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd",
+    "assets/vendor/LICENSE.pdf-lib.txt": "f2c9fc00fdb66eb99ac156ba52d734af66d8d309f65753ae809ad34ee2883bcb",
+    "assets/vendor/pdf-lib-1.17.1.min.js": "0f9a5cad07941f0826586c94e089d89b918c46e5c17cf2d5a3c6f666e3bc694f"
+  }
+}

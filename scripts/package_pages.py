@@ -7,7 +7,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 DESTINATION = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / '_site').resolve()
-DIRECTORIES = ('assets', 'admin', 'crm', 'integracoes', 'ativar-teste', 'solicitar-teste', 'assinatura', 'comunicacao')
+DIRECTORIES = ('assets', 'admin', 'crm', 'integracoes', 'ativar-teste', 'solicitar-teste', 'assinatura', 'comunicacao', 'legal')
 ROOT_FILES = ('index.html', 'nexodent-version.json', 'sw.js', 'manifest.webmanifest', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'favicon.ico', 'favicon.svg', 'favicon-32.png', 'whatsapp-callback.html', 'CNAME')
 EXTENSIONS = {'.html', '.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.webmanifest', '.json', '.mp3', '.wav', '.ogg', '.pdf'}
 REQUIRED = ('index.html', 'nexodent-version.json', 'crm/index.html', 'crm/js/crm.js', 'crm/js/integracao.js', 'assets/js/supabase/config.js', 'assets/js/supabase/client.js')
@@ -24,7 +24,7 @@ for directory in DIRECTORIES:
         for file in folder.rglob('*'):
             if file.is_symlink():
                 raise SystemExit('Link simbólico não permitido no artefato: ' + str(file))
-            if file.is_file() and file.suffix.lower() in EXTENSIONS and not any(part.startswith('.') for part in file.relative_to(ROOT).parts) and not (file.suffix.lower()=='.json' and 'backup' in file.name.lower()):
+            if file.is_file() and (file.suffix.lower() in EXTENSIONS or (file.name.startswith('LICENSE') and file.suffix.lower()=='.txt')) and not any(part.startswith('.') for part in file.relative_to(ROOT).parts) and not (file.suffix.lower()=='.json' and 'backup' in file.name.lower()):
                 files.append(file)
 DESTINATION.mkdir(parents=True)
 for source in files:

@@ -68,7 +68,7 @@ function ovSidebar(active){
       ${item('mt','Tabela de Materiais')}
     </nav>
     <div class="ov-section">Controle</div>
-    <nav class="ov-nav">${pmSee('chat')?`<button type="button" class="ov-nav-btn${active==='chat'?' on':''}" data-act="nav" data-t="chat"><span class="ico" aria-hidden="true">💬</span><span>Comunicação</span><span data-chat-unread class="nav-dot" style="${Number(window.NexoChatBadge?.count||0)>0?'':'display:none'}" ${Number(window.NexoChatBadge?.count||0)>0?'':'hidden'}>${window.NexoChatBadge?.label()||''}</span></button>`:''}${item('bk','Backup')}${item('cfg','Configurações')}${item('conta','Minha conta','pac')}</nav>
+    <nav class="ov-nav">${pmSee('chat')?`<button type="button" class="ov-nav-btn${active==='chat'?' on':''}" data-act="nav" data-t="chat"><span class="ico" aria-hidden="true">💬</span><span>Comunicação</span><span data-chat-unread class="nav-dot" style="${Number(window.NexoChatBadge?.count||0)>0?'':'display:none'}" ${Number(window.NexoChatBadge?.count||0)>0?'':'hidden'}>${window.NexoChatBadge?.label()||''}</span></button>`:''}${item('privacy','Privacidade e dados','sigdoc')}${item('bk','Backup')}${item('cfg','Configurações')}${item('conta','Minha conta','pac')}</nav>
   </aside>`);
 }
 function topCl(){return Object.assign({},CL_DEF,db.cl||{})}

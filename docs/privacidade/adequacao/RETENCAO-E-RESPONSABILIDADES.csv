@@ -1,0 +1,11 @@
+Categoria;Responsável por decidir;Critério a aprovar;Execução e cuidado;Estado
+Prontuário e documentos assinados;Clínica com jurídico/profissional;Guarda clínica/legal aplicável e defesa de direitos;Nova versão para retificar e acesso restrito após encerramento quando cabível;Prazo definitivo a aprovar, sem purge automático
+Conta e contratação da plataforma;Fornecedor com jurídico;Contrato, obrigações e defesa de direitos;Separar encerramento da conta da guarda de prontuários;Identidade e condições contratuais pendentes
+Leads e publicidade;Controlador da finalidade comercial;Necessidade demonstrada, oposição e base do contato;Não reutilizar saúde para publicidade;Prazo e lista de supressão a definir
+Chat e anexos;Clínica com operador;Finalidade e vínculo com atendimento ou operação;Não tratar todo chat como prontuário nem apagar documento necessário indiscriminadamente;Política a aprovar
+Auditoria clínica;Clínica e operador conforme contrato;Integridade, responsabilização e finalidade dos dados copiados;Abranger versões anteriores e restringir acesso;Prazo a aprovar
+Protocolos de privacidade;Fornecedor com jurídico;Cumprimento e prova do atendimento, minimização;Proteger identidade e conteúdo, revisar descarte após finalidade;Processo manual com fila e e-mail
+Incidentes;Controlador e operador conforme responsabilidades;Regulamento ANPD vigente e defesa de direitos;Registro próprio, não confundir com todo erro técnico;Plano a ensaiar e prazo jurídico a confirmar
+Backups;Controlador com operador;Continuidade e ciclo de recuperação compatíveis com guarda;30 dias de artifact não substitui prazo do prontuário nem teste de restauração;Execução, cobertura e restauração a comprovar
+Exportações locais;Quem solicita a cópia e clínica;Finalidade da entrega e guarda aplicável;Custódia segura, dispositivos protegidos e descarte autorizado;Orientação operacional necessária
+Preferências e sessão;Fornecedor;Necessidade do acesso e escolhas solicitadas;Explicar persistência, logout e resíduos legados;Informação implementada, aparelho real a validar
