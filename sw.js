@@ -27,7 +27,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // Somente arquivos públicos versionados. Nunca interceptar HTML, API ou anexos.
-const STATIC_CACHE='nexodent-public-static-291';
+const STATIC_CACHE='nexodent-public-static-292';
 self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  for(const name of await caches.keys())if(name.startsWith('nexodent-public-static-')&&name!==STATIC_CACHE)await caches.delete(name);
