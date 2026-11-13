@@ -196,13 +196,6 @@ function style(){return `<style>
  .nxlab-field input,.nxlab-field select,.nxlab-field textarea{font-size:14px;min-height:42px}
  @media(max-width:700px){.nxlab-top{align-items:stretch}.nxlab-actions{width:100%}.nxlab-actions button{flex:1}.nxlab-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.nxlab-metrics>div{padding:14px;min-height:82px}.nxlab-metrics strong{font-size:24px}.nxlab-card{padding:15px !important}.nxlab-filters input,.nxlab-filters select{width:100%;min-width:0}}
 
- /* Ações legíveis: estados visuais não modificam permissões ou disabled. */
- html[data-ov-mode] :is(button[data-lab]:not(.nxlab-summary),button[data-lab-money],#lab-money-payment button):not(:disabled){background:#273444!important;color:#fff!important;border:1px solid #273444!important;opacity:1!important;font-weight:700}
- html[data-ov-mode] :is(button[data-lab].ghost,button[data-lab-money].ghost,#lab-money-payment button.ghost):not(:disabled){background:#fff!important;color:#273444!important;border-color:#64748b!important}
- html[data-ov-mode] :is(button[data-lab].danger,#lab-money-payment button.danger):not(:disabled){background:#fff!important;color:#b42318!important;border-color:#b42318!important}
- html[data-ov-mode] :is(button[data-lab][aria-pressed="true"],#lab-money-payment button[aria-pressed="true"]):not(:disabled){background:#9a4600!important;border-color:#9a4600!important;color:#fff!important}
- html[data-ov-mode] :is(button[data-lab],button[data-lab-money],#lab-money-payment button):focus-visible{outline:3px solid #1d4ed8!important;outline-offset:3px}
- html[data-ov-mode] :is(button[data-lab],button[data-lab-money],#lab-money-payment button):disabled{background:#e5e7eb!important;color:#64748b!important;border:1px solid #cbd5e1!important;opacity:1!important;cursor:not-allowed}
  </style>`;}
 window.nexoLabHtml=function(){
  if(!allowed())return '<div class="card">Você não possui permissão para consultar os trabalhos de laboratório.</div>';

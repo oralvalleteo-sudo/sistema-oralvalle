@@ -1,11 +1,8 @@
-/* Contraste consistente das ações em todos os módulos e páginas incorporadas. */
-html body button:where(:not(.ov-nav-btn):not(.card):not(.pf-card):not(.nxlab-summary):not(.ag-patient-link):not(.ag-flow-time):not(.ag-flow-day):not(.tabs button):not(.lem-tabs button)):not(:disabled):not([aria-disabled="true"]){background-color:#273444!important;background-image:none!important;color:#fff!important;border-color:#273444!important;opacity:1!important}
-html body button:where(.ghost,.secondary,.btn-secondary):not(:disabled):not([aria-disabled="true"]){background-color:#fff!important;color:#273444!important;border:1px solid #64748b!important;opacity:1!important}
-html body button:where(.danger,.btn-danger,.ortho-manage,.ortho-confirm-delete):not(:disabled):not([aria-disabled="true"]){background-color:#fff!important;color:#b42318!important;border:1px solid #b42318!important;opacity:1!important}
-html body :is(.tabs,.lem-tabs) button:not(:disabled){color:#273444!important;background-color:#fff!important;opacity:1!important}
-html body :is(.tabs,.lem-tabs) button.on:not(:disabled),html body button[aria-pressed="true"]:not(:disabled){background-color:#273444!important;color:#fff!important;border-color:#273444!important}
-html body button:disabled,html body button[aria-disabled="true"]{background-color:#e5e7eb!important;color:#475569!important;border-color:#94a3b8!important;opacity:1!important;cursor:not-allowed}
+/* Somente ações explícitas. Horários, cartões, menus e controles preservam seu desenho. */
+html body button:is(.primary,.btn-primary,.sm,[type="submit"],[data-primary],[data-act="addag"],[data-act="agrentadd"],[data-lab="new"],[data-lab="save"],[data-lab="advance"],[data-lab="section-work"],[data-lab="section-money"],[data-lab-money="refresh"],[data-lab-money="pay"]):not(:disabled):not([aria-disabled="true"]){background:#b45309!important;color:#fff!important;border:1px solid #b45309!important;border-radius:10px!important;font-weight:600;opacity:1!important}
+html body button:is(.ghost,.secondary,.btn-secondary,.ov-sair,[data-lab="section-work"],[data-lab="section-money"]):not(:disabled):not([aria-disabled="true"]){background:#fff!important;color:#334155!important;border:1px solid #94a3b8!important;border-radius:10px!important;opacity:1!important}
+html body button:is(.danger,.btn-danger,.ortho-manage,.ortho-confirm-delete):not(:disabled):not([aria-disabled="true"]){background:#fff!important;color:#b42318!important;border:1px solid #b42318!important;border-radius:10px!important;opacity:1!important}
+html body button:is([data-lab="section-work"],[data-lab="section-money"])[aria-pressed="true"]:not(:disabled){background:#b45309!important;color:#fff!important;border-color:#b45309!important}
+html body button:is(.primary,.btn-primary,.sm,.ghost,.secondary,.danger,[type="submit"],[data-primary]):disabled{background:#e5e7eb!important;color:#475569!important;border-color:#94a3b8!important;opacity:1!important;cursor:not-allowed}
 html body button:focus-visible{outline:3px solid #1d4ed8!important;outline-offset:3px}
-html body button:not(:disabled):not([aria-disabled="true"]):hover{filter:brightness(.94)}
-/* Links usados como ações mantêm uma superfície e texto legíveis. */
-html body a:where(.btn,.button,.btn-primary),html body .ortho-upload{background-color:#273444!important;background-image:none!important;color:#fff!important;border-color:#273444!important;opacity:1!important}
+html body .ortho-upload{background:#b45309!important;color:#fff!important;border:1px solid #b45309!important;border-radius:10px!important;opacity:1!important}
