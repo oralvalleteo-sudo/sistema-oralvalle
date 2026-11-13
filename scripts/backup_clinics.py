@@ -12,6 +12,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from backup_connection import connection_env, failure_message, ConnectionError
+
 import psycopg
 from psycopg import sql
 from psycopg.rows import tuple_row
@@ -20,6 +22,25 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 AGE_RECIPIENT = os.environ.get("AGE_RECIPIENT", "")
 OUT_DIR = Path(os.environ.get("BACKUP_OUTPUT_DIR", "individual-backups"))
 BATCH_SIZE = 500
+
+
+def connection_options() -> dict:
+    """Use the same checked destination and separate password as the full backup."""
+    env = connection_env(DATABASE_URL, os.environ.get("DATABASE_PASSWORD", ""))
+    return dict(host=env["PGHOST"], port=int(env["PGPORT"]),
+                user=env["PGUSER"], password=env["PGPASSWORD"],
+                dbname=env["PGDATABASE"], sslmode=env["PGSSLMODE"],
+                connect_timeout=int(env["PGCONNECT_TIMEOUT"]))
+
+
+def prepare_output(directory: Path) -> None:
+    # Never delete a previous backup or follow an output symlink.
+    if directory.is_symlink():
+        raise ValueError("A pasta de saída não pode ser um link simbólico.")
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if any(directory.iterdir()):
+        raise ValueError("Use uma pasta de saída vazia; backups anteriores foram preservados.")
+    directory.chmod(0o700)
 
 
 def require_environment() -> None:
@@ -52,21 +73,12 @@ def dump_table(conn, schema: str, table: str, clinic_id: str) -> list[dict]:
 def main() -> int:
     require_environment()
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Nunca misturar arquivos antigos com um novo backup.
-    for old in OUT_DIR.iterdir():
-        if old.is_file():
-            old.unlink()
-        elif old.is_dir():
-            raise SystemExit(
-                f"ERRO: diretório inesperado dentro de {OUT_DIR}: {old.name}"
-            )
+    options = connection_options()
+    prepare_output(OUT_DIR)
 
     # Conexão configurada para transações somente leitura.
     with psycopg.connect(
-        DATABASE_URL,
-        connect_timeout=20,
+        **options,
         autocommit=True
     ) as conn:
 
@@ -177,10 +189,8 @@ def main() -> int:
                 encrypted_path = OUT_DIR / f"clinic-{safe_id}.json.age"
 
                 try:
-                    with plain_path.open(
-                        "w",
-                        encoding="utf-8"
-                    ) as handle:
+                    descriptor = os.open(plain_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                         json.dump(
                             payload,
                             handle,
@@ -199,7 +209,8 @@ def main() -> int:
                             str(plain_path)
                         ],
                         check=True,
-                        stdout=subprocess.DEVNULL
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.PIPE
                     )
 
                     if (
@@ -234,9 +245,13 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+def run() -> int:
     try:
-        raise SystemExit(main())
+        return main()
+
+    except ConnectionError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
     except subprocess.CalledProcessError:
         print(
@@ -244,12 +259,15 @@ if __name__ == "__main__":
             "o backup não deve ser considerado válido.",
             file=sys.stderr
         )
-        raise SystemExit(1)
+        return 1
 
     except Exception as exc:
         print(
-            f"ERRO na exportação individual: "
-            f"{type(exc).__name__}: {exc}",
+            "ERRO na exportação individual. " + failure_message(str(exc)),
             file=sys.stderr
         )
-        raise SystemExit(1)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(run())
