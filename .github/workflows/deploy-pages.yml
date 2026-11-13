@@ -26,6 +26,10 @@ jobs:
           python3 scripts/build_shell_css.py
           git diff --exit-code -- assets/css/app-shell.css
       - run: npm ci --ignore-scripts
+      - name: Testar proteção dos backups
+        run: |
+          python3 -m pip install --disable-pip-version-check 'psycopg[binary]==3.2.9'
+          python3 -m unittest discover -s tests/python -v
       - name: Testar funcionalidades e proteção no banco isolado
         run: npm test
         env:

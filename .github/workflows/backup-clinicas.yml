@@ -20,9 +20,15 @@ jobs:
       - name: Baixar código
         uses: actions/checkout@v4
 
+      - name: Testar proteção dos backups
+        run: |
+          python -m pip install --disable-pip-version-check 'psycopg[binary]==3.2.9'
+          python -m unittest discover -s tests/python -v
+
       - name: Validar configuração
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
         run: |
           set -euo pipefail
@@ -31,18 +37,19 @@ jobs:
             age1*) ;;
             *) echo "BACKUP_AGE_RECIPIENT ausente ou inválido"; exit 1 ;;
           esac
+          python scripts/backup_connection.py --check
 
       - name: Instalar ferramentas
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq age
-          python -m pip install --disable-pip-version-check 'psycopg[binary]==3.2.9'
           age --version
           python --version
 
       - name: Exportar e criptografar cada clínica
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
           BACKUP_OUTPUT_DIR: ${{ runner.temp }}/nexodent-clinic-backups
         run: |

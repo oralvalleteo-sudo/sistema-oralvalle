@@ -1,5 +1,7 @@
 # sistema Oral Valle
 
+Preparação para comercialização: [checklist, minutas e critérios de liberação](docs/comercializacao/LEIA-PRIMEIRO.md). Pendências de produção e decisões empresariais estão identificadas sem presumir sua conclusão.
+
 Aplicação estática de HTML, CSS e JavaScript. Abra [index.html](index.html) no navegador. Não é necessário instalar Node, pacotes ou executar comandos.
 
 ## Organização

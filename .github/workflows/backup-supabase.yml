@@ -20,7 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Testar tratamento seguro da conexao
-        run: python3 -m unittest discover -s tests/python -v
+        run: |
+          python3 -m pip install --disable-pip-version-check 'psycopg[binary]==3.2.9'
+          python3 -m unittest discover -s tests/python -v
 
       - name: Verificar configuracao
         env:

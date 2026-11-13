@@ -6,3 +6,5 @@ node_modules/
 backups/
 *backup*.json
 *.bak
+__pycache__/
+*.py[cod]
