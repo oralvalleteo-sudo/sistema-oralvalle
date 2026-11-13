@@ -118,6 +118,7 @@
   async function logout() {
     const token=session?.access_token;
     storeSession(null,false);cloud.clinicId=null;recovery=false;
+    if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('nexodent:signed-out'));
     if(token)await send('/auth/v1/logout?scope=local',{method:'POST',body:{}},token);
   }
 

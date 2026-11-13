@@ -8,7 +8,8 @@ const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const options=(arr,selected)=>arr.map(v=>`<option value="${safe(v)}" ${v===selected?'selected':''}>${safe(v)}</option>`).join('');
 const date=s=>s?String(s).slice(0,10):'';
 const stamp=()=>new Date().toISOString();
-let orders=[],loading=false,error='',loadedClinic=null,filter='ativos',search='',editing=null,busy=false,loadAttemptedClinic=null;
+let orders=[],loading=false,error='',loadedClinic=null,filter='ativos',search='',editing=null,busy=false,loadAttemptedClinic=null,labSection='work';
+let fetchTask=null,fetchTaskClinic=null,orderEpoch=0;
 const cloud=()=>!!window.OralCloud?.enabled;
 const clinic=()=>window.OralCloud?.clinicId||null;
 const key=()=>`nexodent:lab:v1:${clinic()||'local'}:${ME?.id||'local'}`;
@@ -58,23 +59,37 @@ window.NexoLabLoad = async function(force=false){
 function allowed(){return typeof pmSee!=='function'||pmSee('pac');}
 function canEdit(){return typeof pmLvl!=='function'||pmLvl('pac')>=2;}
 function renderLab(){if(isLab()&&typeof render==='function')render();}
-async function fetchOrders(force=false){
+function fetchOrders(force=false){
+ const context=clinic()||'local';
+ if(fetchTask&&fetchTaskClinic===context)return fetchTask;
+ const sequence=++orderEpoch;fetchTaskClinic=context;
+ const task=fetchOrdersImpl(force,sequence);fetchTask=task;
+ task.finally(()=>{if(fetchTask===task)fetchTask=null;}).catch(()=>{});
+ return task;
+}
+async function fetchOrdersImpl(force=false,sequence){
  if(!allowed())return;
  const id=clinic();
  if(cloud()&&!id){orders=[];loadedClinic=null;error='Selecione uma clínica para consultar os trabalhos.';renderLab();return;}
- if(loading)return;
  if(!force&&(loadedClinic===(id||'local')||loadAttemptedClinic===(id||'local')))return;
  loadAttemptedClinic=id||'local';
  loading=true;error='';renderLab();
  try{
   if(cloud()){
-   const path='/rest/v1/nexodent_lab_orders?select=*&clinic_id=eq.'+encodeURIComponent(id)+'&order=updated_at.desc&limit=1000';
-   const data=await OralCloud.request(path);if(clinic()!==id)return;
-   orders=Array.isArray(data)?data:[];
+   const data=[];
+   for(let offset=0;offset<20000;offset+=500){
+    const page=await OralCloud.request('/rest/v1/nexodent_lab_orders?select=*&clinic_id=eq.'+encodeURIComponent(id)+'&order=id.asc&limit=500&offset='+offset);
+    if(sequence!==orderEpoch||clinic()!==id)return;
+    if(!Array.isArray(page))throw Error('Resposta de trabalhos inválida.');
+    data.push(...page);
+    if(page.length<500)break;
+    if(offset===19500)throw Error('Limite de segurança atingido. Consulta incompleta; totais bloqueados.');
+   }
+   orders=data.sort((a,b)=>String(b.updated_at||'').localeCompare(String(a.updated_at||''))||String(a.id).localeCompare(String(b.id)));
   }else orders=localRead();
   loadedClinic=id||'local';publishOrders();
- }catch(e){orders=[];loadedClinic=null;error='Não foi possível carregar os trabalhos: '+(e.message||'erro de conexão');}
- finally{loading=false;renderLab();}
+ }catch(e){if(sequence!==orderEpoch)return;orders=[];loadedClinic=null;error='Não foi possível carregar os trabalhos: '+(e.message||'erro de conexão');}
+ finally{if(sequence===orderEpoch){loading=false;renderLab();}}
 }
 function input(label,id,value='',type='text',extra=''){
  return `<label class="nxlab-field"><span>${label}</span><input id="${id}" type="${type}" value="${safe(value)}" ${extra}></label>`;
@@ -184,6 +199,8 @@ function style(){return `<style>
 window.nexoLabHtml=function(){
  if(!allowed())return '<div class="card">Você não possui permissão para consultar os trabalhos de laboratório.</div>';
  if(loadedClinic!==(clinic()||'local')&&!loading&&loadAttemptedClinic!==(clinic()||'local'))setTimeout(()=>fetchOrders(),0);
+ const navigation=`<div class="nxlab-actions" style="margin-bottom:18px"><button type="button" data-lab="section-work" aria-pressed="${labSection==='work'}">Trabalhos</button><button type="button" data-lab="section-money" aria-pressed="${labSection==='money'}">Contas dos laboratórios</button></div>`;
+ if(labSection==='money')return style()+navigation+(window.NexoLabPayables?.html()||'<p>Carregando contas dos laboratórios…</p>');
  const today=isoToday();
  const active=o=>!missingTreatment(o)&&!['Entregue','Cancelado'].includes(o.status);
  const late=o=>active(o)&&!!o.due_at&&date(o.due_at)<today;
@@ -192,7 +209,7 @@ window.nexoLabHtml=function(){
  const totals={open:orders.filter(active).length,late:orders.filter(late).length,observed:orders.filter(o=>o.status==='Em observação').length,delivered:orders.filter(o=>o.status==='Entregue').length,soon:orders.filter(soon).length,noDeadline:orders.filter(noDeadline).length};
  const items=orders.filter(o=>filter==='todos'||(!missingTreatment(o)&&(filter==='observacao'?o.status==='Em observação':filter==='atrasados'?late(o):filter==='proximos'?soon(o):filter==='sem-prazo'?noDeadline(o):active(o)))).filter(o=>!search||[patientName(o.patient_id),o.laboratory,o.work_description,o.teeth].some(t=>String(t||'').toLowerCase().includes(search.toLowerCase())));
 
- return `${style()}<div class="nxlab-top"><div><h2>Laboratório</h2><p>Controle de trabalhos, etapas, prazos e comunicação.</p></div><div class="nxlab-actions">${canEdit()?'<button data-lab="new">+ Novo trabalho</button>':''}<button class="ghost" data-lab="export">Exportar CSV (filtro atual)</button><button class="ghost" data-lab="refresh">Atualizar</button></div></div>
+ return `${style()}${navigation}<div class="nxlab-top"><div><h2>Laboratório</h2><p>Controle de trabalhos, etapas, prazos e comunicação.</p></div><div class="nxlab-actions">${canEdit()?'<button data-lab="new">+ Novo trabalho</button>':''}<button class="ghost" data-lab="export">Exportar CSV (filtro atual)</button><button class="ghost" data-lab="refresh">Atualizar</button></div></div>
  ${error?`<p class="nxlab-error">${safe(error)}</p>`:''}${loading?'<p>Carregando trabalhos...</p>':''}
  <div class="nxlab-metrics"><div><strong>${totals.open}</strong><span>Em aberto</span></div><div><strong>${totals.late}</strong><span>Atrasados</span></div><div><strong>${totals.observed}</strong><span>Em observação</span></div><div><strong>${totals.delivered}</strong><span>Entregues</span></div><div><strong>${totals.soon}</strong><span>Próximos 7 dias</span></div><div><strong>${totals.noDeadline}</strong><span>Sem prazo definido</span></div></div>
  ${editing!==null?form(editing==='new'?{}:orders.find(o=>o.id===editing)||{}):''}
@@ -222,6 +239,7 @@ function exportCsv(){
  const a=document.createElement('a');a.href=url;a.download='nexodent-laboratorio-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function execute(action,id){
+ if(action==='section-work'||action==='section-money'){if(busy)return;labSection=action==='section-money'?'money':'work';renderLab();return;}
  if(action==='export'){if(allowed())exportCsv();return;}
  if(busy)return;
  if(action==='refresh'){loadedClinic=null;loadAttemptedClinic=null;await fetchOrders(true);return;}
@@ -251,13 +269,13 @@ async function execute(action,id){
  }
  const old=orders.find(o=>o.id===id);
  if(action!=='save'&&!old)return;
- let o;
+ let o,pendingLink;
  if(action==='save'){
   const f=readForm();if(!f.patient_id||!f.laboratory||!f.work_description){alert('Informe paciente, laboratório e trabalho.');return;}
   if(f.status==='Em observação'&&!f.observation_reason){alert('Informe o motivo da observação.');return;}
   const original=editing==='new'?null:orders.find(x=>x.id===editing);
   const invalid=validateOrder(f,original);if(invalid){if(invalid!=='cancel')alert(invalid);return;}
-  const pendingLink={tid:$id('nxlab-treatment')?.value||'',cost:Number($id('nxlab-cost')?.value||0)};
+  pendingLink={tid:$id('nxlab-treatment')?.value||'',cost:Number($id('nxlab-cost')?.value||0)};
   if(!Number.isFinite(pendingLink.cost)||pendingLink.cost<0){alert('Informe um custo laboratorial válido.');return;}
   o={...(original||{}),...f,...(cloud()?{treatment_id:pendingLink.tid||null,laboratory_cost:pendingLink.cost}:{}),id:original?.id||crypto.randomUUID(),history:[...(original?.history||[]),{at:stamp(),text:original?'Dados e etapa atualizados':'Trabalho cadastrado'}],comments:original?.comments||[],updated_at:stamp(),_new:!original};
  }else if(action==='advance'){
@@ -311,6 +329,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-nxlab-pa
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-lab]');if(btn){e.preventDefault();execute(btn.dataset.lab,btn.dataset.id);}});
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-filter'){filter=e.target.value;renderLab();}if(e.target.id==='nxlab-search'){search=e.target.value;renderLab();}});
 document.addEventListener('keydown',e=>{if(e.target.id==='nxlab-search'&&e.key==='Enter'){search=e.target.value;renderLab();}});
+window.addEventListener('nexodent:signed-out',()=>{orderEpoch++;fetchTask=null;fetchTaskClinic=null;orders=[];loadedClinic=null;loadAttemptedClinic=null;loading=false;editing=null;labSection='work';window.NexoLabRead=null;});
 window.addEventListener('nexodent:clinic-data-loaded',()=>{loadedClinic=null;loadAttemptedClinic=null;if(isLab())fetchOrders(true);});
 window.addEventListener('focus',()=>{if(isLab())fetchOrders(true);});
 })();
