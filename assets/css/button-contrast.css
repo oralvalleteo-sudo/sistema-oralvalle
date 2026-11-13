@@ -9,3 +9,10 @@ html body button:is([data-lab="section-work"],[data-lab="section-money"])[aria-p
 html body button:is(.primary,.btn-primary,.ov-new-patient,.sm,.ghost,.secondary,.danger,[type="submit"],[data-primary]):disabled{background:#e5e7eb!important;color:#475569!important;border-color:#94a3b8!important;opacity:1!important;cursor:not-allowed}
 html body button:focus-visible{outline:3px solid #1d4ed8!important;outline-offset:3px}
 html body .ortho-upload{background:var(--nexo-action-primary)!important;color:var(--nexo-action-primary-text)!important;border:1px solid var(--nexo-action-primary-border)!important;border-radius:10px!important;opacity:1!important}
+/* Ações antigas com cor própria: mesmo cinza aprovado, sem negrito pesado. */
+html body button:is(#nexo-wa-open,#wa-settings-save,#ns-a1-check,#ns-a1-sign,#ns-reg-save,#ns-print,#nexo-save-evolution,[data-save],[data-print],[data-archive],[data-act="nexopdfupload"],[data-act="evsignprint"]):not(:disabled):not([aria-disabled="true"]),
+html body :is(.crm-patient-panel-52,.crm59-card,.crm-analytics,.ops-heading,.recovery-actions,.sales-period-actions,.crm-funil-nav-266-actions,.intro,.ov-banner) button:not(.danger):not(.btn-danger):not(:disabled):not([aria-disabled="true"]),
+html body :is(a,button):is(.btn.accent,.btn.primary):not(:disabled):not([aria-disabled="true"]){background:var(--nexo-action-primary)!important;color:var(--nexo-action-primary-text)!important;border:1px solid var(--nexo-action-primary-border)!important;box-shadow:none!important;text-shadow:none!important;font-weight:500!important;opacity:1!important}
+/* Seletores segmentados mantêm formato e seleção; somente a cor é neutralizada. */
+html body :is(.hn,.tp-seg) button.on,html body :is(.tab,.chip).on,
+html body .crm-commandbar button[aria-current="page"],html body .crm-view-tabs button[aria-selected="true"]{background:#e2e8f0!important;color:#273444!important;border-color:#94a3b8!important;font-weight:500!important;text-shadow:none!important}
