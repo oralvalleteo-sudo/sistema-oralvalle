@@ -87,3 +87,24 @@
     gap: 6px;
   }
 }
+
+@media (max-width: 760px) {
+  .nxlab-money-metrics.nxlab-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nxlab-money-metrics.nxlab-metrics > div {
+    container-type: inline-size;
+    min-width: 0;
+    padding-inline: 12px;
+    justify-content: flex-start;
+  }
+
+  .nxlab-money-metrics.nxlab-metrics strong.nxlab-money-total {
+    font-size: 18px;
+    font-size: clamp(14px, 15cqi, 20px);
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+}

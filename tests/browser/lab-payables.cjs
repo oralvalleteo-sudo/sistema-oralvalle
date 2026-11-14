@@ -5,6 +5,15 @@ const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('nod
  for(const file of ['laboratory','lab-payables'])await page.addScriptTag({content:fs.readFileSync('assets/js/features/'+file+'.js','utf8')});await page.evaluate(()=>render());await page.getByRole('button',{name:'Contas dos laboratórios',exact:true}).click();await page.getByRole('heading',{name:'Resumo por laboratório'}).waitFor();assert.match(await page.locator('#app').textContent(),/1 trabalho\(s\) sem custo/);assert.match(await page.locator('#app').textContent(),/Cancelado/);assert.equal(await page.locator('[data-lab-money="pay"]').count(),2);
  await page.addStyleTag({content:fs.readFileSync('assets/css/lab-payables.css','utf8')});
  await page.setViewportSize({width:320,height:720});
+ const totals=await page.locator('.nxlab-money-total').evaluateAll(values=>values.map(value=>{
+  const range=document.createRange();
+  range.selectNodeContents(value);
+  const text=range.getBoundingClientRect(), card=value.parentElement.getBoundingClientRect();
+  return {font:parseFloat(getComputedStyle(value).fontSize),left:text.left-card.left,right:card.right-text.right};
+ }));
+ assert.equal(totals.length,3);
+ assert.ok(totals.every(total=>total.font<=20&&total.left>=12&&total.right>=12),JSON.stringify(totals));
+
  const mobile=await page.locator('.nxlab-money-patients').evaluate(table=>{
   const rows=[...table.tBodies[0].rows], bounds=table.getBoundingClientRect();
   return { colors:rows.slice(0,2).map(row=>getComputedStyle(row).backgroundColor),
