@@ -1,0 +1,89 @@
+.nxlab-money-scroll {
+  overflow-x: auto;
+  border: 1px solid color-mix(in srgb, currentColor 17%, transparent);
+  border-radius: 12px;
+}
+
+.nxlab-money-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.nxlab-money-table :is(th, td) {
+  padding: 10px 12px;
+  text-align: start;
+  vertical-align: middle;
+}
+
+.nxlab-money-table thead,
+.nxlab-money-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, #7692b6 12%, transparent);
+}
+
+.nxlab-money-table tbody tr:nth-child(odd) {
+  background: color-mix(in srgb, currentColor 2%, transparent);
+}
+
+.nxlab-money-table tbody tr {
+  border-top: 1px solid color-mix(in srgb, currentColor 13%, transparent);
+}
+
+.nxlab-money-label { display: none; }
+.nxlab-money-patient { font-weight: 650; }
+.nxlab-money-amount { font-variant-numeric: tabular-nums; }
+.nxlab-money-actions button { margin: 2px; }
+
+@media (max-width: 760px) {
+  .nxlab-money-patients,
+  .nxlab-money-patients tbody {
+    display: block;
+  }
+
+  .nxlab-money-patients thead {
+    position: absolute;
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .nxlab-money-patients tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .nxlab-money-patients tbody tr:first-child { border-top: 0; }
+
+  .nxlab-money-patients td {
+    min-width: 0;
+    padding: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .nxlab-money-patients :is(.nxlab-money-patient, .nxlab-money-work,
+    .nxlab-money-status, .nxlab-money-actions, [colspan]) {
+    grid-column: 1 / -1;
+  }
+
+  .nxlab-money-work,
+  .nxlab-money-status { font-size: .875rem; }
+
+  .nxlab-money-label {
+    display: block;
+    font-size: .75rem;
+    margin-bottom: 2px;
+  }
+
+  .nxlab-money-amount {
+    font-size: .875rem;
+    font-weight: 600;
+  }
+
+  .nxlab-money-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
