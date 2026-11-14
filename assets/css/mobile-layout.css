@@ -1,0 +1,63 @@
+/* A moldura principal aplica a margem uma vez, inclusive nos módulos integrados. */
+@media (max-width: 760px) and (pointer: coarse) {
+  :root {
+    --nexo-mobile-gutter: 12px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    touch-action: pan-x pan-y;
+  }
+
+  .ov-shell > main.ov-content {
+    box-sizing: border-box;
+    padding-inline: max(var(--nexo-mobile-gutter), env(safe-area-inset-left))
+                    max(var(--nexo-mobile-gutter), env(safe-area-inset-right)) !important;
+  }
+
+  .ov-content > .ov-content-inner,
+  .ov-content-inner > :is(.nexo-agenda-page, .ov-modern-page, .ov-patients-page, .nexo-crm-embed) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+    padding-inline: 0 !important;
+  }
+
+  html body :is(main.crm-main, main.wrap) {
+    padding-inline: var(--nexo-mobile-gutter) !important;
+  }
+
+  html.crm-embedded body main.crm-main,
+  html.chat-in-system body main {
+    padding-inline: 0 !important;
+  }
+
+  html body #editor[open],
+  html body #recovery-message[open] {
+    box-sizing: border-box;
+    inset-inline: 0 !important;
+    margin-inline: auto !important;
+    width: calc(100% - 2 * var(--nexo-mobile-gutter)) !important;
+    max-width: calc(100% - 2 * var(--nexo-mobile-gutter)) !important;
+  }
+
+  #editor #form {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  #editor #form > * {
+    min-width: 0;
+    grid-column: 1 / -1 !important;
+  }
+
+  /* No iPhone, campos de texto menores podem ampliar a página ao receber foco. */
+  html body :is(input:not([type]), input:is([type=text], [type=search], [type=tel],
+    [type=email], [type=password], [type=url], [type=number], [type=date],
+    [type=time], [type=datetime-local], [type=month]), select, textarea),
+  .ov-shell .ag-date-panel #agDate,
+  .ov-shell .ag-new-form #ad,
+  #editor #form :is(input:not([type=checkbox]), select, textarea) {
+    font-size: max(16px, 1em) !important;
+  }
+}

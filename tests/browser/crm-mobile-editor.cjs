@@ -16,6 +16,8 @@ const { chromium } = require('playwright');
       if (url.pathname === '/') return route.fulfill({
         contentType: 'text/html',
         body: `<meta name="viewport" content="width=device-width,initial-scale=1">
+          <script src="/assets/js/mobile-viewport.js"></script>
+          <link rel="stylesheet" href="/assets/css/mobile-layout.css">
           <style>${host}
           body{margin:0} .shell{height:100dvh;overflow:hidden}
           .content{margin-top:110px;height:calc(100dvh - 110px);overflow:auto;padding:12px;box-sizing:border-box}
@@ -28,6 +30,15 @@ const { chromium } = require('playwright');
     });
     await page.goto('http://nexo.invalid/');
     const frame = page.frameLocator('iframe');
+    assert.match(await page.locator('meta[name="viewport"]').getAttribute('content'), /user-scalable=no/);
+    assert.equal(await page.evaluate(() => document.dispatchEvent(new Event('gesturestart', { cancelable: true }))), false);
+    const pageBounds = await frame.locator('.crm-main').evaluate(main => ({
+      padding: getComputedStyle(main).paddingInlineStart,
+      fontSize: getComputedStyle(main.querySelector('#search')).fontSize,
+    }));
+    assert.equal(pageBounds.padding, '0px');
+    assert.ok(parseFloat(pageBounds.fontSize) >= 16);
+
     await frame.locator('#editor').evaluate(editor => {
       editor.querySelector('#delete-lead').hidden = false;
       editor.showModal();
@@ -36,8 +47,9 @@ const { chromium } = require('playwright');
 
     async function checkSave() {
       const bounds = await frame.locator('#save').boundingBox();
-      const height = await page.evaluate(() => visualViewport.height);
-      assert.ok(bounds.y >= 0 && bounds.y + bounds.height <= height, JSON.stringify({ bounds, height }));
+      const size = await page.evaluate(() => ({ height: visualViewport.height, width: visualViewport.width }));
+      assert.ok(bounds.y >= 0 && bounds.y + bounds.height <= size.height, JSON.stringify({ bounds, size }));
+      assert.ok(bounds.x >= 12 && bounds.x + bounds.width <= size.width - 12, JSON.stringify({ bounds, size }));
       await frame.locator('#save').click({ trial: true });
     }
 
