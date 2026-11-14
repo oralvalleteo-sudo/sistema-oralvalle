@@ -1,1 +1,19 @@
 .nexo-crm-embed{width:100%;min-width:0;background:#fff}.nexo-crm-embed iframe{display:block;width:100%;height:max(720px,calc(100vh - 130px));border:0;background:#fff}@media(max-width:700px){.nexo-crm-embed iframe{height:calc(100vh - 95px);min-height:650px}}
+
+/* Enquanto um diálogo do CRM está aberto, o iframe acompanha a área visível. */
+.nexo-crm-embed:has(> iframe.crm-visible-dialog) {
+  min-height: max(650px, calc(100vh - 95px));
+}
+.nexo-crm-embed iframe.crm-visible-dialog {
+  position: fixed;
+  inset: auto;
+  top: var(--crm-viewport-top);
+  left: var(--crm-viewport-left);
+  width: var(--crm-viewport-width);
+  height: var(--crm-viewport-height);
+  min-height: 0;
+  z-index: 2147482003;
+}
+html:has(iframe.crm-visible-dialog) :is(#nexodent-chat-launcher, #nexodent-chat-panel) {
+  visibility: hidden;
+}

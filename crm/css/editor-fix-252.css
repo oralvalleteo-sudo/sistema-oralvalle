@@ -6,3 +6,30 @@
 #editor #delete-lead[hidden]{display:none!important}
 #editor #form input,#editor #form select,#editor #form textarea{color:#172033!important;background:#fff!important}
 @media(max-width:520px){#editor #form>.buttons{gap:6px!important}#editor #form>.buttons button{padding:10px!important;font-size:12px!important}}
+
+@media(max-width:700px), (hover:none) and (pointer:coarse){
+  #editor[open], #recovery-message[open] {
+    box-sizing:border-box;
+    max-height:calc(var(--crm-visible-height, 100dvh) - 16px)!important;
+  }
+  #editor[open] {
+    height:calc(var(--crm-visible-height, 100dvh) - 16px)!important;
+  }
+  #editor #form {
+    scroll-padding-bottom:108px;
+  }
+  #editor #form>.buttons {
+    flex-wrap:wrap!important;
+    padding-bottom:max(8px, env(safe-area-inset-bottom))!important;
+  }
+  #editor #form>.buttons button {
+    min-height:44px;
+    min-width:0;
+    flex:1 1 auto;
+  }
+  #editor #save { min-width:0; }
+  #editor #form input:not([type=checkbox]),
+  #editor #form select,
+  #editor #form textarea,
+  #recovery-message textarea { font-size:16px!important; }
+}
