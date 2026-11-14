@@ -90,21 +90,21 @@
 
 @media (max-width: 760px) {
   .nxlab-money-metrics.nxlab-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   .nxlab-money-metrics.nxlab-metrics > div {
     container-type: inline-size;
     min-width: 0;
-    padding-inline: 12px;
+    padding-inline: 12px !important;
     justify-content: flex-start;
   }
 
   .nxlab-money-metrics.nxlab-metrics strong.nxlab-money-total {
-    font-size: 18px;
-    font-size: clamp(14px, 15cqi, 20px);
+    font-size: 14px !important;
+    font-size: min(20px, calc(145cqi / var(--nxlab-amount-length))) !important;
     line-height: 1.2;
     font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
   }
 }
