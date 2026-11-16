@@ -1,4 +1,4 @@
-# Central de WhatsApp — versão 303
+# Central de WhatsApp — versão 304
 
 Em **WhatsApp → Central de contatos**, selecionar uma fila e data, buscar um paciente, preparar a mensagem e abrir a conversa. O envio é manual, individual e revisado pelo usuário. A central não acessa conversas, não recebe respostas e não verifica a integração oficial da Meta.
 
@@ -19,3 +19,7 @@ O servidor exige membro ativo com acesso a WhatsApp e pacientes, edição de Wha
 Testes isolados cobrem filas, telefones, permissões entre clínicas, paciente de outra clínica, leitura sem escrita, proteção de agenda, repetição de requisição e conflito de revisão. Testes no navegador usam pacientes sintéticos, sem mensagens reais: edição, abertura manual sem registro fictício, separação de modelos, falhas do serviço, troca de clínica e limpeza da composição.
 
 Não há confirmação de entrega/leitura, consentimento de marketing ou sincronização dos modelos entre dispositivos nesta versão. O registro de contato é uma declaração da equipe, não evidência de envio pelo WhatsApp. Não inserir conteúdo clínico desnecessário nas mensagens. Os novos registros devem ser incluídos nos processos de backup, retenção e atendimento de direitos da clínica; nenhum prontuário é alterado por esta migração.
+
+## Apresentação e organização na versão 304
+
+Filas em cartões com contagem real dos dados carregados; busca por nome/telefone com atualização local; filtros por validade do telefone e andamento quando o histórico estiver disponível; destaque do paciente selecionado; botão Próximo contato sem abertura ou envio automático. Prévia identificada como não enviada, renderizada como texto, e contador de caracteres. Layout em duas colunas no computador e uma no celular, com lista rolável e aviso antes de descartar uma mensagem editada ao trocar fila, data ou paciente. Mantém o cinza aprovado, sem alterações nos botões de outros módulos. Usa a mesma migração descrita acima; não exige outro esquema.
