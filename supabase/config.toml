@@ -4,3 +4,10 @@ verify_jwt = false
 
 [functions.nexodent-whatsapp-connect-callback]
 verify_jwt = false
+
+# Autenticação de usuário validada no handler; webhook usa HMAC oficial da Meta.
+[functions.nexodent-whatsapp-messaging]
+verify_jwt = false
+
+[functions.nexodent-whatsapp-messaging-webhook]
+verify_jwt = false
