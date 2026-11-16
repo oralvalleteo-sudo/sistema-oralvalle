@@ -1,4 +1,4 @@
-# Central de WhatsApp — versão 302
+# Central de WhatsApp — versão 303
 
 Em **WhatsApp → Central de contatos**, selecionar uma fila e data, buscar um paciente, preparar a mensagem e abrir a conversa. O envio é manual, individual e revisado pelo usuário. A central não acessa conversas, não recebe respostas e não verifica a integração oficial da Meta.
 
