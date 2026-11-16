@@ -13,6 +13,7 @@ const NAV=[['pac','Pacientes'],['ag','Agenda'],['vd','Vendas'],['dt','Dentistas'
 function ovIcon(name){
   const P={
     ag:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',
+    chat:'<path d="M21 11.5a8 8 0 0 1-8 8H8l-5 2 1.5-4.5A8 8 0 0 1 11 3.5h2a8 8 0 0 1 8 8Z"/><path d="M8 11.5h.01m4 0h.01m4 0h.01"/>',
     pac:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
     lem:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     dt:'<path d="M7 3C4.5 3 3 5 3 7.5c0 2 1 3.5 1.5 5.5.5 2 .7 4.5 1.5 7 .3 1 1.7 1 2-.2.4-1.8.8-4.3 2-4.3s1.6 2.5 2 4.3c.3 1.2 1.7 1.2 2 .2.8-2.5 1-5 1.5-7 .5-2 1.5-3.5 1.5-5.5C21 5 19.5 3 17 3c-1.8 0-3 1-5 1S8.8 3 7 3z"/>',
@@ -68,7 +69,7 @@ function ovSidebar(active){
       ${item('mt','Tabela de Materiais')}
     </nav>
     <div class="ov-section">Controle</div>
-    <nav class="ov-nav">${pmSee('chat')?`<button type="button" class="ov-nav-btn${active==='chat'?' on':''}" data-act="nav" data-t="chat"><span class="ico" aria-hidden="true">💬</span><span>Comunicação</span><span data-chat-unread class="nav-dot" style="${Number(window.NexoChatBadge?.count||0)>0?'':'display:none'}" ${Number(window.NexoChatBadge?.count||0)>0?'':'hidden'}>${window.NexoChatBadge?.label()||''}</span></button>`:''}${item('privacy','Privacidade e dados','sigdoc')}${item('bk','Backup')}${item('cfg','Configurações')}${item('conta','Minha conta','pac')}</nav>
+    <nav class="ov-nav">${pmSee('chat')?`<button type="button" class="ov-nav-btn${active==='chat'?' on':''}" data-act="nav" data-t="chat"><span class="ico" aria-hidden="true">${ovIcon('chat')}</span><span>Comunicação</span><span data-chat-unread class="nav-dot" style="${Number(window.NexoChatBadge?.count||0)>0?'':'display:none'}" ${Number(window.NexoChatBadge?.count||0)>0?'':'hidden'}>${window.NexoChatBadge?.label()||''}</span></button>`:''}${item('privacy','Privacidade e dados','sigdoc')}${item('bk','Backup')}${item('cfg','Configurações')}${item('conta','Minha conta','pac')}</nav>
   </aside>`);
 }
 function topCl(){return Object.assign({},CL_DEF,db.cl||{})}
