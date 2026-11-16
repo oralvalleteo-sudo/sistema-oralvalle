@@ -20,5 +20,30 @@ await menu.locator('[data-t="ag"]').click();await page.locator('#apn').fill('Nov
 assert.equal(await page.locator('.slot-free').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');await page.locator('.slot-free').first().scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/nexo-agenda-standard.png'});
 for(const tab of ['pac','lem','wa','dt','vd','reports','pf','hc','pr','mt','bk','cfg','sigdoc','chat']){const button=menu.locator(`[data-t="${tab}"]`).first();if(await button.count()){await button.click();await page.locator('.ov-content').waitFor({state:'visible'});assert.equal(await page.locator('.ov-sidebar').first().isVisible(),true);}}
 await page.locator('iframe[title="Comunicação da equipe"]').waitFor();assert.equal(page.context().pages().length,1);await page.screenshot({path:process.env.CHECKUP_SCREENSHOT||'/tmp/nexodent-checkup.png'});
+// Regressão: recepção edita orçamento e recebe pagamentos sem escrever configurações da clínica.
+await db.query("update clinic_members set admin=false,perms=$1 where clinic_id=$2 and user_id=$3",[JSON.stringify(Object.fromEntries(['ag','pac','vd','pf','lem','dt','cm','pr','mt','hc','bk','pac.dados','pac.orc','pac.pag','pac.odo','pac.trat','pac.anam','pac.agd','pac.arquivos'].map(k=>[k,'edit']))),C,U]);
+await page.reload();await page.locator('.ov-sidebar').first().waitFor({state:'visible'});
+await page.evaluate(()=>{
+ if(ME.admin)throw Error('O teste precisa usar recepção, não administrador.');
+ const p=db.p.find(p=>p.nome==='Novo paciente sintético');
+ p.orcs.push({id:'staff-budget',data:'16/11/2026',status:'Pendente',desc:'',val:'',cond:'',itens:[{id:'staff-item',proc:'Consulta sintética',valor:'100',dt:'',obs:''}]});
+ view.h='pac';view.id=p.id;view.tab='orc';view.orcOpen={'staff-budget':true};
+ A.orcsave(null,{o:'staff-budget'},p);
+});
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+assert.equal(Number((await db.query("select count(*) n from budgets where dados->>'id'='staff-budget'")).rows[0].n),1);
+await page.evaluate(()=>{
+ const p=db.p.find(p=>p.nome==='Novo paciente sintético');
+ db.vd.push({id:'staff-sale',pid:p.id,dt:'',proc:'Consulta sintética',valor:100,mat:0,lab:0,rep:0,data:tdy(),pg:[]});
+ view.tab='pag';render();save();
+});
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+await page.locator('[data-pgv="staff-sale"]').fill('40,00');
+await page.locator('[data-act="pgrcv"][data-id="staff-sale"]').click();
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+assert.equal(Number((await db.query("select (dados->>'valor')::numeric amount from receipts where kind='object' and dados->>'forma'='Pix'")).rows[0].amount),40);
+assert.equal(await page.evaluate(()=>Object.hasOwn(db,'taxasPagamento')),false);
+assert.equal(Number((await db.query("select count(*) n from clinic_settings where slot='taxasPagamento'")).rows[0].n),0);
+console.log('Recepção sem acesso administrativo: orçamento e recebimento persistidos sem criar configuração de taxas.');
 await page.locator('[data-act="logout"]').first().click();await page.locator('#cloudEmail').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>window.OralCloud.session),null);assert.equal(await page.locator('.ov-sidebar').count(),0);assert.deepEqual(errors,[]);console.log('Aplicação real: entrada, cadastro e persistência de paciente, agendamento, navegação de módulos, central interna e saída sem dados clínicos visíveis.');
 }finally{if(browser)await browser.close();await db.close();}})().catch(error=>{console.error(error);process.exit(1)});

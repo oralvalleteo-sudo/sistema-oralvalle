@@ -1,8 +1,9 @@
 /* Oral Valle 062: taxas editáveis e histórico imutável por recebimento. */
 const OV_FEE_FORMS=['Pix','Dinheiro','Débito','Crédito à vista',...Array.from({length:11},(_,i)=>`Crédito ${i+2}x`),'Crédito','Boleto','Financiamento','Outro'];
 function ovFeeRates(){
-  if(!db.taxasPagamento||typeof db.taxasPagamento!=='object'||Array.isArray(db.taxasPagamento))db.taxasPagamento={};
-  return db.taxasPagamento;
+  // Consultar/calcular uma taxa não deve criar configurações administrativas.
+  const rates=db.taxasPagamento;
+  return rates&&typeof rates==='object'&&!Array.isArray(rates)?rates:{};
 }
 function ovFeePct(forma){
   const rates=ovFeeRates();const key=forma==='Crédito'?'Crédito à vista':forma;
@@ -28,7 +29,7 @@ function ovFeeUpdatePreview(reset){const f=document.getElementById('vfm'),a=docu
 }
 document.addEventListener('input',e=>{if(e.target.matches('#vrc,#ovFeeOverride'))ovFeeUpdatePreview(false)});
 document.addEventListener('change',e=>{if(e.target.matches('#vfm'))ovFeeUpdatePreview(true)});
-function ovFeeSaveAction(){const r=ovFeeRates();for(const el of document.querySelectorAll('[data-fee-rate]')){const n=Number(el.value);if(el.value===''||!Number.isFinite(n)||n<0||n>100){toast('Informe taxas entre 0 e 100%');return}r[el.dataset.feeRate]=n}save();toast('Taxas de pagamento salvas');render()}
+function ovFeeSaveAction(){if(typeof ME!=='undefined'&&ME&&!ME.admin){toast('Somente administradores podem alterar as taxas da clínica.');return}const r={...ovFeeRates()};for(const el of document.querySelectorAll('[data-fee-rate]')){const n=Number(el.value);if(el.value===''||!Number.isFinite(n)||n<0||n>100){toast('Informe taxas entre 0 e 100%');return}r[el.dataset.feeRate]=n}db.taxasPagamento=r;save();toast('Taxas de pagamento salvas');render()}
 
 document.addEventListener('DOMContentLoaded',()=>ovFeeUpdatePreview(true));
 
@@ -54,6 +55,7 @@ function ovFinanceSettings(){
  return `<div class="cfg-financeiro">${html}<button type="button" class="sm" data-act="ovFinanceSave">Salvar configurações financeiras</button></div>`;
 }
 function ovFinanceSaveAction(){
+ if(typeof ME!=='undefined'&&ME&&!ME.admin){toast('Somente administradores podem alterar as configurações financeiras.');return}
  const next={...(db.financeiroConfig||{})};const rates={...ovFeeRates()};
  for(const el of document.querySelectorAll('[data-fin-key]')){let value=el.value;if(el.type==='number'){value=Number(value);if(!Number.isFinite(value)||value<0){toast('Confira os valores financeiros');return}}next[el.dataset.finKey]=value}
  for(const el of document.querySelectorAll('.cfg-financeiro [data-fee-rate]')){const n=Number(el.value);if(el.value===''||!Number.isFinite(n)||n<0||n>100){toast('Taxas devem ficar entre 0% e 100%');return}rates[el.dataset.feeRate]=n}
