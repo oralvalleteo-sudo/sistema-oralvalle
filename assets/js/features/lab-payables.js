@@ -6,7 +6,7 @@
   const legacy=new Map(),payments=new Map();
   for(const s of settlements)legacy.set(String(s.source_order_id),cents(s.paid_amount));
   for(const e of events){const id=String(e.source_order_id),p=payments.get(id)||{opening:0,installments:0};p[e.kind==='opening'?'opening':'installments']+=cents(e.amount);payments.set(id,p);}
-  return orders.map(o=>{const p=payments.get(String(o.id))||{opening:0,installments:0};const cost=cents(o.laboratory_cost),paid=Math.max(legacy.get(String(o.id))||0,p.opening)+p.installments;return {...o,cost,paid,balance:Math.max(0,cost-paid),excess:Math.max(0,paid-cost),canceled:o.status==='Cancelado'};});
+  return orders.map(o=>{const p=payments.get(String(o.id))||{opening:0,installments:0};const cost=cents(o.laboratory_cost),paid=Math.max(legacy.get(String(o.id))||0,p.opening)+p.installments;return {...o,cost,paid,balance:Math.max(0,cost-paid),excess:Math.max(0,paid-cost),canceled:o.status==='Cancelado'};}).filter(row=>!(row.execution_location==='clinic'&&row.cost===0&&row.paid===0));
  }
  function group(rows){const groups=new Map();for(const row of rows.filter(r=>!r.canceled)){const key=String(row.laboratory||'A definir').trim().replace(/\s+/g,' ').toLocaleLowerCase('pt-BR');const g=groups.get(key)||{name:String(row.laboratory||'A definir').trim(),patients:new Set(),works:0,cost:0,paid:0,balance:0,excess:0,unpriced:0};g.patients.add(String(row.patient_id));g.works++;for(const k of ['cost','paid','balance','excess'])g[k]+=row[k];if(!row.cost)g.unpriced++;groups.set(key,g);}return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));}
  const core={calculate,group};

@@ -3,12 +3,13 @@
 'use strict';
 const STAGES=['Planejamento','Moldagem / escaneamento','Enviado ao laboratório','Em produção','Prova','Ajustes','Finalização','Recebido na clínica','Entregue ao paciente'];
 const STATES=['Pendente','Em andamento','Aguardando laboratório','Em prova','Em observação','Recebido','Entregue','Cancelado'];
+const execution=window.NexoLabExecution;
 const $id=id=>document.getElementById(id);
 const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const options=(arr,selected)=>arr.map(v=>`<option value="${safe(v)}" ${v===selected?'selected':''}>${safe(v)}</option>`).join('');
 const date=s=>s?String(s).slice(0,10):'';
 const stamp=()=>new Date().toISOString();
-let orders=[],loading=false,error='',loadedClinic=null,filter='ativos',search='',editing=null,busy=false,loadAttemptedClinic=null,labSection='work';
+let orders=[],loading=false,error='',loadedClinic=null,filter='ativos',search='',editing=null,busy=false,loadAttemptedClinic=null,labSection='work',executionFilter='all';
 let fetchTask=null,fetchTaskClinic=null,orderEpoch=0;
 const cloud=()=>!!window.OralCloud?.enabled;
 const clinic=()=>window.OralCloud?.clinicId||null;
@@ -18,7 +19,7 @@ function localRead(){try{return JSON.parse(localStorage.getItem(key())||'[]')}ca
 function localWrite(){localStorage.setItem(key(),JSON.stringify(orders));}
 // Espelho de consulta para os demais módulos; nenhuma baixa ou lançamento é criado.
 function publishOrders(){
- window.NexoLabRead={clinicId:clinic()||'local',loaded:!!loadedClinic,orders:orders.map(o=>({id:o.id,patient_id:o.patient_id,treatment_id:linkFor(o.id).treatment_id||'',laboratory_cost:linkFor(o.id).cost||0,status:o.status,stage:o.stage,laboratory:o.laboratory,work_description:o.work_description,due_at:o.due_at,received_at:o.received_at}))};
+ window.NexoLabRead={clinicId:clinic()||'local',loaded:!!loadedClinic,orders:orders.map(o=>({id:o.id,patient_id:o.patient_id,treatment_id:linkFor(o.id).treatment_id||'',laboratory_cost:linkFor(o.id).cost||0,status:o.status,stage:o.stage,laboratory:o.laboratory,execution_location:execution.get(o),work_description:o.work_description,due_at:o.due_at,received_at:o.received_at}))};
  window.dispatchEvent(new CustomEvent('nexodent:lab-orders-updated'));
 }
 // Consulta sob demanda por outros módulos: carrega apenas os dados da clínica ativa.
@@ -118,9 +119,9 @@ function treatmentLabel(t){return [t.proc||t.nome||t.procedimento||t.descricao||
 function money(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 function isoToday(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
 function validateOrder(f,original){
- if(f.due_at&&f.sent_at&&f.due_at<f.sent_at)return 'A previsão de entrega não pode ser anterior à data de envio.';
- if(f.received_at&&f.sent_at&&f.received_at<f.sent_at)return 'O recebimento não pode ser anterior ao envio.';
- if(f.status==='Entregue'&&!f.received_at)return 'Informe a data de recebimento antes de marcar como entregue.';
+ if($id('nxlab-execution')?.value!=='clinic'&&f.due_at&&f.sent_at&&f.due_at<f.sent_at)return 'A previsão de entrega não pode ser anterior à data de envio.';
+ if($id('nxlab-execution')?.value!=='clinic'&&f.received_at&&f.sent_at&&f.received_at<f.sent_at)return 'O recebimento não pode ser anterior ao envio.';
+ if($id('nxlab-execution')?.value!=='clinic'&&f.status==='Entregue'&&!f.received_at)return 'Informe a data de recebimento antes de marcar como entregue.';
  const duplicate=orders.some(o=>o.id!==original?.id&&String(o.patient_id)===String(f.patient_id)&&String(o.laboratory||'').trim().toLowerCase()===f.laboratory.toLowerCase()&&String(o.work_description||'').trim().toLowerCase()===f.work_description.toLowerCase()&&!['Cancelado','Entregue'].includes(o.status));
  if(duplicate&&!confirm('Já existe um trabalho em aberto com o mesmo paciente, laboratório e descrição. Deseja cadastrar mesmo assim?'))return 'cancel';
  return '';
@@ -134,22 +135,23 @@ function treatmentSummary(pid){
  return `<span><b>Tratamentos:</b> ${list.length} (${completed.length} concluídos)</span><span><b>Custos cadastrados:</b> ${safe(money(cost))}</span>`;
 }
 function form(o={}){
- const patients=(db.p||[]).filter(p=>!p.arq);
- return `<section class="card nxlab-form"><h3>${o.id?'Editar trabalho':'Novo trabalho para laboratório'}</h3>
+ const patients=(db.p||[]).filter(p=>!p.arq),where=execution.get(o)||(!o.id?'laboratory':''),internal=where==='clinic';
+ return `<section class="card nxlab-form"><h3>${o.id?'Editar trabalho':'Novo trabalho'}</h3>
  <div class="nxlab-grid"><label class="nxlab-field"><span>Paciente * — digite para filtrar</span><input id="nxlab-patient-search" type="search" autocomplete="off" placeholder="Digite o nome do paciente" value="${safe(patients.find(p=>String(p.id)===String(o.patient_id))?.nome||'')}"><div id="nxlab-patient-suggestions" class="nxlab-suggestions" style="display:none;position:absolute;z-index:30;background:#ffffff;color:#222;border:1px solid #d9dfe6;border-radius:8px;max-height:220px;overflow-y:auto;width:min(360px,90vw)"></div><input id="nxlab-patient" type="hidden" value="${safe(o.patient_id||'')}"><small id="nxlab-patient-count">${patients.length} pacientes disponíveis</small></label>
  <label class="nxlab-field"><span>Tratamento vinculado</span><select id="nxlab-treatment"><option value="">Sem vínculo</option>${patientTreatments(o.patient_id).map(t=>`<option value="${safe(t.id)}" ${String(linkFor(o.id).treatment_id||'')===String(t.id)?'selected':''}>${safe(treatmentLabel(t))}</option>`).join('')}</select><small>Selecione o paciente para listar os procedimentos já cadastrados no prontuário.</small></label>
- ${input('Custo do laboratório','nxlab-cost',linkFor(o.id).cost||0,'number','min="0" step="0.01"')}
- ${input('Laboratório responsável *' ,'nxlab-lab',o.laboratory,'text','maxlength="160" required')}
+ <label class="nxlab-field"><span>Local de execução *</span><select id="nxlab-execution"><option value=""${!where?' selected':''}>Selecione o local</option><option value="laboratory"${where==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${internal?' selected':''}>Na clínica</option></select><small>A escolha do local não registra nem quita pagamentos.</small></label>
+ ${input('Valor a pagar ao laboratório (se houver)','nxlab-cost',linkFor(o.id).cost||0,'number','min="0" step="0.01"')}
+ <label class="nxlab-field"><span id="nxlab-responsible-label">${internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável *'}</span><input id="nxlab-lab" type="text" maxlength="160" value="${safe(o.laboratory||'')}"${internal?'':' required'}><small>Para execução interna sem laboratório externo, deixe o valor a pagar em zero.</small></label>
  ${input('Trabalho a realizar *','nxlab-work',o.work_description,'text','maxlength="240" required')}
  ${input('Cor / escala (ex.: A2)','nxlab-shade',o.shade,'text','maxlength="80"')}
  ${input('Dente(s) / região','nxlab-teeth',o.teeth,'text','maxlength="80"')}
- ${input('Data de envio','nxlab-sent',date(o.sent_at),'date')}
+ <div id="nxlab-sent-field"${internal?' hidden':''}>${input('Data de envio','nxlab-sent',date(o.sent_at),'date')}</div>
  ${input('Previsão de entrega','nxlab-due',date(o.due_at),'date')}
- ${input('Data de recebimento','nxlab-received',date(o.received_at),'date')}
- ${select('Etapa atual','nxlab-stage',STAGES,o.stage||STAGES[0])}
- ${select('Situação','nxlab-status',STATES,o.status||STATES[0])}
+ <div id="nxlab-received-field"${internal?' hidden':''}>${input('Data de recebimento','nxlab-received',date(o.received_at),'date')}</div>
+ ${select('Etapa atual','nxlab-stage',execution.stages(STAGES,where),o.stage||STAGES[0])}
+ ${select('Situação','nxlab-status',execution.states(STATES,where),o.status||STATES[0])}
  ${textarea('Motivo da observação (obrigatório se Em observação)','nxlab-observation',o.observation_reason)}
- ${textarea('Instruções para o laboratório','nxlab-instructions',o.instructions)}
+ ${textarea('Instruções para o trabalho','nxlab-instructions',o.instructions)}
  </div><div class="nxlab-actions"><button type="button" data-lab="save">${o.id?'Salvar alterações':'Cadastrar trabalho'}</button><button class="ghost" type="button" data-lab="cancel">Cancelar</button></div></section>`;
 }
 function card(o){
@@ -157,8 +159,8 @@ function card(o){
  const comments=Array.isArray(o.comments)?o.comments:[];
  const obs=o.status==='Em observação';
  const expanded=String(view.labExpanded||'')===String(o.id);
- return `<article class="card nxlab-card ${expanded?'nxlab-expanded':'nxlab-collapsed'}"><button type="button" class="nxlab-summary" data-lab="toggle" data-id="${safe(o.id)}" aria-expanded="${expanded}" aria-label="${expanded?'Recolher':'Mostrar'} detalhes de ${safe(patientName(o.patient_id))}"><span class="nxlab-summary-name"><strong>${safe(patientName(o.patient_id))}</strong><span class="nxlab-sub">${safe(o.work_description)} · ${safe(o.teeth||'Sem região')}</span></span><span class="nxlab-summary-stage">Etapa: ${safe(o.stage||'—')}</span><span class="nxlab-summary-right"><span class="nxlab-pill ${obs?'nxlab-alert':''}">${safe(o.status)}</span><span class="nxlab-chevron" aria-hidden="true">›</span></span></button>${expanded?`
- <div class="nxlab-details"><span><b>Laboratório:</b> ${safe(o.laboratory)}</span><span><b>Cor:</b> ${safe(o.shade||'—')}</span><span><b>Etapa:</b> ${safe(o.stage)}</span><span><b>Envio:</b> ${safe(date(o.sent_at)||'—')}</span><span><b>Entrega prevista:</b> ${safe(date(o.due_at)||'—')}</span><span><b>Recebido:</b> ${safe(date(o.received_at)||'—')}</span>${treatmentSummary(o.patient_id)}<span><b>Tratamento vinculado:</b> ${safe(linkedTreatment(o)?treatmentLabel(linkedTreatment(o)):'Não vinculado')}</span><span><b>Custo laboratório:</b> ${safe(money(linkFor(o.id).cost))}</span></div>
+ return `<article class="card nxlab-card ${expanded?'nxlab-expanded':'nxlab-collapsed'}"><button type="button" class="nxlab-summary" data-lab="toggle" data-id="${safe(o.id)}" aria-expanded="${expanded}" aria-label="${expanded?'Recolher':'Mostrar'} detalhes de ${safe(patientName(o.patient_id))}"><span class="nxlab-summary-name"><strong>${safe(patientName(o.patient_id))}</strong><span class="nxlab-sub">${safe(o.work_description)} · ${safe(o.teeth||'Sem região')} · ${safe(execution.label(execution.get(o)))}</span></span><span class="nxlab-summary-stage">Etapa: ${safe(o.stage||'—')}</span><span class="nxlab-summary-right"><span class="nxlab-pill ${obs?'nxlab-alert':''}">${safe(o.status)}</span><span class="nxlab-chevron" aria-hidden="true">›</span></span></button>${expanded?`
+ <div class="nxlab-details"><span><b>Local de execução:</b> ${safe(execution.label(execution.get(o)))}</span><span><b>Responsável:</b> ${safe(o.laboratory)}</span><span><b>Cor:</b> ${safe(o.shade||'—')}</span><span><b>Etapa:</b> ${safe(o.stage)}</span><span><b>Envio:</b> ${safe(date(o.sent_at)||'—')}</span><span><b>Entrega prevista:</b> ${safe(date(o.due_at)||'—')}</span><span><b>Recebido:</b> ${safe(date(o.received_at)||'—')}</span>${treatmentSummary(o.patient_id)}<span><b>Tratamento vinculado:</b> ${safe(linkedTreatment(o)?treatmentLabel(linkedTreatment(o)):'Não vinculado')}</span><span><b>Custo laboratório:</b> ${safe(money(linkFor(o.id).cost))}</span></div>
  ${missingTreatment(o)?'<p class="nxlab-note"><b>Atenção:</b> o procedimento vinculado foi excluído do prontuário. Este trabalho não aparece na lista Em aberto; use Excluir para removê-lo definitivamente.</p>':''}
  ${obs?`<p class="nxlab-note"><b>Em observação:</b> ${safe(o.observation_reason||'Motivo não informado')}</p>`:''}
  ${o.instructions?`<p><b>Instruções:</b> ${safe(o.instructions)}</p>`:''}
@@ -208,13 +210,13 @@ window.nexoLabHtml=function(){
  const soon=o=>active(o)&&!!o.due_at&&date(o.due_at)>=today&&date(o.due_at)<=new Date(Date.now()+7*86400000).toLocaleDateString('en-CA');
  const noDeadline=o=>active(o)&&!o.due_at;
  const totals={open:orders.filter(active).length,late:orders.filter(late).length,observed:orders.filter(o=>o.status==='Em observação').length,delivered:orders.filter(o=>o.status==='Entregue').length,soon:orders.filter(soon).length,noDeadline:orders.filter(noDeadline).length};
- const items=orders.filter(o=>filter==='todos'||(!missingTreatment(o)&&(filter==='observacao'?o.status==='Em observação':filter==='atrasados'?late(o):filter==='proximos'?soon(o):filter==='sem-prazo'?noDeadline(o):active(o)))).filter(o=>!search||[patientName(o.patient_id),o.laboratory,o.work_description,o.teeth].some(t=>String(t||'').toLowerCase().includes(search.toLowerCase())));
+ const items=orders.filter(o=>filter==='todos'||(!missingTreatment(o)&&(filter==='observacao'?o.status==='Em observação':filter==='atrasados'?late(o):filter==='proximos'?soon(o):filter==='sem-prazo'?noDeadline(o):active(o)))).filter(o=>executionFilter==='all'||execution.get(o)===executionFilter).filter(o=>!search||[patientName(o.patient_id),o.laboratory,execution.label(execution.get(o)),o.work_description,o.teeth].some(t=>String(t||'').toLowerCase().includes(search.toLowerCase())));
 
  return `${style()}${navigation}<div class="nxlab-top"><div><h2>Laboratório</h2><p>Controle de trabalhos, etapas, prazos e comunicação.</p></div><div class="nxlab-actions">${canEdit()?'<button data-lab="new">+ Novo trabalho</button>':''}<button class="ghost" data-lab="export">Exportar CSV (filtro atual)</button><button class="ghost" data-lab="refresh">Atualizar</button></div></div>
  ${error?`<p class="nxlab-error">${safe(error)}</p>`:''}${loading?'<p>Carregando trabalhos...</p>':''}
  <div class="nxlab-metrics"><div><strong>${totals.open}</strong><span>Em aberto</span></div><div><strong>${totals.late}</strong><span>Atrasados</span></div><div><strong>${totals.observed}</strong><span>Em observação</span></div><div><strong>${totals.delivered}</strong><span>Entregues</span></div><div><strong>${totals.soon}</strong><span>Próximos 7 dias</span></div><div><strong>${totals.noDeadline}</strong><span>Sem prazo definido</span></div></div>
  ${editing!==null?form(editing==='new'?{}:orders.find(o=>o.id===editing)||{}):''}
- <div class="nxlab-filters"><select id="nxlab-filter"><option value="ativos" ${filter==='ativos'?'selected':''}>Em aberto</option><option value="observacao" ${filter==='observacao'?'selected':''}>Em observação</option><option value="atrasados" ${filter==='atrasados'?'selected':''}>Atrasados</option><option value="proximos" ${filter==='proximos'?'selected':''}>Próximos 7 dias</option><option value="sem-prazo" ${filter==='sem-prazo'?'selected':''}>Sem prazo definido</option><option value="todos" ${filter==='todos'?'selected':''}>Todos</option></select><input id="nxlab-search" placeholder="Buscar paciente, laboratório ou trabalho" value="${safe(search)}"></div>
+ <div class="nxlab-filters"><select id="nxlab-filter"><option value="ativos" ${filter==='ativos'?'selected':''}>Em aberto</option><option value="observacao" ${filter==='observacao'?'selected':''}>Em observação</option><option value="atrasados" ${filter==='atrasados'?'selected':''}>Atrasados</option><option value="proximos" ${filter==='proximos'?'selected':''}>Próximos 7 dias</option><option value="sem-prazo" ${filter==='sem-prazo'?'selected':''}>Sem prazo definido</option><option value="todos" ${filter==='todos'?'selected':''}>Todos</option></select><select id="nxlab-execution-filter" aria-label="Filtrar local de execução"><option value="all"${executionFilter==='all'?' selected':''}>Todos os locais</option><option value="laboratory"${executionFilter==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${executionFilter==='clinic'?' selected':''}>Na clínica</option></select><input id="nxlab-search" placeholder="Buscar paciente, laboratório ou trabalho" value="${safe(search)}"></div>
  <div>${items.length?items.map(card).join(''):'<div class="card nxlab-empty">Nenhum trabalho encontrado.</div>'}</div>`;
 };
 async function persist(o){
@@ -229,11 +231,11 @@ async function persist(o){
 }
 function readForm(){const v=id=>($id(id)?.value||'').trim();return {patient_id:v('nxlab-patient'),laboratory:v('nxlab-lab'),work_description:v('nxlab-work'),shade:v('nxlab-shade'),teeth:v('nxlab-teeth'),sent_at:v('nxlab-sent')||null,due_at:v('nxlab-due')||null,received_at:v('nxlab-received')||null,stage:v('nxlab-stage'),status:v('nxlab-status'),observation_reason:v('nxlab-observation'),instructions:v('nxlab-instructions')};}
 function exportCsv(){
- const fields=['Paciente','Laboratório','Trabalho','Dentes','Cor','Etapa','Situação','Envio','Previsão','Recebimento','Observação','Tratamentos cadastrados','Tratamentos concluídos','Custos cadastrados','Tratamento vinculado','Custo laboratório'];
+ const fields=['Paciente','Local de execução','Responsável','Trabalho','Dentes','Cor','Etapa','Situação','Envio','Previsão','Recebimento','Observação','Tratamentos cadastrados','Tratamentos concluídos','Custos cadastrados','Tratamento vinculado','Custo laboratório'];
  const today=isoToday();
  const active=o=>!missingTreatment(o)&&!['Entregue','Cancelado'].includes(o.status);
- const filtered=orders.filter(o=>filter==='todos'||(!missingTreatment(o)&&(filter==='observacao'?o.status==='Em observação':filter==='atrasados'?active(o)&&o.due_at&&date(o.due_at)<today:filter==='proximos'?active(o)&&o.due_at&&date(o.due_at)>=today&&date(o.due_at)<=new Date(Date.now()+7*86400000).toLocaleDateString('en-CA'):filter==='sem-prazo'?active(o)&&!o.due_at:active(o)))).filter(o=>!search||[patientName(o.patient_id),o.laboratory,o.work_description,o.teeth].some(t=>String(t||'').toLowerCase().includes(search.toLowerCase())));
- const rows=filtered.map(o=>[patientName(o.patient_id),o.laboratory,o.work_description,o.teeth,o.shade,o.stage,o.status,date(o.sent_at),date(o.due_at),date(o.received_at),o.observation_reason,patientTreatments(o.patient_id).length,patientTreatments(o.patient_id).filter(t=>t.vid||['concluído','concluido','realizado'].includes(String(t.status||'').toLowerCase())).length,patientTreatments(o.patient_id).reduce((sum,t)=>sum+(Number(t.custo)||0),0).toFixed(2),linkedTreatment(o)?treatmentLabel(linkedTreatment(o)):'',Number(linkFor(o.id).cost||0).toFixed(2)]);
+ const filtered=orders.filter(o=>filter==='todos'||(!missingTreatment(o)&&(filter==='observacao'?o.status==='Em observação':filter==='atrasados'?active(o)&&o.due_at&&date(o.due_at)<today:filter==='proximos'?active(o)&&o.due_at&&date(o.due_at)>=today&&date(o.due_at)<=new Date(Date.now()+7*86400000).toLocaleDateString('en-CA'):filter==='sem-prazo'?active(o)&&!o.due_at:active(o)))).filter(o=>executionFilter==='all'||execution.get(o)===executionFilter).filter(o=>!search||[patientName(o.patient_id),o.laboratory,execution.label(execution.get(o)),o.work_description,o.teeth].some(t=>String(t||'').toLowerCase().includes(search.toLowerCase())));
+ const rows=filtered.map(o=>[patientName(o.patient_id),execution.label(execution.get(o)),o.laboratory,o.work_description,o.teeth,o.shade,o.stage,o.status,date(o.sent_at),date(o.due_at),date(o.received_at),o.observation_reason,patientTreatments(o.patient_id).length,patientTreatments(o.patient_id).filter(t=>t.vid||['concluído','concluido','realizado'].includes(String(t.status||'').toLowerCase())).length,patientTreatments(o.patient_id).reduce((sum,t)=>sum+(Number(t.custo)||0),0).toFixed(2),linkedTreatment(o)?treatmentLabel(linkedTreatment(o)):'',Number(linkFor(o.id).cost||0).toFixed(2)]);
  const cell=v=>'"'+String(v??'').replace(/^[=+@\-\t\r]/,v=>"'"+v).replace(/"/g,'""')+'"';
  const csv='\uFEFF'+[fields,...rows].map(row=>row.map(cell).join(';')).join('\r\n');
  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
@@ -272,16 +274,17 @@ async function execute(action,id){
  if(action!=='save'&&!old)return;
  let o,pendingLink;
  if(action==='save'){
-  const f=readForm();if(!f.patient_id||!f.laboratory||!f.work_description){alert('Informe paciente, laboratório e trabalho.');return;}
+  const f=readForm(),where=$id('nxlab-execution')?.value;if(!execution.valid(where)){alert('Escolha o local de execução.');return;}if(where==='clinic'&&!f.laboratory)f.laboratory='Na clínica';if(!f.patient_id||!f.laboratory||!f.work_description){alert('Informe paciente, responsável e trabalho.');return;}
   if(f.status==='Em observação'&&!f.observation_reason){alert('Informe o motivo da observação.');return;}
   const original=editing==='new'?null:orders.find(x=>x.id===editing);
   const invalid=validateOrder(f,original);if(invalid){if(invalid!=='cancel')alert(invalid);return;}
   pendingLink={tid:$id('nxlab-treatment')?.value||'',cost:Number($id('nxlab-cost')?.value||0)};
   if(!Number.isFinite(pendingLink.cost)||pendingLink.cost<0){alert('Informe um custo laboratorial válido.');return;}
-  o={...(original||{}),...f,...(cloud()?{treatment_id:pendingLink.tid||null,laboratory_cost:pendingLink.cost}:{}),id:original?.id||crypto.randomUUID(),history:[...(original?.history||[]),{at:stamp(),text:original?'Dados e etapa atualizados':'Trabalho cadastrado'}],comments:original?.comments||[],updated_at:stamp(),_new:!original};
+  if(where==='clinic'&&pendingLink.cost>0&&f.laboratory==='Na clínica'){alert('Identifique o laboratório responsável pelo valor a pagar ou deixe esse valor em zero para execução somente interna.');return;}
+  o={...(original||{}),...f,...(cloud()?{treatment_id:pendingLink.tid||null,laboratory_cost:pendingLink.cost}:{}),id:original?.id||crypto.randomUUID(),history:[...(original?.history||[]),{at:stamp(),text:(original?'Dados e etapa atualizados':'Trabalho cadastrado')+' • Local: '+execution.label(where),execution_location:where}],comments:original?.comments||[],updated_at:stamp(),_new:!original};
  }else if(action==='advance'){
-  const ix=STAGES.indexOf(old.stage),next=STAGES[Math.min(ix+1,STAGES.length-1)];
-  if(ix===STAGES.length-1){alert('O trabalho já está na última etapa.');return;}
+  const stages=execution.stages(STAGES,execution.get(old)),ix=stages.indexOf(old.stage),next=stages[Math.min(ix+1,stages.length-1)];
+  if(ix===stages.length-1){alert('O trabalho já está na última etapa.');return;}
   const note=prompt(`Avançar para "${next}". Informe um comentário sobre a etapa (opcional):`);if(note===null)return;
   o={...old,stage:next,status:next==='Recebido na clínica'?'Recebido':next==='Entregue ao paciente'?'Entregue':'Em andamento',received_at:next==='Recebido na clínica'?(old.received_at||new Date().toISOString().slice(0,10)):old.received_at,history:[...(old.history||[]),{at:stamp(),text:`Etapa: ${old.stage} → ${next}${note?' — '+note.slice(0,500):''}`}],updated_at:stamp()};
  }else if(action==='comment'){
@@ -293,6 +296,14 @@ async function execute(action,id){
  catch(e){alert('Não foi possível salvar: '+(e.message||'Erro de conexão'));}
  finally{busy=false;}
 }
+function updateExecutionForm(){
+ const where=$id('nxlab-execution')?.value,internal=where==='clinic';
+ for(const [id,all,get] of [['nxlab-stage',STAGES,execution.stages],['nxlab-status',STATES,execution.states]]){const el=$id(id);if(!el)continue;const previous=el.value,choices=get(all,where);el.innerHTML=options(choices,choices.includes(previous)?previous:choices[0]);}
+ const field=$id('nxlab-lab');if(field)field.required=!internal;
+ const label=$id('nxlab-responsible-label');if(label)label.textContent=internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável *';
+ for(const id of ['nxlab-sent-field','nxlab-received-field'])if($id(id))$id(id).hidden=internal;
+}
+document.addEventListener('change',e=>{if(e.target.id==='nxlab-execution')updateExecutionForm();});
 function labNormalize(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();}
 function labUpdateTreatments(pid){
  const sel=$id('nxlab-treatment');if(!sel)return;
@@ -328,9 +339,9 @@ document.addEventListener('input',e=>{if(e.target.id==='nxlab-patient-search')la
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-patient-search')labPatientMatch();});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-nxlab-patient-id]');if(btn){e.preventDefault();labChoosePatient(btn.dataset.nxlabPatientId);}});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-lab]');if(btn){e.preventDefault();execute(btn.dataset.lab,btn.dataset.id);}});
-document.addEventListener('change',e=>{if(e.target.id==='nxlab-filter'){filter=e.target.value;renderLab();}if(e.target.id==='nxlab-search'){search=e.target.value;renderLab();}});
+document.addEventListener('change',e=>{if(e.target.id==='nxlab-filter'){filter=e.target.value;renderLab();}if(e.target.id==='nxlab-execution-filter'){executionFilter=e.target.value;renderLab();}if(e.target.id==='nxlab-search'){search=e.target.value;renderLab();}});
 document.addEventListener('keydown',e=>{if(e.target.id==='nxlab-search'&&e.key==='Enter'){search=e.target.value;renderLab();}});
-window.addEventListener('nexodent:signed-out',()=>{orderEpoch++;fetchTask=null;fetchTaskClinic=null;orders=[];loadedClinic=null;loadAttemptedClinic=null;loading=false;editing=null;labSection='work';window.NexoLabRead=null;});
-window.addEventListener('nexodent:clinic-data-loaded',()=>{loadedClinic=null;loadAttemptedClinic=null;if(isLab())fetchOrders(true);});
+window.addEventListener('nexodent:signed-out',()=>{orderEpoch++;fetchTask=null;fetchTaskClinic=null;orders=[];loadedClinic=null;loadAttemptedClinic=null;loading=false;editing=null;labSection='work';executionFilter='all';window.NexoLabRead=null;});
+window.addEventListener('nexodent:clinic-data-loaded',()=>{executionFilter='all';loadedClinic=null;loadAttemptedClinic=null;if(isLab())fetchOrders(true);});
 window.addEventListener('focus',()=>{if(isLab())fetchOrders(true);});
 })();
