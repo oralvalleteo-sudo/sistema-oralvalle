@@ -32,6 +32,22 @@ function ovSyncBudgetFinancial(p,o){
   return {ok:true,changed};
 }
 
+// Valida o conjunto completo antes de alterar qualquer lançamento.
+function ovBudgetUndoRows(p,o){
+  const itens=(o.itens||[]).filter(i=>i.vid),ids=new Set(itens.map(i=>String(i.vid)));
+  const rows=(db.vd||[]).filter(v=>ids.has(String(v.id)));
+  const compartilhado=(db.p||[]).some(q=>{
+    const outrosOrcamentos=(q.orcs||[]).some(b=>
+      (q!==p||b!==o)&&(b.itens||[]).some(i=>i.vid&&ids.has(String(i.vid))));
+    const outrosTratamentos=(q.trat||[]).some(t=>
+      t.vid&&ids.has(String(t.vid))&&(q!==p||String(t.oid)!==String(o.id)));
+    return outrosOrcamentos||outrosTratamentos;
+  });
+  if(ids.size!==itens.length||rows.length!==ids.size||rows.some(v=>String(v.pid)!==String(p.id))||compartilhado)
+    return null;
+  return rows;
+}
+
 const A={
   agrentadd:()=>{
     const date=view.agDate||tdy(),chair=$('agRentChair').value,start=$('agRentStart').value,end=$('agRentEnd').value;
@@ -328,6 +344,24 @@ const A={
   },
   orccollapse:(b,d,p)=>{if(!p||!getO(p,d.o))return;save();view.orcOpen=view.orcOpen||{};view.orcOpen[d.o]=false;view.obx=null;view.obxAll=null;render();toast('Orçamento recolhido. Toque no resumo para abrir novamente.',2600)},
   otoggle:(b,d)=>{view.orcOpen=view.orcOpen||{};view.orcOpen[d.o]=!view.orcOpen[d.o];view.obx=null;view.obxAll=null;render()},
+  obundoall:(b,d,p)=>{
+    const o=p&&getO(p,d.o);if(!o)return;
+    const rows=ovBudgetUndoRows(p,o);
+    if(!rows){toast('Vínculos financeiros inconsistentes. Nenhuma baixa foi desfeita.',4500);return}
+    if(!rows.length){toast('Este orçamento não tem baixas para desfazer.');return}
+    const total=r2(rows.reduce((s,v)=>s+recebido(v),0)),n=rows.reduce((s,v)=>s+(v.pg||[]).length,0);
+    if(!confirm('Desfazer todas as baixas deste orçamento?\n\n'+rows.length+' atendimento(s) financeiro(s) e suas comissões serão removidos.\n'+n+' recebimento(s), totalizando '+brl(total)+', serão removidos do caixa.\n\nOs procedimentos voltarão a ficar pendentes. O histórico clínico e uma cópia dos lançamentos serão preservados. Será necessário registrar novamente os recebimentos. Isso não devolve dinheiro ao paciente.'))return;
+    const ids=new Set(rows.map(v=>String(v.id)));
+    const registro={id:uid(),data:new Date().toISOString(),usuario:ME&&(ME.nome||ME.login||ME.id)||'Usuário',recebido:total,vendas:JSON.parse(JSON.stringify(rows))};
+    (o.baixasDesfeitas=o.baixasDesfeitas||[]).push(registro);
+    o.itens.forEach(i=>{if(i.vid&&ids.has(String(i.vid)))delete i.vid});
+    (p.trat||[]).forEach(t=>{if(t.vid&&ids.has(String(t.vid))){t.vid=null;t.status='Pendente';t.rep=0;t.data=''}});
+    (db.ag||[]).forEach(a=>{if(a.vid&&ids.has(String(a.vid))){delete a.vid;if(a.st==='Compareceu')a.st='Confirmado'}});
+    // Não apaga nem altera evoluções anteriores, inclusive as assinadas.
+    (p.evol=p.evol||[]).push({id:uid(),data:tdy(),n:'',txt:'Baixas do orçamento de '+o.data+' desfeitas por '+registro.usuario+': '+rows.length+' atendimento(s) e '+brl(total)+' em recebimentos removidos. Procedimentos reabertos para correção.',auto:false});
+    db.vd=db.vd.filter(v=>!ids.has(String(v.id)));
+    view.obx=null;view.obxAll=null;save();render();toast('Baixas desfeitas. Edite o orçamento e refaça os lançamentos.',4500);
+  },
   oball:(b,d,p)=>{
     const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid);
     const sd=pend.find(it=>!it.dt);if(sd){toast('Escolha o dentista do item "'+(sd.proc||'sem nome')+'" antes de dar baixa',3500);return}

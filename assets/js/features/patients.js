@@ -246,6 +246,11 @@ function obLaunch(p,it,vv,rc,forma,data,rep){
   (p.evol=p.evol||[]).push({id:uid(),data,n:it.dente?String(it.dente):'',txt:(proc||'Atendimento')+' — realizado por '+dName(it.dt)+'.',auto:true,vid:v.id});
   db.vd.push(v);return v;
 }
+function obUndoHtml(o){
+  const baixados=(o.itens||[]).filter(it=>it.vid);
+  const historico=(o.baixasDesfeitas||[]).map(h=>`<div class="note">${esc(new Date(h.data).toLocaleString('pt-BR'))} · ${esc(h.usuario||'Usuário')} · ${h.vendas.length} atendimento(s) · ${brl(h.recebido)} em recebimentos removidos</div>`).join('');
+  return (baixados.length?`<div class="ob-all"><button type="button" class="danger sm" data-act="obundoall" data-o="${esc(o.id)}">Desfazer todas as baixas (${baixados.length})</button><p class="note">Remove os atendimentos financeiros, recebimentos e comissões vinculados a este orçamento para refazer os lançamentos. O histórico clínico é preservado.</p></div>`:'')+(historico?`<details style="margin:10px 0"><summary>Histórico de baixas desfeitas</summary>${historico}</details>`:'');
+}
 function obAllHtml(o){
   if(o.status!=='Aprovado')return '';
   const pend=o.itens.filter(it=>!it.vid);
@@ -301,7 +306,7 @@ function orcHtml(o){
   const open=!!(view.orcOpen&&view.orcOpen[o.id]),nIt=o.itens.length,stc=o.status==='Aprovado'?'stt-ok':o.status==='Pendente'?'stt-wr':'';
   const head=`<button type="button" class="orc-h" data-act="otoggle" data-o="${esc(o.id)}" aria-expanded="${open}"><span class="orc-chev" aria-hidden="true">${open?'▾':'▸'}</span><span class="orc-t"><strong>${esc(o.data)}</strong><small>${nIt} ${nIt===1?'item':'itens'} · toque para ${open?'recolher':'abrir'}</small></span><span class="badge ${stc}" style="flex:none">${esc(o.status==='Pendente'?'Proposta':o.status==='Recusado'?'Perdida':o.status)}</span><strong class="orc-tot" data-ototal>${brl(total(o))}</strong></button>`;
   return `<div class="card orc-card" data-oid="${esc(o.id)}">${head}${open?`<div class="orc-body"><div class="row" style="margin-bottom:10px"><span style="flex:1"><strong>${esc(o.data)}</strong><br><span class="note" style="margin:0">Criado em</span></span><select data-o="${esc(o.id)}" data-f="status" aria-label="Situação do orçamento">${[['Pendente','Proposta'],['Aprovado','Aprovado'],['Recusado','Perdida']].map(([s,label])=>`<option value="${s}"${o.status===s?' selected':''}>${label}</option>`).join('')}</select></div>
-  ${obAllHtml(o)}${o.itens.map((it,i)=>itemHtml(o,it,i)).join('')}
+  ${obUndoHtml(o)}${obAllHtml(o)}${o.itens.map((it,i)=>itemHtml(o,it,i)).join('')}
   <div class="row" style="margin-top:8px"><button class="ghost sm" data-act="addi" data-o="${esc(o.id)}">Adicionar item</button></div>
   <div class="row" style="align-items:flex-start"><div><label>Desconto (R$)</label><input data-o="${esc(o.id)}" data-f="desc" inputmode="decimal" value="${esc(o.desc)}"></div><div><label>Válido até</label><input type="date" data-o="${esc(o.id)}" data-f="val" value="${esc(o.val)}"></div></div>
   ${nxPayHtml(o)}${budgetBillingHtml(o)}<label>Condições de pagamento (editável)</label><input data-o="${esc(o.id)}" data-f="cond" placeholder="Ex.: entrada + 3x no cartão" value="${esc(o.cond)}">
