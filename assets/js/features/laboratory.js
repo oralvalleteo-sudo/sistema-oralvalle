@@ -57,8 +57,8 @@ window.NexoLabLoad = async function(force=false){
  if(error)throw new Error(error);
  return window.NexoLabRead;
 };
-function allowed(){return typeof pmSee!=='function'||pmSee('pac');}
-function canEdit(){return typeof pmLvl!=='function'||pmLvl('pac')>=2;}
+function allowed(){return typeof pmSee!=='function'||pmSee('lab')&&pmSee('pac');}
+function canEdit(){return typeof pmLvl!=='function'||pmLvl('lab')>=2&&pmLvl('pac')>=2;}
 function renderLab(){if(isLab()&&typeof render==='function')render();}
 function fetchOrders(force=false){
  const context=clinic()||'local';

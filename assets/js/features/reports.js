@@ -429,7 +429,7 @@
  }
  const kinds={cashcomplete:'Fluxo de caixa consolidado — despesas gerais e laboratório',generalexpenses:'Despesas gerais — contas a pagar',cashcontrol:'Caixa operacional — entradas e saídas conciliadas',cashverified:'Conciliação integrada de saídas (sem duplicidades)',labposting:'Livro auxiliar de despesas laboratoriais',labmatching:'Conciliação de parcelas com despesas manuais',cashflow:'Fluxo financeiro integrado (parcial)',labexpenses:'Razão auxiliar de saídas laboratoriais',labreconcile:'Conferência de custos e parcelas laboratoriais',labhistory:'Histórico individual de pagamentos laboratoriais',labcash:'Conciliação de saídas laboratoriais',labpayments:'Pagamentos aos laboratórios',finance:'Financeiro',dentists:'Dentistas e comissões',procedures:'Procedimentos',patients:'Novos pacientes',laboratory:'Custos do laboratório',labledger:'Obrigações laboratoriais'};
  function allowed(type){
-  if(!commercial() || !Object.prototype.hasOwnProperty.call(kinds,type))return false;
+  if(!can('reports') || !commercial() || !Object.prototype.hasOwnProperty.call(kinds,type))return false;
   if(type==='patients')return can('pac');
   if(type==='cashcomplete')return moduleAllowed('finance') && can('vd') && can('pac') && typeof pmLvl==='function' && pmLvl('vd')>=2 && !!window.OralCloud?.enabled;
   if(type==='generalexpenses')return moduleAllowed('finance') && can('vd') && typeof pmLvl==='function' && pmLvl('vd')>=2 && !!window.OralCloud?.enabled;

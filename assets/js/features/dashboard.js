@@ -46,9 +46,9 @@ function ovSidebar(active){
       ${item('ag','Agenda')}
       ${item('pac','Pacientes')}
       ${pmSee('crm')?`<button class="ov-nav-btn${active==='crm'?' on':''}" data-act="nav" data-t="crm"><span class="ico">${ovIcon('reports')}</span><span>CRM</span></button>`:''}
-      ${pmSee('lem')?`<button class="ov-nav-btn${active==='ortho'?' on':''}" data-act="orthonav"><span class="ico">${ovIcon('ortho')}</span><span>Ortodontia</span></button>`:''}
-      ${pmSee('lem')?`<button class="ov-nav-btn${active==='impl'?' on':''}" data-act="implnav"><span class="ico">${ovIcon('impl')}</span><span>Implantodontia</span></button>`:''}
-      ${pmSee('lem')?`<button class="ov-nav-btn${active==='prot'?' on':''}" data-act="protnav"><span class="ico">${ovIcon('prot')}</span><span>Prótese</span></button>`:''}
+      ${pmSee('ortho')?`<button class="ov-nav-btn${active==='ortho'?' on':''}" data-act="orthonav"><span class="ico">${ovIcon('ortho')}</span><span>Ortodontia</span></button>`:''}
+      ${pmSee('impl')?`<button class="ov-nav-btn${active==='impl'?' on':''}" data-act="implnav"><span class="ico">${ovIcon('impl')}</span><span>Implantodontia</span></button>`:''}
+      ${pmSee('prot')?`<button class="ov-nav-btn${active==='prot'?' on':''}" data-act="protnav"><span class="ico">${ovIcon('prot')}</span><span>Prótese</span></button>`:''}
       ${item('lem','Lembretes')}
       ${item('lab','Laboratório')}
       ${item('wa','WhatsApp')}
@@ -56,7 +56,7 @@ function ovSidebar(active){
       ${pmSee('dt')||pmSee('cm')?`<button class="ov-nav-btn${active==='dt'||active==='cm'?' on':''}" data-act="nav" data-t="${pmSee('dt')?'dt':'cm'}"><span class="ico">${ovIcon('dt')}</span><span>Dentistas</span></button>`:''}
       ${item('vd','Pagamentos Recebidos','pg')}
       ${item('vd','Vendas')}
-      ${pmSee('vd')||pmSee('cm')||pmSee('pac')?`<button class="ov-nav-btn${active==='reports'?' on':''}" data-act="nav" data-t="reports"><span class="ico">${ovIcon('reports')}</span><span>Relatórios</span></button>`:''}
+      ${pmSee('reports')?`<button class="ov-nav-btn${active==='reports'?' on':''}" data-act="nav" data-t="reports"><span class="ico">${ovIcon('reports')}</span><span>Relatórios</span></button>`:''}
     </nav>
     <div class="ov-section">Negociação</div>
     <nav class="ov-nav">

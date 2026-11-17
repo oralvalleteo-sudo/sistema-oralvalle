@@ -6,12 +6,14 @@
  let signatures={dentista:null,paciente:null}, signedAt={},form={},revision=0,saving=false,saved=null,attemptId=null,sessionOwner=null;
  let registryClinic=null,registryRows=[],registryBusy=false,registryError='';
  const activeClinic=()=>window.OralCloud?.clinicId||null;
- const registryAvailable=()=>!!(window.OralCloud?.enabled&&activeClinic());
+ const access=write=>typeof pmLvl!=='function'||pmLvl('sigdoc')>=(write?2:1);
+ const registryAvailable=()=>!!(access(false)&&window.OralCloud?.enabled&&activeClinic());
  function clear(){signatures={dentista:null,paciente:null};signedAt={};revision++;saved=null;attemptId=null;}
  function resetInk(){clear();for(const role of ['dentista','paciente']){const canvas=document.getElementById('ns-'+role);if(canvas)canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);const label=document.getElementById('ns-status-'+role);if(label)label.textContent='Assine após revisar o documento';}const consent=document.getElementById('ns-consent');if(consent)consent.checked=false;}
  const owner=()=>activeClinic()+':'+(window.OralCloud?.session?.user?.id||'');
 
  window.nexoSignHtml=function(){
+  if(!access(false))return '<section class="card">Sem permissão para consultar documentos.</section>';
   if(sessionOwner!==owner()){clear();form={};sessionOwner=owner();}
   const patients=(db.p||[]).filter(p=>!p.arq),dentists=(db.dt||[]).filter(d=>d.ativo!==false);
   return `<div class="ov-page-head"><div><h1>Documentos e Assinaturas</h1><p class="sub">Assinatura presencial e documentos arquivados no prontuário.</p></div></div>
@@ -165,6 +167,7 @@
    const sub=document.createElement('div');sub.className='note';sub.textContent='Pendente de assinatura · '+new Date(row.created_at).toLocaleString('pt-BR')+(row.note?' · '+row.note:'');const action=document.createElement('button');action.type='button';action.className='ghost sm';action.textContent='Abrir ficha da pendência';action.dataset.nsRegView=row.id;action.style.marginTop='6px';const pdf=document.createElement('button');pdf.type='button';pdf.className='ghost sm';pdf.textContent='Gerar PDF (rascunho)';pdf.dataset.nsRegPdf=row.id;pdf.style.margin='6px 0 0 8px';div.append(title,sub,action,pdf);el.appendChild(div);}
  }
  async function registrySave(){
+  if(!access(true)){alert('Sem permissão para alterar documentos.');return;}
   const btn=document.getElementById('ns-reg-save'),out=document.getElementById('ns-reg-status');if(!btn||!out)return;
   const id=activeClinic(),patient=document.getElementById('ns-reg-patient')?.value,title=document.getElementById('ns-reg-title')?.value.trim(),note=document.getElementById('ns-reg-note')?.value.trim(),kind=document.getElementById('ns-reg-type')?.value;
   if(!registryAvailable()){out.textContent='Clínica não conectada.';return;}
@@ -197,6 +200,7 @@
  const regObserver=new MutationObserver(()=>{if(document.getElementById('ns-reg-list')){if(registryClinic!==activeClinic()){registryRows=[];registryClinic=null;}registryLoad();}});
  document.addEventListener('DOMContentLoaded',()=>regObserver.observe(document.body,{childList:true,subtree:true}));
  async function savePresential(){
+  if(!access(true)){alert('Sem permissão para salvar documentos.');return;}
   if(saving)return;const get=id=>document.getElementById(id),button=get('ns-print'),cloud=window.OralCloud;
   if(!cloud?.enabled||!cloud.clinicId||!cloud.session?.user?.id||!window.OralCloudSync?.fileOperation){alert('Conecte a clínica para salvar o documento no prontuário.');return;}
   const patient=(db.p||[]).find(p=>String(p.id)===get('ns-patient').value&&!p.arq),dentist=(db.dt||[]).find(d=>String(d.id)===get('ns-dentist').value&&d.ativo!==false);

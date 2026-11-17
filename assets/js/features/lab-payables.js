@@ -19,7 +19,7 @@
   return `<strong class="nxlab-money-total" style="--nxlab-amount-length:${value.length}">${value}</strong>`;
  }
  const clinic=()=>root.OralCloud?.clinicId;
- const allowed=()=>typeof pmLvl==='function'&&pmLvl('pac')>=1&&pmLvl('vd')>=1&&(!root.NexoModules||root.NexoModules.isAllowed('finance')===true);
+ const allowed=()=>typeof pmLvl==='function'&&pmLvl('lab')>=1&&pmLvl('pac')>=1&&pmLvl('vd')>=1&&(!root.NexoModules||root.NexoModules.isAllowed('finance')===true);
  const writable=()=>allowed()&&pmLvl('vd')>=2;
  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
  const patient=id=>(typeof db==='undefined'?[]:db.p||[]).find(p=>String(p.id)===String(id))?.nome||'Paciente não disponível';
