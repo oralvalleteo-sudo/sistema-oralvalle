@@ -75,7 +75,7 @@ function pmAllowed(act,d){
 }
 function pmDeny(){toast(pmCur()===1?'Esta área está em modo somente visualização.':'Você não tem permissão para fazer isso.',3000)}
 function pmCleanSide(h){return h.replace(/<div class="ov-section">[^<]*<\/div>\s*<nav class="ov-nav">\s*<\/nav>/g,'')}
-function pmContaHtml(){return `<div class="ov-page-head"><div><h1>Minha conta</h1><p class="sub">Organize seus dados de acesso por seção.</p></div></div>${acHtml(true)}`}
+function pmContaHtml(){return `<div class="ov-page-head"><div><h1>Minha conta</h1><p class="sub">Organize seus dados de acesso por seção.</p></div></div>${acHtml(true)}<section class="card"><h2>Privacidade e dados</h2><p class="note">Consulte as informações de privacidade e os canais para exercer seus direitos sobre seus dados.</p><button type="button" class="ghost sm" data-act="nav" data-t="privacy">Acessar privacidade e dados</button></section>`}
 function pmDefault(){const p={};pmKeys().forEach(k=>{p[k]=k==='chat'?'edit':(k==='ag'||k==='pac'||k==='lem'||k.indexOf('pac.')===0)?'view':'none'});return p}
 function pmGet(u,key){return ['none','view','edit'][permOf(u,key)]||'none'}
 function pmSeg(u,key,label){
