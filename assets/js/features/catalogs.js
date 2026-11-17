@@ -162,7 +162,7 @@ function hcRes(r){
 }
 function hcHtml(){
   const h=db.hc,f=(k,l,hint)=>`<div class="hc-f"><label>${l}</label><input data-h="${k}" inputmode="decimal" value="${esc(h[k])}">${hint?`<div class="hc-hint">${hint}</div>`:''}</div>`;
-  return `<div class="hc-wrap">
+  return `<div class="pricing-page"><div id="pricing-overview">${window.NexoPricingOverview?NexoPricingOverview.html():''}</div><details id="pricing-parameters" class="pricing-parameters"><summary>Custos e parâmetros de cálculo</summary><div class="hc-wrap">
   <div class="hc-col">
     <div class="card"><h2 style="margin-top:0">Custos fixos por mês (R$)</h2><p class="note" style="margin:0">Preencha cada custo separado. Não inclua impostos.</p>
       <div class="hc-grid">${f('alu','Aluguel')}${f('eqp','Equipe (salários e encargos)')}${f('luz','Luz')}${f('net','Internet')}${f('fix','Outros custos fixos')}</div>
@@ -173,6 +173,6 @@ function hcHtml(){
       <div class="hc-grid">${f('imp','Impostos sobre o faturamento (%)')}${f('cart','Taxa média de cartão (%)')}${f('com','Comissão média de parceiros (%)','Usada quando o procedimento não tem comissão fixa')}${f('mg','Margem de lucro desejada (%)','Parte do preço de venda que sobra como lucro')}</div></div>
   </div>
   <div class="hc-col hc-side"><div class="card" id="hcr" style="margin-bottom:0">${hcRes(hcCalc(h))}</div></div>
-  </div>`;
+  </div></details></div>`;
 }
 

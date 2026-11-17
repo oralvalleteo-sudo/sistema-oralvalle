@@ -93,7 +93,7 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
     const rs=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(rs)rs.innerHTML=prRes(x);save();return}
   if(t.dataset.pc){const x=db.pr.find(y=>y.id===t.dataset.pc);x.parc=t.checked;const r=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(r)r.innerHTML=prRes(x);save();return}
   if(t.dataset.p){const x=db.pr.find(y=>y.id===t.dataset.p),f=t.dataset.f;x[f]=f==='nome'?t.value:t.value.replace(',','.');if(f==='parTipo'){view.prOpen=x.id;save();render();return}const r=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(r)r.innerHTML=prRes(x);save();return}
-  if(t.dataset.h){db.hc[t.dataset.h]=t.value.replace(',','.');$('hcr').innerHTML=hcRes(hcCalc(db.hc));const tf=$('hcfx');if(tf)tf.textContent=brl(hcFix(db.hc));save();return}
+  if(t.dataset.h){db.hc[t.dataset.h]=t.value.replace(',','.');$('hcr').innerHTML=hcRes(hcCalc(db.hc));const tf=$('hcfx');if(tf)tf.textContent=brl(hcFix(db.hc));window.NexoPricingOverview?.refresh();save();return}
   if(!p)return;
   if(t.dataset.k&&(t.dataset.k==='nome'||t.dataset.k==='cpf')){
     const r=pvCheck(t.dataset.k==='nome'?t.value:p.nome,t.dataset.k==='cpf'?t.value:'',p.tel,p.id);
