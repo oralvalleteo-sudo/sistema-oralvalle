@@ -20,7 +20,10 @@ begin
  if patched=0 then raise exception 'Validador de permissões não encontrado. Nenhuma alteração aplicada.';end if;
 end $migration$;
 
-create or replace function public.nexodent_set_clinic_admin(p_clinic_id uuid,p_user_id uuid,p_make_admin boolean)
+-- Compatibilidade com instalações anteriores que retornavam void ou boolean.
+-- Sem CASCADE: dependências inesperadas abortam a transação, preservando o banco.
+drop function if exists public.nexodent_set_clinic_admin(uuid,uuid,boolean);
+create function public.nexodent_set_clinic_admin(p_clinic_id uuid,p_user_id uuid,p_make_admin boolean)
 returns jsonb language plpgsql security definer set search_path=pg_catalog as $function$
 declare member public.clinic_members%rowtype;
 begin
