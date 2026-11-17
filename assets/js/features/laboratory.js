@@ -137,8 +137,8 @@ function treatmentSummary(pid){
 function form(o={}){
  const patients=(db.p||[]).filter(p=>!p.arq),where=execution.get(o)||(!o.id?'laboratory':''),internal=where==='clinic';
  return `<section class="card nxlab-form"><h3>${o.id?'Editar trabalho':'Novo trabalho'}</h3>
- <div class="nxlab-grid"><label class="nxlab-field"><span>Paciente * — digite para filtrar</span><input id="nxlab-patient-search" type="search" autocomplete="off" placeholder="Digite o nome do paciente" value="${safe(patients.find(p=>String(p.id)===String(o.patient_id))?.nome||'')}"><div id="nxlab-patient-suggestions" class="nxlab-suggestions" style="display:none;position:absolute;z-index:30;background:#ffffff;color:#222;border:1px solid #d9dfe6;border-radius:8px;max-height:220px;overflow-y:auto;width:min(360px,90vw)"></div><input id="nxlab-patient" type="hidden" value="${safe(o.patient_id||'')}"><small id="nxlab-patient-count">${patients.length} pacientes disponíveis</small></label>
- <label class="nxlab-field"><span>Tratamento vinculado</span><select id="nxlab-treatment"><option value="">Sem vínculo</option>${patientTreatments(o.patient_id).map(t=>`<option value="${safe(t.id)}" ${String(linkFor(o.id).treatment_id||'')===String(t.id)?'selected':''}>${safe(treatmentLabel(t))}</option>`).join('')}</select><small>Selecione o paciente para listar os procedimentos já cadastrados no prontuário.</small></label>
+ <div class="nxlab-grid"><label class="nxlab-field"><span>Paciente *</span><input id="nxlab-patient-search" type="search" autocomplete="off" placeholder="Buscar pelo nome do paciente" value="${safe(patients.find(p=>String(p.id)===String(o.patient_id))?.nome||'')}"><select id="nxlab-patient" aria-label="Selecionar paciente">${labPatientOptions(patients,o.patient_id)}</select><small id="nxlab-patient-count">${o.patient_id?'Paciente selecionado':patients.length+' pacientes disponíveis. Escolha um nome na lista.'}</small></label>
+ <label class="nxlab-field"><span>Procedimento do prontuário (opcional)</span><select id="nxlab-treatment"><option value="">Sem vínculo</option>${patientTreatments(o.patient_id).filter(t=>t.status!=='Cancelado').map(t=>`<option value="${safe(t.id)}" ${String(linkFor(o.id).treatment_id||'')===String(t.id)?'selected':''}>${safe(treatmentLabel(t))}</option>`).join('')}</select><small>${labTreatmentHint(o.patient_id)}</small></label>
  <label class="nxlab-field"><span>Local de execução *</span><select id="nxlab-execution"><option value=""${!where?' selected':''}>Selecione o local</option><option value="laboratory"${where==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${internal?' selected':''}>Na clínica</option></select><small>A escolha do local não registra nem quita pagamentos.</small></label>
  ${input('Valor a pagar ao laboratório (se houver)','nxlab-cost',linkFor(o.id).cost||0,'number','min="0" step="0.01"')}
  <label class="nxlab-field"><span id="nxlab-responsible-label">${internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável *'}</span><input id="nxlab-lab" type="text" maxlength="160" value="${safe(o.laboratory||'')}"${internal?'':' required'}><small>Para execução interna sem laboratório externo, deixe o valor a pagar em zero.</small></label>
@@ -327,7 +327,7 @@ function labUpdateTreatments(pid){
  sel.dataset.patient=String(pid||'');
  if(list.some(t=>String(t.id)===old))sel.value=old;
  const hint=sel.parentElement?.querySelector('small');
- if(hint)hint.textContent=!pid?'Selecione um paciente para listar seus procedimentos.':list.length?list.length+' procedimento(s) disponível(is).':'Este paciente não possui tratamentos cadastrados na aba Tratamentos.';
+ if(hint)hint.textContent=labTreatmentHint(pid);
 }
 function labChoosePatient(id){
  const p=(db.p||[]).find(p=>String(p.id)===String(id));if(!p)return;
@@ -337,20 +337,26 @@ function labChoosePatient(id){
  const count=$id('nxlab-patient-count');if(count)count.textContent='Paciente selecionado';
  labUpdateTreatments(p.id);
 }
+function labPatientOptions(patients,selected){
+ const counts={};patients.forEach(p=>{counts[p.nome]=(counts[p.nome]||0)+1});
+ return '<option value="">Selecione o paciente</option>'+patients.slice().sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR')).map(p=>`<option value="${safe(p.id)}"${String(p.id)===String(selected)?' selected':''}>${safe(p.nome)}${counts[p.nome]>1?' · '+safe(p.tel||String(p.id)):''}</option>`).join('');
+}
+function labTreatmentHint(pid){
+ if(!pid)return 'Escolha o paciente acima para consultar os procedimentos do prontuário.';
+ return patientTreatments(pid).filter(t=>t.status!=='Cancelado').length?'Vincule a peça a um procedimento existente, se desejar.':'Este paciente ainda não tem procedimentos cadastrados. Você pode salvar o trabalho sem vínculo.';
+}
 function labPatientMatch(){
- const input=$id('nxlab-patient-search'),hidden=$id('nxlab-patient'),count=$id('nxlab-patient-count'),box=$id('nxlab-patient-suggestions');
- if(!input||!hidden)return;
- const q=labNormalize(input.value);
- const patients=(db.p||[]).filter(p=>!p.arq);
- const exact=patients.filter(p=>labNormalize(p.nome)===q);
- const id=exact.length===1?String(exact[0].id):'';
- if(hidden.value!==id){hidden.value=id;labUpdateTreatments(id);}
- const matches=q?patients.filter(p=>labNormalize(p.nome).includes(q)).slice(0,15):[];
- if(box){box.innerHTML=matches.map(p=>`<button type="button" data-nxlab-patient-id="${safe(p.id)}" style="display:block;width:100%;text-align:left;padding:10px;background:#202020;color:white;border:0;border-bottom:1px solid #333;cursor:pointer">${safe(p.nome)}</button>`).join('');box.style.display=matches.length&&!(exact.length===1&&q===labNormalize(input.value)&&input.value===exact[0].nome)?'block':'none';}
- if(count)count.textContent=!q?patients.length+' pacientes disponíveis':exact.length>1?'Há pacientes com nomes iguais; selecione na lista.':exact.length===1?'Paciente selecionado':matches.length+' paciente(s) encontrado(s)';
+ const input=$id('nxlab-patient-search'),select=$id('nxlab-patient'),count=$id('nxlab-patient-count');
+ if(!input||!select)return;
+ const q=labNormalize(input.value),patients=(db.p||[]).filter(p=>!p.arq),matches=patients.filter(p=>!q||labNormalize(p.nome).includes(q));
+ const exact=matches.filter(p=>labNormalize(p.nome)===q),previous=select.value;
+ const chosen=exact.length===1?String(exact[0].id):matches.some(p=>String(p.id)===previous)?previous:'';
+ select.innerHTML=labPatientOptions(matches,chosen);select.value=chosen;
+ labUpdateTreatments(chosen);
+ if(count)count.textContent=chosen?'Paciente selecionado':matches.length?matches.length+' paciente(s) encontrado(s). Escolha um nome na lista.':'Nenhum paciente encontrado. Limpe a busca para ver todos.';
 }
 document.addEventListener('input',e=>{if(e.target.id==='nxlab-patient-search')labPatientMatch();});
-document.addEventListener('change',e=>{if(e.target.id==='nxlab-patient-search')labPatientMatch();});
+document.addEventListener('change',e=>{if(e.target.id==='nxlab-patient-search')labPatientMatch();if(e.target.id==='nxlab-patient'){if(e.target.value)labChoosePatient(e.target.value);else labUpdateTreatments('');}});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-nxlab-patient-id]');if(btn){e.preventDefault();labChoosePatient(btn.dataset.nxlabPatientId);}});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-lab]');if(btn){e.preventDefault();execute(btn.dataset.lab,btn.dataset.id);}});
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-filter'){filter=e.target.value;renderLab();}if(e.target.id==='nxlab-execution-filter'){executionFilter=e.target.value;renderLab();}if(e.target.id==='nxlab-search'){search=e.target.value;renderLab();}});
