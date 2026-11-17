@@ -22,3 +22,7 @@ Recebimentos são os registros de pagamentos dos pacientes, mesmo quando a venda
 Os dados clínicos/financeiros já carregados são usados conforme a sessão autorizada. Para incluir laboratório, o usuário precisa de Laboratório e Pacientes; para repasses, de Comissões. Falhas de carregamento ou fontes sem permissão exibem aviso e saldo PARCIAL. Não apresentar o saldo como extrato bancário: não inclui saldo inicial nem transações que a clínica não registrou.
 
 Vínculos antigos explícitos CP-ID ou LABPAY-ID eliminam duplicidade apenas quando únicos, pagos e com valor idêntico. A data do pagamento original prevalece; divergências geram avisos. Despesas sem vínculo não são deduzidas por coincidência de valor. Conferir cadastros históricos que já tenham pagamentos duplicados antes de usar o saldo para decisões.
+
+## Visualização a partir da versão 329
+
+Os recebimentos individuais dos pacientes não aparecem na lista de gastos nem no CSV desta aba. Continuam compondo o total de entradas e o saldo do período. A lista detalha apenas saídas pagas; o CSV traz os totais e os gastos. Os registros originais permanecem nas áreas de pagamentos.
