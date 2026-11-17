@@ -9,7 +9,7 @@ const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const options=(arr,selected)=>arr.map(v=>`<option value="${safe(v)}" ${v===selected?'selected':''}>${safe(v)}</option>`).join('');
 const date=s=>s?String(s).slice(0,10):'';
 const stamp=()=>new Date().toISOString();
-let orders=[],loading=false,error='',loadedClinic=null,filter='ativos',search='',editing=null,busy=false,loadAttemptedClinic=null,labSection='work',executionFilter='all';
+let orders=[],loading=false,error='',loadedClinic=null,filter='ativos',search='',editing=null,busy=false,loadAttemptedClinic=null,labSection='work',executionFilter='all',careDraft=null;
 let fetchTask=null,fetchTaskClinic=null,orderEpoch=0;
 const cloud=()=>!!window.OralCloud?.enabled;
 const clinic=()=>window.OralCloud?.clinicId||null;
@@ -199,6 +199,19 @@ function style(){return `<style>
  @media(max-width:700px){.nxlab-top{align-items:stretch}.nxlab-actions{width:100%}.nxlab-actions button{flex:1}.nxlab-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.nxlab-metrics>div{padding:14px;min-height:82px}.nxlab-metrics strong{font-size:24px}.nxlab-card{padding:15px !important}.nxlab-filters input,.nxlab-filters select{width:100%;min-width:0}}
 
  </style>`;}
+function carePatients(){
+ return (db.p||[]).filter(p=>!p.arq&&(
+  (p.protAtivo&&p.protEtapa!=='Tratamento concluído')||
+  (p.implAtivo&&p.implEtapa!=='Tratamento concluído')));
+}
+function careQueue(){
+ if(!loadedClinic||loading||error)return '';
+ const list=carePatients().filter(p=>!orders.some(o=>String(o.patient_id)===String(p.id)&&!['Entregue','Cancelado'].includes(o.status)))
+  .filter(p=>!search||labNormalize(p.nome).includes(labNormalize(search)))
+  .sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR'));
+ if(!list.length)return '';
+ return `<section class="card nxlab-care"><h3>Prótese e implantes — trabalhos a definir (${list.length})</h3><p class="note">Pacientes em acompanhamento sem trabalho laboratorial em aberto. Defina a peça, o local de execução e o responsável. Esta lista não cria custos nem pagamentos.</p>${list.map(p=>`<div class="nxlab-actions" style="justify-content:space-between;border-top:1px solid var(--line,#d9dfe6);padding:12px 0"><div><strong>${safe(p.nome)}</strong><p class="note">${[p.protAtivo&&p.protEtapa!=='Tratamento concluído'?'Prótese':'',p.implAtivo&&p.implEtapa!=='Tratamento concluído'?'Implantodontia':''].filter(Boolean).join(' · ')}</p></div>${canEdit()?`<button type="button" class="ghost sm" data-lab="care-new" data-id="${safe(p.id)}">Cadastrar trabalho</button>`:''}</div>`).join('')}</section>`;
+}
 window.nexoLabHtml=function(){
  if(!allowed())return '<div class="card">Você não possui permissão para consultar os trabalhos de laboratório.</div>';
  if(loadedClinic!==(clinic()||'local')&&!loading&&loadAttemptedClinic!==(clinic()||'local'))setTimeout(()=>fetchOrders(),0);
@@ -215,9 +228,9 @@ window.nexoLabHtml=function(){
  return `${style()}${navigation}<div class="nxlab-top"><div><h2>Laboratório</h2><p>Controle de trabalhos, etapas, prazos e comunicação.</p></div><div class="nxlab-actions">${canEdit()?'<button data-lab="new">+ Novo trabalho</button>':''}<button class="ghost" data-lab="export">Exportar CSV (filtro atual)</button><button class="ghost" data-lab="refresh">Atualizar</button></div></div>
  ${error?`<p class="nxlab-error">${safe(error)}</p>`:''}${loading?'<p>Carregando trabalhos...</p>':''}
  <div class="nxlab-metrics"><div><strong>${totals.open}</strong><span>Em aberto</span></div><div><strong>${totals.late}</strong><span>Atrasados</span></div><div><strong>${totals.observed}</strong><span>Em observação</span></div><div><strong>${totals.delivered}</strong><span>Entregues</span></div><div><strong>${totals.soon}</strong><span>Próximos 7 dias</span></div><div><strong>${totals.noDeadline}</strong><span>Sem prazo definido</span></div></div>
- ${editing!==null?form(editing==='new'?{}:orders.find(o=>o.id===editing)||{}):''}
+ ${editing!==null?form(editing==='new'?(careDraft||{}):orders.find(o=>o.id===editing)||{}):''}
  <div class="nxlab-filters"><select id="nxlab-filter"><option value="ativos" ${filter==='ativos'?'selected':''}>Em aberto</option><option value="observacao" ${filter==='observacao'?'selected':''}>Em observação</option><option value="atrasados" ${filter==='atrasados'?'selected':''}>Atrasados</option><option value="proximos" ${filter==='proximos'?'selected':''}>Próximos 7 dias</option><option value="sem-prazo" ${filter==='sem-prazo'?'selected':''}>Sem prazo definido</option><option value="todos" ${filter==='todos'?'selected':''}>Todos</option></select><select id="nxlab-execution-filter" aria-label="Filtrar local de execução"><option value="all"${executionFilter==='all'?' selected':''}>Todos os locais</option><option value="laboratory"${executionFilter==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${executionFilter==='clinic'?' selected':''}>Na clínica</option></select><input id="nxlab-search" placeholder="Buscar paciente, laboratório ou trabalho" value="${safe(search)}"></div>
- <div>${items.length?items.map(card).join(''):'<div class="card nxlab-empty">Nenhum trabalho encontrado.</div>'}</div>`;
+ ${careQueue()}<div>${items.length?items.map(card).join(''):'<div class="card nxlab-empty">Nenhum trabalho encontrado.</div>'}</div>`;
 };
 async function persist(o){
  if(cloud()){
@@ -249,8 +262,9 @@ async function execute(action,id){
  if(action==='toggle'){view.labExpanded=String(view.labExpanded||'')===String(id)?null:id;renderLab();return;}
  if(action==='details'){view.labDetails=view.labDetails===id?null:id;renderLab();return;}
  if(!canEdit())return;
- if(action==='new'){editing='new';renderLab();return;}
- if(action==='cancel'){editing=null;renderLab();return;}
+ if(action==='care-new'){const p=carePatients().find(p=>String(p.id)===String(id));if(!p)return;careDraft={patient_id:String(p.id),shade:p.protCor||'',instructions:'Paciente em acompanhamento de '+[p.protAtivo?'prótese':'',p.implAtivo?'implantodontia':''].filter(Boolean).join(' e ')+'. Definir a peça e confirmar a necessidade laboratorial.'};editing='new';renderLab();setTimeout(()=>$id('nxlab-patient-search')?.scrollIntoView({block:'center',behavior:'smooth'}),0);return;}
+ if(action==='new'){careDraft=null;editing='new';renderLab();return;}
+ if(action==='cancel'){careDraft=null;editing=null;renderLab();return;}
  if(action==='edit'){editing=id;renderLab();return;}
  if(action==='delete'){
   const target=orders.find(o=>String(o.id)===String(id));if(!target)return;
@@ -341,7 +355,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-nxlab-pa
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-lab]');if(btn){e.preventDefault();execute(btn.dataset.lab,btn.dataset.id);}});
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-filter'){filter=e.target.value;renderLab();}if(e.target.id==='nxlab-execution-filter'){executionFilter=e.target.value;renderLab();}if(e.target.id==='nxlab-search'){search=e.target.value;renderLab();}});
 document.addEventListener('keydown',e=>{if(e.target.id==='nxlab-search'&&e.key==='Enter'){search=e.target.value;renderLab();}});
-window.addEventListener('nexodent:signed-out',()=>{orderEpoch++;fetchTask=null;fetchTaskClinic=null;orders=[];loadedClinic=null;loadAttemptedClinic=null;loading=false;editing=null;labSection='work';executionFilter='all';window.NexoLabRead=null;});
+window.addEventListener('nexodent:signed-out',()=>{orderEpoch++;fetchTask=null;fetchTaskClinic=null;orders=[];loadedClinic=null;loadAttemptedClinic=null;loading=false;editing=null;careDraft=null;labSection='work';executionFilter='all';window.NexoLabRead=null;});
 window.addEventListener('nexodent:clinic-data-loaded',()=>{executionFilter='all';loadedClinic=null;loadAttemptedClinic=null;if(isLab())fetchOrders(true);});
 window.addEventListener('focus',()=>{if(isLab())fetchOrders(true);});
 })();
