@@ -156,12 +156,12 @@ function tabAgd(p){
   const itens=ags.map(a=>{
     const s=st(a),inativo=s==='Faltou'||s==='Cancelado',ev=(p.evol||[]).some(e=>e.ag===a.id||(a.vid&&e.vid===a.vid));
     const fim=hm(mins(a.hora)+(a.dur||30));
-    return `<div class="ag-appointment${s==='Compareceu'||s==='Confirmado'?' is-confirmed':''}" style="margin:6px 0${inativo?';opacity:.8':''}"><div class="ag-appointment-main"><div><strong>${esc(fd(a.data))} · ${esc(a.hora)}–${fim}</strong>${a.proc?' <span class="ag-proc">· '+esc(a.proc)+'</span>':''}${a.tipo?' <span class="ag-tipo">'+esc(a.tipo)+'</span>':''}<div class="ag-meta">${esc(dName(a.dt))} · Consultório ${esc(a.cadeira||'1')}${ev?' · Lançado na evolução':''}</div></div><span class="${cls(s)}">${esc(s)}</span></div><div class="ag-actions">${!inativo&&!a.vid?`<button class="ghost sm" data-act="agbaixa" data-id="${esc(a.id)}">Dar baixa</button>`:''}${a.vid?'<span class="badge stt-ok">Baixa feita</span>':''}${!inativo&&!a.vid&&s!=='Compareceu'?`<button class="ghost sm" data-act="agfalta" data-id="${esc(a.id)}">Marcar falta</button><button class="ghost sm" data-act="agcancel" data-id="${esc(a.id)}">Cancelar</button>`:''}${inativo?`<button class="ghost sm" data-act="agreativ" data-id="${esc(a.id)}">Reativar</button>`:''}</div></div>`}).join('');
+    return `<div class="ag-appointment${s==='Compareceu'||s==='Confirmado'?' is-confirmed':''}" style="margin:6px 0${inativo?';opacity:.8':''}"><div class="ag-appointment-main"><div><strong>${esc(fd(a.data))} · ${esc(a.hora)}–${fim}</strong>${a.proc?' <span class="ag-proc">· '+esc(a.proc)+'</span>':''}${a.tipo?' <span class="ag-tipo">'+esc(a.tipo)+'</span>':''}<div class="ag-meta">${esc(dName(a.dt))} · Consultório ${esc(a.cadeira||'1')}${ev?' · Lançado na evolução':''}</div></div><span class="${cls(s)}">${esc(s)}</span></div><div class="ag-actions">${!inativo&&!a.vid?`<button class="ghost sm" data-act="agbaixa" data-id="${esc(a.id)}">Registrar pagamento</button>`:''}${a.vid?'<span class="badge stt-ok">Financeiro lançado</span>':''}${!inativo&&!a.vid&&s!=='Compareceu'?`<button class="ghost sm" data-act="agfalta" data-id="${esc(a.id)}">Marcar falta</button><button class="ghost sm" data-act="agcancel" data-id="${esc(a.id)}">Cancelar</button>`:''}${inativo?`<button class="ghost sm" data-act="agreativ" data-id="${esc(a.id)}">Reativar</button>`:''}</div></div>`}).join('');
   return `<div class="card"><h2>Agendamentos do paciente</h2><p class="note">Todos os atendimentos, faltas e cancelamentos. Ao dar baixa, o atendimento é lançado automaticamente na aba Evolução.</p>${resumo}${acompanhamento}${itens||'<p class="note" style="margin:6px 0">Nenhum agendamento para este paciente.</p>'}</div>`;
 }
 function evPendHtml(p){
   const l=(p.trat||[]).filter(x=>!x.vid&&x.status!=='Concluído'&&x.status!=='Cancelado');
-  const rows=l.map((x,ix)=>{const m=itMult(x);return `<div class="pr-card pr-compact"><div class="pr-head"><span class="pr-av" aria-hidden="true">${ix+1}</span><div class="pr-nm">${esc(x.proc||'Tratamento')}${x.dente?' · '+dLab(x.dente)+' '+esc(x.dente):' · Geral'}<small>${m.q>1?brl(m.u)+' × '+m.q+' = ':''}${brl(x.valor)} · ${esc(dName(x.dt))}</small></div><button class="sm" data-act="trbaixa" data-id="${esc(x.id)}">Dar baixa</button></div>${x.obs?`<small class="note" style="display:block;margin:8px 0 0">${esc(x.obs)}</small>`:''}</div>`}).join('');
+  const rows=l.map((x,ix)=>{const m=itMult(x);return `<div class="pr-card pr-compact"><div class="pr-head"><span class="pr-av" aria-hidden="true">${ix+1}</span><div class="pr-nm">${esc(x.proc||'Tratamento')}${x.dente?' · '+dLab(x.dente)+' '+esc(x.dente):' · Geral'}<small>${m.q>1?brl(m.u)+' × '+m.q+' = ':''}${brl(x.valor)} · ${esc(dName(x.dt))}</small></div><button class="sm" data-act="trbaixa" data-id="${esc(x.id)}">Concluir procedimento</button></div>${x.obs?`<small class="note" style="display:block;margin:8px 0 0">${esc(x.obs)}</small>`:''}</div>`}).join('');
   return `<div class="card"><h2 style="margin:0 0 4px">Procedimentos do tratamento (${l.length})</h2><p class="note" style="margin:0 0 6px">Os procedimentos registrados para o paciente aparecem aqui. Ao dar baixa, o procedimento é concluído, a venda e a comissão são lançadas e o registro entra na evolução.</p>${rows||'<p class="note" style="margin:6px 0">Nenhum procedimento pendente. Registre novos procedimentos na Evolução.</p>'}</div>`;
 }
 // Sincroniza a seleção do odontograma incorporado com o campo de dente da evolução.
@@ -237,13 +237,14 @@ function orcSum(o){
   const d=num(o.desc);
   return (d>0?`<div class="tot" style="font-size:15px;font-weight:600;border:0;margin:0;padding:3px 0"><span>Subtotal</span><span>${brl(sub(o))}</span></div><div class="tot" style="font-size:15px;font-weight:600;border:0;margin:0;padding:3px 0"><span>Desconto</span><span>− ${brl(d)}</span></div>`:'')+`<div class="tot"><span>Total</span><span>${brl(total(o))}</span></div>`;
 }
+// Vínculo financeiro separado: pagamento não comprova execução clínica.
 function obLaunch(p,it,vv,rc,forma,data,rep){
-  const proc=it.proc||'',mm=comCalc(it.dt,proc,vv,qOf(it));
-  const v={id:uid(),pid:p.id,dt:it.dt,proc,valor:r2(vv),mat:mm.mat,lab:mm.lab,rep:r2(rep),data,pg:[]};
+  const linked=it.paymentSaleId||it.vid;
+  if(linked){const existing=db.vd.find(v=>String(v.id)===String(linked)&&String(v.pid)===String(p.id));if(!existing)throw Error('Vínculo financeiro não encontrado. Confira antes de receber.');return existing}
+  const proc=it.proc||'';
+  const v={id:uid(),pid:p.id,dt:it.dt,proc,valor:r2(vv),mat:0,lab:0,rep:0,data,pg:[],clinicalPending:true};
   if(rc>0)v.pg.push(ovFeeMake(rc,forma,data));
-  it.vid=v.id;
-  (p.trat||[]).forEach(t=>{if(t.oiid===it.id&&!t.vid){t.vid=v.id;t.status='Concluído';t.rep=v.rep;t.data=v.data}});
-  (p.evol=p.evol||[]).push({id:uid(),data,n:it.dente?String(it.dente):'',txt:(proc||'Atendimento')+' — realizado por '+dName(it.dt)+'.',auto:true,vid:v.id});
+  it.paymentSaleId=v.id;
   db.vd.push(v);return v;
 }
 function obUndoHtml(o){
@@ -253,43 +254,43 @@ function obUndoHtml(o){
 }
 function obAllHtml(o){
   if(o.status!=='Aprovado')return '';
-  const pend=o.itens.filter(it=>!it.vid);
+  const pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);
   if(!o.itens.length)return '';
-  if(!pend.length)return '<div class="ob-st ob-all"><span class="badge stt-ok">Baixa feita</span> <span class="note" style="margin:0">Todos os itens deste orçamento já tiveram baixa.</span></div>';
+  if(!pend.length)return '<div class="ob-st ob-all"><span class="badge stt-ok">Financeiro lançado</span> <span class="note" style="margin:0">Todos os itens já possuem lançamento financeiro. Consulte o saldo em Pagamentos.</span></div>';
   const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
-  if(view.obxAll!==o.id)return `<div class="ob-all"><button class="sm" style="width:100%" data-act="oball" data-o="${esc(o.id)}">Dar baixa em todo o orçamento (${pend.length} ${pend.length===1?'item':'itens'} · ${brl(tot)})</button></div>`;
-  return `<div class="ob-all"><div class="ob-pay"><h4>Dar baixa em todo o orçamento</h4>
+  if(view.obxAll!==o.id)return `<div class="ob-all"><button class="sm" style="width:100%" data-act="oball" data-o="${esc(o.id)}">Registrar pagamento do orçamento (${pend.length} ${pend.length===1?'item':'itens'} · ${brl(tot)})</button></div>`;
+  return `<div class="ob-all"><div class="ob-pay"><h4>Registrar pagamento do orçamento</h4>
   ${pend.map(it=>`<div class="ob-li"><span>${esc(it.proc||'Procedimento')}${it.dente?' · dente '+esc(it.dente):''}<br><span class="note" style="margin:0">${esc(dName(it.dt))}</span></span><strong>${brl(val(it))}</strong></div>`).join('')}
-  <div class="tot" style="margin-top:6px"><span>Total da baixa</span><span>${brl(tot)}</span></div>
-  <div class="row" style="align-items:flex-start"><div><label for="oab">Recebido agora (R$)</label><input id="oab" inputmode="decimal" value="${tot.toFixed(2)}"></div><div><label for="oaf">Forma</label><select id="oaf">${FORMAS.map(f=>`<option>${f}</option>`).join('')}</select></div></div>
-  <p class="note" style="margin:6px 0 0">Cada item vira uma venda em Vendas, com a comissão do dentista calculada. O valor recebido é distribuído na ordem dos itens. Se o paciente ainda não pagou, coloque 0.</p>
+  <div class="tot" style="margin-top:6px"><span>Valor dos itens</span><span>${brl(tot)}</span></div>
+  <div class="row" style="align-items:flex-start"><div><label for="oab">Recebido agora (R$)</label><input id="oab" inputmode="decimal" value="" placeholder="Valor efetivamente recebido"></div><div><label for="oaf">Forma</label><select id="oaf">${FORMAS.map(f=>`<option>${f}</option>`).join('')}</select></div></div>
+  <p class="note" style="margin:6px 0 0">O valor recebido será distribuído na ordem dos itens. O saldo restante ficará em aberto. Este registro não conclui procedimentos, não cria evolução e não libera comissão por execução.</p>
   <label for="oad">Data</label><input id="oad" type="date" value="${tdy()}">
-  <div class="row" style="margin-top:10px"><button data-act="oballconf" data-o="${esc(o.id)}" style="flex:1">Confirmar baixa de tudo</button><button class="ghost" data-act="obcancel" style="flex:none">Cancelar</button></div></div></div>`;
+  <div class="row" style="margin-top:10px"><button data-act="oballconf" data-o="${esc(o.id)}" style="flex:1">Confirmar recebimento</button><button class="ghost" data-act="obcancel" style="flex:none">Cancelar</button></div></div></div>`;
 }
 function obCalc(it,v){return it.dt&&v>0?comCalc(it.dt,it.proc||'',v,qOf(it)).rep:0}
 function obPanel(o,it,i){
   const key=o.id+':'+it.id;
-  if(it.vid){
-    const v=db.vd.find(x=>x.id===it.vid);
+  if(it.vid||it.paymentSaleId){
+    const v=db.vd.find(x=>x.id===(it.paymentSaleId||it.vid));
     if(!v)return '';
     const rc=recebido(v),sd=saldoV(v),st=sd<=0?['Pago','stt-ok']:rc>0?['Parcial','']:['A receber','stt-wr'];
     return `<div class="ob-st"><div class="row" style="flex-wrap:wrap;gap:8px"><span class="badge ${st[1]}" style="flex:none">${st[0]}</span><span class="note" style="margin:0;flex:1">Recebido ${brl(rc)} de ${brl(v.valor)}${sd>0?' · falta '+brl(sd):''} · já aparece em Vendas</span></div>
     ${sd>0?`<div class="row" style="margin-top:8px"><input data-rcv="${esc(v.id)}" inputmode="decimal" value="${sd.toFixed(2)}" aria-label="Valor recebido"><select data-rcvf="${esc(v.id)}" aria-label="Forma de pagamento">${FORMAS.map(f=>`<option>${f}</option>`).join('')}</select><button class="sm" data-act="rcv" data-id="${esc(v.id)}">Receber</button></div>`:''}</div>`;
   }
   if(view.obx!==key)return '';
-  const val=r2(num(it.valor)*fac(o)),cr=obCalc(it,val);
-  return `<div class="ob-pay"><h4>Dar baixa: ${esc(it.proc||'procedimento')}</h4>
-  <div class="row" style="align-items:flex-start"><div><label for="obv" style="margin-top:0">Valor (R$)</label><input id="obv" inputmode="decimal" value="${val.toFixed(2)}"></div><div><label for="obr" style="margin-top:0">Comissão (R$)</label><input id="obr" inputmode="decimal" value="${cr?cr.toFixed(2):''}"></div></div>
-  <div class="row" style="align-items:flex-start"><div><label for="obc">Recebido agora (R$)</label><input id="obc" inputmode="decimal" value="${val.toFixed(2)}"></div><div><label for="obf">Forma</label><select id="obf">${FORMAS.map(f=>`<option>${f}</option>`).join('')}</select></div></div>
-  <p class="note" style="margin:6px 0 0">Se o paciente ainda não pagou, coloque 0. A venda é lançada em Vendas e a comissão só é liberada conforme o paciente paga.</p>
+  const val=r2(num(it.valor)*fac(o));
+  return `<div class="ob-pay"><h4>Registrar pagamento: ${esc(it.proc||'procedimento')}</h4>
+  <div class="row" style="align-items:flex-start"><div><label for="obv" style="margin-top:0">Valor (R$)</label><input id="obv" inputmode="decimal" value="${val.toFixed(2)}"></div></div>
+  <div class="row" style="align-items:flex-start"><div><label for="obc">Recebido agora (R$)</label><input id="obc" inputmode="decimal" value="" placeholder="Valor efetivamente recebido"></div><div><label for="obf">Forma</label><select id="obf">${FORMAS.map(f=>`<option>${f}</option>`).join('')}</select></div></div>
+  <p class="note" style="margin:6px 0 0">Registra somente o financeiro. O saldo restante fica em aberto. O procedimento permanece pendente até a conclusão clínica em Evolução.</p>
   <label for="obd">Data</label><input id="obd" type="date" value="${tdy()}">
-  <div class="row" style="margin-top:10px"><button data-act="obconf" data-o="${esc(o.id)}" data-i="${i}" style="flex:1">Confirmar baixa</button><button class="ghost" data-act="obcancel" style="flex:none">Cancelar</button></div></div>`;
+  <div class="row" style="margin-top:10px"><button data-act="obconf" data-o="${esc(o.id)}" data-i="${i}" style="flex:1">Confirmar recebimento</button><button class="ghost" data-act="obcancel" style="flex:none">Cancelar</button></div></div>`;
 }
 function itemHtml(o,it,i){
   const base=`data-o="${esc(o.id)}" data-i="${i}"`;
   return `<div class="oitem"><div class="oitem-h"><span class="oitem-n">Item ${i+1}</span></div><div class="it"><input placeholder="Procedimento" list="prl" ${base} data-f="proc" value="${esc(it.proc)}"><input placeholder="Dente" inputmode="numeric" ${base} data-f="dente" value="${esc(it.dente)}"><input placeholder="R$" inputmode="decimal" ${base} data-f="valor" value="${esc(it.valor)}"><button class="danger sm" aria-label="Remover item" data-act="rmi" data-o="${esc(o.id)}" data-i="${i}">×</button></div>
   <input style="margin-bottom:6px" placeholder="O que precisa ser feito (aparece na impressão)" ${base} data-f="obs" value="${esc(it.obs||'')}">
-  <div class="row" style="margin-bottom:4px"><select ${base} data-f="dt" aria-label="Dentista que vai executar">${dentOpts(it.dt,'Dentista a definir')}</select>${it.vid?'<span class="badge stt-ok" style="flex:none">Baixa feita</span>':(o.status==='Aprovado'&&view.obx!==o.id+':'+it.id?`<button class="sm" data-act="obaixa" data-o="${esc(o.id)}" data-i="${i}">Dar baixa</button>`:'')}</div>
+  <div class="row" style="margin-bottom:4px"><select ${base} data-f="dt" aria-label="Dentista que vai executar">${dentOpts(it.dt,'Dentista a definir')}</select>${it.vid||it.paymentSaleId?'<span class="badge" style="flex:none">Financeiro lançado</span>':(o.status==='Aprovado'&&view.obx!==o.id+':'+it.id?`<button class="sm" data-act="obaixa" data-o="${esc(o.id)}" data-i="${i}">Registrar pagamento</button>`:'')}</div>
   ${obPanel(o,it,i)}
   ${qOf(it)>1?(()=>{const m=itMult(it);return `<div class="note" style="margin:0 0 6px">${brl(m.u)} × ${m.q} dentes = ${brl(m.t)}</div>`})():''}
   <div class="note oitem-last" data-cpi="${o.id}:${i}">${esc(cpText(o,it))}</div></div>`;

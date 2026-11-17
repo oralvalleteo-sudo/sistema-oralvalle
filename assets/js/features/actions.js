@@ -19,9 +19,9 @@ function ovAgDialog(title, content, onSubmit) {
 // A entrada do planejamento NÃO é recebimento: pagamentos são registrados apenas no caixa.
 function ovSyncBudgetFinancial(p,o){
   if(!p||!o||o.status!=='Aprovado')return {ok:true,changed:false};
-  const itens=(o.itens||[]).filter(i=>i.vid);
+  const itens=(o.itens||[]).filter(i=>i.vid||i.paymentSaleId);
   if(!itens.length)return {ok:true,changed:false};
-  const rows=itens.map(i=>({i,v:(db.vd||[]).find(v=>String(v.id)===String(i.vid)&&String(v.pid)===String(p.id))}));
+  const rows=itens.map(i=>({i,v:(db.vd||[]).find(v=>String(v.id)===String(i.paymentSaleId||i.vid)&&String(v.pid)===String(p.id))}));
   if(rows.some(x=>!x.v)||new Set(rows.map(x=>String(x.v.id))).size!==rows.length)
     return {ok:false,message:'Vínculos financeiros inconsistentes. Nenhum atendimento foi atualizado.'};
   const metas=rows.map(({i,v})=>({v,novo:r2(num(i.valor)*fac(o))}));
@@ -38,7 +38,7 @@ function ovBudgetUndoRows(p,o){
   const rows=(db.vd||[]).filter(v=>ids.has(String(v.id)));
   const compartilhado=(db.p||[]).some(q=>{
     const outrosOrcamentos=(q.orcs||[]).some(b=>
-      (q!==p||b!==o)&&(b.itens||[]).some(i=>i.vid&&ids.has(String(i.vid))));
+      (q!==p||b!==o)&&(b.itens||[]).some(i=>(i.vid&&ids.has(String(i.vid)))||(i.paymentSaleId&&ids.has(String(i.paymentSaleId)))));
     const outrosTratamentos=(q.trat||[]).some(t=>
       t.vid&&ids.has(String(t.vid))&&(q!==p||String(t.oid)!==String(o.id)));
     return outrosOrcamentos||outrosTratamentos;
@@ -280,7 +280,7 @@ const A={
   sigclr:(b,d,p)=>{p.sign='';p.signDate='';p.signTermo='';save();render()},
   addo:(b,d,p)=>{const nid=uid();(view.orcOpen=view.orcOpen||{})[nid]=true;p.orcs.unshift({id:nid,data:new Date().toLocaleDateString('pt-BR'),status:'Pendente',itens:[{id:uid(),proc:'',dente:'',valor:'',dt:defDt()}],desc:'',val:plusDays(15),cond:''});save();render()},
   addi:(b,d,p)=>{getO(p,d.o).itens.push({id:uid(),proc:'',dente:'',valor:'',dt:defDt()});save();render()},
-  rmi:(b,d,p)=>{const o=getO(p,d.o),it=o.itens[+d.i];if(it&&it.vid){toast('Este item já teve baixa. Exclua a venda antes de remover.',3000);return}if(it&&it.tid){const t=(p.trat||[]).find(z=>z.id===it.tid);if(t){delete t.oid;delete t.oiid}}o.itens.splice(+d.i,1);save();render()},
+  rmi:(b,d,p)=>{const o=getO(p,d.o),it=o.itens[+d.i];if(it&&(it.vid||it.paymentSaleId)){toast('Este item já teve baixa. Exclua a venda antes de remover.',3000);return}if(it&&it.tid){const t=(p.trat||[]).find(z=>z.id===it.tid);if(t){delete t.oid;delete t.oiid}}o.itens.splice(+d.i,1);save();render()},
   addtr:(b,d,p)=>{
     if((view.trSel||[]).length||ttBasket().length){ttSave(p);return}
     if(!view.trForm){view.trForm=true;view.trDraft=view.trDraft||{};render();setTimeout(()=>{const e=$('trform');if(e)e.scrollIntoView({behavior:'smooth',block:'center'})},60);return}
@@ -300,8 +300,23 @@ const A={
     });
     view.trSel=[];view.trForm=false;view.trDraft=null;save();render();
     toast(list.length>1?list.length+' tratamentos adicionados':'Tratamento adicionado'+(orc?' ao orçamento':''),2400)},
-  trbaixa:(b,d,p)=>{const x=(p.trat||[]).find(t=>t.id===d.id);if(!x)return;if(x.vid){toast('Este tratamento já teve baixa');return}if(!x.dt){toast('Escolha o dentista responsável');return}const val=r2(num(x.valor));if(!(val>0)){toast('Informe o valor do tratamento');return}const mm=comCalc(x.dt,x.proc,val,qOf(x)),rep=r2(mm.rep),v={id:uid(),pid:p.id,dt:x.dt,proc:x.proc,valor:val,mat:mm.mat,lab:mm.lab,rep,data:tdy(),pg:[]};db.vd.push(v);x.vid=v.id;x.status='Concluído';x.rep=rep;x.data=v.data;(p.evol=p.evol||[]).push({id:uid(),data:tdy(),n:x.dente||'',txt:(x.proc||'Procedimento')+(x.dente?' ('+dLab(x.dente)+' '+x.dente+')':'')+(x.obs?': '+x.obs:''),auto:true,vid:v.id,tid:x.id});if(x.oiid){const oo=getO(p,x.oid),ii=oo&&oo.itens.find(i=>i.id===x.oiid);if(ii)ii.vid=v.id}save();render();toast('Baixa realizada e comissão enviada para o dentista')},
-  rmtr:(b,d,p)=>{const x=(p.trat||[]).find(t=>t.id===d.id);if(x&&x.vid){toast('Não é possível excluir um tratamento com baixa. Exclua a venda primeiro.',3000);return}arm(d.id,()=>{if(x&&x.oiid){const oo=getO(p,x.oid);if(oo)oo.itens=oo.itens.filter(i=>i.id!==x.oiid)}p.trat=p.trat.filter(y=>y.id!==d.id);save();render()})},
+  trbaixa:(b,d,p)=>{
+    const x=(p.trat||[]).find(t=>t.id===d.id);if(!x)return;
+    if(x.vid||x.status==='Concluído'){toast('Este procedimento já foi concluído.');return}
+    if(!x.dt){toast('Escolha o dentista responsável');return}
+    const item=x.oiid&&(getO(p,x.oid)?.itens||[]).find(i=>i.id===x.oiid);
+    let v=item?.paymentSaleId?db.vd.find(v=>v.id===item.paymentSaleId&&v.pid===p.id):null;
+    if(item?.paymentSaleId&&!v){toast('Vínculo financeiro não encontrado. Confira antes de concluir.');return}
+    const val=v?num(v.valor):r2(num(x.valor));if(!(val>0)){toast('Informe o valor do tratamento');return}
+    if(!confirm('Confirmar que este procedimento foi realizado? Isso registra a conclusão clínica e a evolução.'))return;
+    const mm=comCalc(x.dt,x.proc,val,qOf(x)),rep=r2(mm.rep),data=tdy();
+    if(v){Object.assign(v,{dt:x.dt,proc:x.proc,mat:mm.mat,lab:mm.lab,rep,clinicalPending:false,performedAt:data})}
+    else{v={id:uid(),pid:p.id,dt:x.dt,proc:x.proc,valor:val,mat:mm.mat,lab:mm.lab,rep,data,pg:[]};db.vd.push(v)}
+    x.vid=v.id;x.status='Concluído';x.rep=rep;x.data=data;
+    (p.evol=p.evol||[]).push({id:uid(),data,n:x.dente||'',txt:(x.proc||'Procedimento')+(x.dente?' ('+dLab(x.dente)+' '+x.dente+')':'')+(x.obs?': '+x.obs:''),auto:true,vid:v.id,tid:x.id});
+    if(item)item.vid=v.id;save();render();toast('Procedimento concluído. Pagamentos existentes preservados.');
+  },
+  rmtr:(b,d,p)=>{const x=(p.trat||[]).find(t=>t.id===d.id);if(x&&(x.vid||(getO(p,x.oid)?.itens||[]).some(i=>i.id===x.oiid&&i.paymentSaleId))){toast('Não é possível excluir um tratamento com baixa. Exclua a venda primeiro.',3000);return}arm(d.id,()=>{if(x&&x.oiid){const oo=getO(p,x.oid);if(oo)oo.itens=oo.itens.filter(i=>i.id!==x.oiid)}p.trat=p.trat.filter(y=>y.id!==d.id);save();render()})},
   copy:(b,d,p)=>copy(orcText(p,getO(p,d.o)),'Orçamento copiado'),
   owa:(b,d,p)=>waOpen(p.tel,orcText(p,getO(p,d.o))),
   print:(b,d,p)=>printOrc(p,getO(p,d.o)),
@@ -323,7 +338,7 @@ const A={
     if(!p)return;
     const o=(p.orcs||[]).find(x=>String(x.id)===String(d.o));if(!o)return;
     const vinculados=(p.trat||[]).filter(t=>String(t.oid)===String(o.id));
-    if((o.itens||[]).some(i=>i.vid)||vinculados.some(t=>t.vid)){
+    if((o.itens||[]).some(i=>i.vid||i.paymentSaleId)||vinculados.some(t=>t.vid)){
       toast('Não é possível excluir uma proposta com procedimentos já baixados ou vendidos.',4500);return;
     }
     arm('orc:'+o.id,()=>{
@@ -354,7 +369,7 @@ const A={
     const ids=new Set(rows.map(v=>String(v.id)));
     const registro={id:uid(),data:new Date().toISOString(),usuario:ME&&(ME.nome||ME.login||ME.id)||'Usuário',recebido:total,vendas:JSON.parse(JSON.stringify(rows))};
     (o.baixasDesfeitas=o.baixasDesfeitas||[]).push(registro);
-    o.itens.forEach(i=>{if(i.vid&&ids.has(String(i.vid)))delete i.vid});
+    o.itens.forEach(i=>{if(i.vid&&ids.has(String(i.vid)))delete i.vid;if(i.paymentSaleId&&ids.has(String(i.paymentSaleId)))delete i.paymentSaleId});
     (p.trat||[]).forEach(t=>{if(t.vid&&ids.has(String(t.vid))){t.vid=null;t.status='Pendente';t.rep=0;t.data=''}});
     (db.ag||[]).forEach(a=>{if(a.vid&&ids.has(String(a.vid))){delete a.vid;if(a.st==='Compareceu')a.st='Confirmado'}});
     // Não apaga nem altera evoluções anteriores, inclusive as assinadas.
@@ -363,39 +378,44 @@ const A={
     view.obx=null;view.obxAll=null;save();render();toast('Baixas desfeitas. Edite o orçamento e refaça os lançamentos.',4500);
   },
   oball:(b,d,p)=>{
-    const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid);
+    const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);
     const sd=pend.find(it=>!it.dt);if(sd){toast('Escolha o dentista do item "'+(sd.proc||'sem nome')+'" antes de dar baixa',3500);return}
     const sv=pend.find(it=>!(r2(num(it.valor)*fac(o))>0));if(sv){toast('Informe o valor do item "'+(sv.proc||'sem nome')+'"',3500);return}
     view.obx=null;view.obxAll=o.id;render()},
   oballconf:(b,d,p)=>{
-    const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid);if(!pend.length)return;
+    const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);if(!pend.length)return;
     const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
     if(pend.some(it=>!it.dt)){toast('Há item sem dentista definido');return}
-    let rest=$('oab').value.trim()===''?0:num($('oab').value);
+    let rest=num($('oab').value);if(!(rest>0)){toast('Informe o valor efetivamente recebido.');return}
     if(rest>tot+0.005){toast('O valor recebido é maior que o total da baixa ('+brl(tot)+')',3500);return}
     const forma=$('oaf').value,data=$('oad').value||tdy();
-    pend.forEach(it=>{const vv=val(it),take=Math.min(rest,vv);rest=r2(rest-take);obLaunch(p,it,vv,r2(take),forma,data,obCalc(it,vv))});
-    view.obxAll=null;save();render();toast(pend.length+(pend.length===1?' item baixado':' itens baixados')+': vendas lançadas e comissões registradas',3500)},
+    pend.forEach(it=>{const vv=val(it),take=Math.min(rest,vv);rest=r2(rest-take);obLaunch(p,it,vv,r2(take),forma,data,0)});
+    view.obxAll=null;save();render();toast(pend.length+(pend.length===1?' item financeiro':' itens financeiros')+': financeiro registrado, procedimentos permanecem pendentes',3500)},
   obconf:(b,d,p)=>{
     const o=getO(p,d.o),it=o&&o.itens[+d.i];if(!it)return;
-    if(it.vid){toast('Este item já teve baixa');return}
+    if(it.vid||it.paymentSaleId){toast('Este item já possui lançamento financeiro. Registre o recebimento no saldo existente.');return}
     if(!it.dt){toast('Escolha o dentista que vai executar');return}
     const vv=num($('obv').value);if(!(vv>0)){toast('Informe o valor do atendimento');return}
-    const rc=$('obc').value.trim()===''?0:num($('obc').value);
+    const rc=num($('obc').value);if(!(rc>0)){toast('Informe o valor efetivamente recebido.');return}
     if(rc>vv+0.005){toast('O valor recebido é maior que o valor da venda');return}
-    obLaunch(p,it,vv,rc,$('obf').value,$('obd').value||tdy(),num($('obr').value));
-    view.obx=null;save();render();toast('Baixa feita: venda lançada e comissão registrada',3000)},
+    obLaunch(p,it,vv,rc,$('obf').value,$('obd').value||tdy(),0);
+    view.obx=null;save();render();toast('Recebimento registrado. O procedimento permanece pendente.',3000)},
   addvd:()=>{
     const vv=num($('vv').value);if(!(vv>0)){toast('Informe o valor do atendimento');return}
     const dtid=$('vdn').value;if(!dtid){toast('Escolha o dentista');return}
     let rc=$('vrc').value.trim()===''?0:num($('vrc').value);
     if(rc>vv){toast('O valor recebido é maior que o valor da venda');return}
     const proc=$('vpr').value.trim(),mm=comCalc(dtid,proc,vv,(view.pre&&view.pre.qtd)||1),data=$('vdt').value||tdy(),pid=$('vp').value;
+    if(view.link?.oid){
+      const p=db.p.find(p=>p.id===pid),o=p&&getO(p,view.link.oid),it=o?.itens.find(i=>i.id===view.link.ii);
+      if(!it||view.link.pid!==pid){toast('Orçamento não encontrado para este paciente.');return}
+      if(it.vid||it.paymentSaleId){toast('O item já possui financeiro. Registre o recebimento no saldo existente.');return}
+      obLaunch(p,it,vv,rc,$('vfm').value,data,0);view.link=null;save();render();toast('Financeiro registrado. Procedimento permanece pendente.');return;
+    }
     const v={id:uid(),pid,dt:dtid,proc,valor:r2(vv),mat:mm.mat,lab:mm.lab,rep:r2(num($('vr').value)),data,pg:[]};
     if(rc>0){const override=document.getElementById('ovFeeOverride');const pct=override?Number(override.value):ovFeePct($('vfm').value);if(!Number.isFinite(pct)||pct<0||pct>100){toast('Taxa inválida');return}v.pg.push(ovFeeMake(rc,$('vfm').value,data,null,pct))}
     const lk=view.link;
     if(lk&&lk.pid===pid){
-      if(lk.oid){db.p.forEach(p=>p.orcs.forEach(o=>o.itens.forEach(i=>{if(i.id===lk.ii)i.vid=v.id})));db.p.forEach(p=>(p.trat||[]).forEach(t=>{if(t.oiid===lk.ii&&!t.vid){t.vid=v.id;t.status='Concluído';t.rep=v.rep;t.data=v.data}}))}
       if(lk.ag){const a=db.ag.find(x=>x.id===lk.ag);if(a){a.vid=v.id;a.st='Compareceu'}}
     }
     {const pt=db.p.find(x=>x.id===pid);
@@ -410,7 +430,7 @@ const A={
      }}
     view.link=null;db.vd.push(v);save();render();toast('Venda lançada e evolução atualizada')},
   rmvd:(b,d)=>arm(d.id,()=>{
-    db.p.forEach(p=>p.orcs.forEach(o=>o.itens.forEach(i=>{if(i.vid===d.id)delete i.vid})));db.p.forEach(p=>(p.trat||[]).forEach(t=>{if(t.vid===d.id){t.vid=null;t.status='Pendente';t.rep=0;t.data=''}}));
+    db.p.forEach(p=>p.orcs.forEach(o=>o.itens.forEach(i=>{if(i.vid===d.id)delete i.vid;if(i.paymentSaleId===d.id)delete i.paymentSaleId})));db.p.forEach(p=>(p.trat||[]).forEach(t=>{if(t.vid===d.id){t.vid=null;t.status='Pendente';t.rep=0;t.data=''}}));
     db.ag.forEach(a=>{if(a.vid===d.id){delete a.vid;if(a.st==='Compareceu')a.st='Confirmado'}});
     db.p.forEach(p=>{if(p.evol)p.evol=p.evol.filter(e=>!(e.auto&&e.vid===d.id))});
     db.vd=db.vd.filter(x=>x.id!==d.id);save();render()}),

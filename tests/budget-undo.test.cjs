@@ -15,7 +15,9 @@ function setup(accepted=true){
 }
 test('desfaz orçamento inteiro, preservando outros lançamentos e histórico clínico',()=>{
  const s=setup(),original=JSON.stringify(s.db.vd.slice(0,2)),evol=JSON.stringify(s.p.evol[0]);
+ s.o.itens[0].paymentSaleId='v1';
  s.run();
+ assert.equal(s.o.itens[0].paymentSaleId,undefined);
  assert.deepEqual(s.db.vd.map(v=>v.id),['other']);
  assert.ok(s.o.itens.every(i=>!i.vid));
  assert.equal(s.p.trat[0].status,'Pendente');assert.equal(s.p.trat[0].rep,0);assert.equal(s.p.trat[0].vid,null);
