@@ -301,15 +301,24 @@ const A={
     view.trSel=[];view.trForm=false;view.trDraft=null;save();render();
     toast(list.length>1?list.length+' tratamentos adicionados':'Tratamento adicionado'+(orc?' ao orçamento':''),2400)},
   trbaixa:(b,d,p)=>{
-    const x=(p.trat||[]).find(t=>t.id===d.id);if(!x)return;
-    if(x.vid||x.status==='Concluído'){toast('Este procedimento já foi concluído.');return}
-    if(!x.dt){toast('Escolha o dentista responsável');return}
-    const item=x.oiid&&(getO(p,x.oid)?.itens||[]).find(i=>i.id===x.oiid);
+    if(!p)return;
+    const o=d.o&&getO(p,d.o);
+    if(d.o&&(!o||o.status!=='Aprovado')){toast('O orçamento precisa estar aprovado.');return}
+    let item=o?.itens.find(i=>String(i.id)===String(d.item));
+    let x=d.id?(p.trat||[]).find(t=>t.id===d.id):item&&(p.trat||[]).find(t=>(item.tid&&t.id===item.tid)||(t.oiid===item.id&&t.oid===o.id));
+    if(!x&&!item)return;
+    const fresh=!x;
+    if(fresh)x={proc:item.proc,dente:item.dente||'',obs:item.obs||'',valor:r2(num(item.valor)*fac(o)),dt:item.dt,qtd:item.qtd,unit:item.unit,oid:o.id,oiid:item.id,status:'Pendente',mats:[]};
+    if(!item&&x.oiid)item=(getO(p,x.oid)?.itens||[]).find(i=>i.id===x.oiid);
+    if(x.vid||item?.vid||x.status==='Concluído'){toast('Este procedimento já foi concluído.');return}
+    if(x.status==='Cancelado'||item?.status==='Cancelado'){toast('Este procedimento está cancelado.');return}
+    if(!x.dt){toast('Escolha o dentista responsável no orçamento antes de concluir.');return}
     let v=item?.paymentSaleId?db.vd.find(v=>v.id===item.paymentSaleId&&v.pid===p.id):null;
     if(item?.paymentSaleId&&!v){toast('Vínculo financeiro não encontrado. Confira antes de concluir.');return}
-    const val=v?num(v.valor):r2(num(x.valor));if(!(val>0)){toast('Informe o valor do tratamento');return}
-    if(!confirm('Confirmar que este procedimento foi realizado? Isso registra a conclusão clínica e a evolução.'))return;
+    const val=v?num(v.valor):r2(num(x.valor));if(!(val>0)){toast('Informe o valor do procedimento no orçamento.');return}
+    if(!confirm('Concluir '+(x.proc||'este procedimento')+(x.dente?' — dente '+x.dente:'')+'? Isso registra somente esta execução clínica e preserva os pagamentos existentes.'))return;
     const mm=comCalc(x.dt,x.proc,val,qOf(x)),rep=r2(mm.rep),data=tdy();
+    if(fresh){x.id=uid();(p.trat=p.trat||[]).push(x);item.tid=x.id}
     if(v){Object.assign(v,{dt:x.dt,proc:x.proc,mat:mm.mat,lab:mm.lab,rep,clinicalPending:false,performedAt:data})}
     else{v={id:uid(),pid:p.id,dt:x.dt,proc:x.proc,valor:val,mat:mm.mat,lab:mm.lab,rep,data,pg:[]};db.vd.push(v)}
     x.vid=v.id;x.status='Concluído';x.rep=rep;x.data=data;

@@ -1,0 +1,7 @@
+.nexo-pending-procedures [data-pending-procedure]{padding:12px 0;border-bottom:1px solid #e2e8f0}
+.nexo-pending-procedures [data-pending-procedure]:last-child{border-bottom:0}
+.nexo-pending-procedures .pr-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.nexo-pending-procedures .pr-nm{flex:1;min-width:180px;color:#273444}
+.nexo-pending-procedures .pr-nm small{display:block;margin-top:4px;color:#475569}
+.nexo-pending-procedures .pr-head>.badge,.nexo-pending-procedures .pr-head>button{flex:none}
+.nexo-pending-procedures .pr-head>button{min-height:36px}
