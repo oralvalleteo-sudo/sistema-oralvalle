@@ -6,7 +6,7 @@ No Excel, selecione a aba de gastos desejada. Confira a situação: quando a pla
 
 A prévia exige descrição, categoria e valor, ignora totais e linhas vazias e apresenta erros para revisão. Despesas já cadastradas e repetições ficam impedidas de importar. Coincidências de valor e data com pagamentos automáticos ou outras despesas ficam desmarcadas; confira antes de selecionar. Não importe novamente despesas de laboratório ou repasses já registrados automaticamente.
 
-Confirme a quantidade, o total, as datas e a clínica. Cada linha recebe um identificador estável por clínica para evitar duplicações em novas tentativas. Se houver interrupção, os lançamentos confirmados permanecem gravados; atualize a prévia antes de continuar. A confirmação depende da resposta ou de uma consulta ao registro salvo, nunca somente de um envio sem retorno.
+Confirme a quantidade, o total, as datas e a clínica. Cada linha recebe um identificador estável por clínica para evitar duplicações em novas tentativas. Após a confirmação de todas as linhas selecionadas, a prévia fecha automaticamente e ficam apenas os registros do Financeiro. Se houver interrupção, os lançamentos confirmados permanecem gravados; atualize a prévia antes de continuar. A confirmação depende da resposta ou de uma consulta ao registro salvo, nunca somente de um envio sem retorno.
 
 O CSV pode conter: Descrição, Categoria, Valor, Mês de referência, Situação, Data do pagamento, Vencimento, Pagamento previsto e Forma de pagamento. Use UTF-8 e separador ponto e vírgula para valores brasileiros. Excel aceita a tabela Data (ou N), Gastos, Descrição, Valor. Não há execução de fórmulas: o leitor usa valores armazenados na planilha. Arquivos `.xls` devem ser salvos como `.xlsx`.
 
