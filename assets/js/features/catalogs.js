@@ -14,7 +14,7 @@ function prRes(x){
     if(num(h.cart)>0)s+=rw('Taxa de cartão ('+num(h.cart)+'%)',brl(pr*num(h.cart)/100));
     if(r.comPct>0&&!r.parPct)s+=rw('Comissão média ('+r.comPct+'%) sobre base líquida',brl(r.comValorPct));
   }
-  s+=`<div class="tot"><span>Custo total${pr>0?'':' (sem impostos e taxas)'}</span><span>${brl(r.fixo+pr*r.pct)}</span></div>`;
+  s+=`<div class="tot"><span>Custo total${pr>0?'':' (sem impostos e taxas)'}</span><span>${brl(pr>0?pr-r.lu:r.fixo)}</span></div>`;
   if(pr>0)s+=`<div class="tot" style="color:${r.lu<0?'var(--wr)':'var(--ok)'}"><span>Lucro</span><span>${brl(r.lu)} (${r.mg.toFixed(0)}% do preço)</span></div>`;
   else s+='<p class="note" style="margin:8px 0 0">Informe o preço cobrado para ver o lucro.</p>';
   s+=r.ok?`<div class="row" style="margin-top:8px"><span class="note" style="margin:0">Sugerido: ${brl(r.sug)}</span><button class="ghost sm" data-act="usesug" data-id="${esc(x.id)}">Usar sugerido</button></div>`:'<p class="note" style="color:var(--wr)">Impostos, taxas, comissão e margem desejada somam 100% ou mais. Nenhum preço fecha a conta; revise a aba Hora clínica.</p>';
@@ -121,41 +121,15 @@ function mtHtml(){
   ${list.length?list.map(mtCard).join(''):'<div class="empty">'+(db.mt.length?'Nenhum material encontrado.':'Nenhum material cadastrado ainda.')+'</div>'}`;
 }
 function prHtml(){
-  const query=String(view.prq||'').toLowerCase().trim();
-  const list=db.pr.filter(x=>!query||String(x.nome||'').toLowerCase().includes(query));
-  const count=db.pr.length;
-  const cards=list.map((x)=>{
-    const r=prCalc(x), price=num(x.preco), mg=price?r.mg:0;
-    const cls=price?(mg>=25?'good':mg>=0?'':'warn'):'';
-    const f=(k,l)=>`<div><label>${l}</label><input data-p="${esc(x.id)}" data-f="${k}" inputmode="decimal" value="${esc(x[k])}"></div>`;
-    const tone=!price?'none':mg>=25?'good':mg>=0?'mid':'neg';
-    const toneTxt={none:'Sem preço',good:'Margem boa',mid:'Margem baixa',neg:'Prejuízo'}[tone];
-    const idx=db.pr.indexOf(x)+1, nm=(x.mats||[]).length, minN=num(x.min);
-    return `<article class="proc-card pr-card pcx pcx-${tone}" data-proc-name="${esc(String(x.nome||'').toLowerCase())}">
-      <div class="pcx-top"><span class="pcx-num" aria-hidden="true">${idx}</span>
-        <div class="pcx-id"><div class="pcx-name">${esc(x.nome||'Novo procedimento')}</div>
-          <div class="pcx-chips"><span class="pcx-chip">⏱ ${minN||0} min</span><span class="pcx-chip">${nm?nm+' material(is) · '+brl(r.mat):'Sem materiais'}</span>${x.parc?'<span class="pcx-chip pcx-chip-p">Parceiro</span>':''}</div></div>
-        <div class="pcx-price"><b>${price?brl(price):'—'}</b><span class="pcx-tag">${toneTxt}</span></div></div>
-      <div class="pcx-stats">
-        <div><small>Custo</small><b>${price||r.fixo?brl(r.fixo+(r.comValorPct||0)):'—'}</b></div>
-        <div><small>Lucro</small><b class="pcx-lu">${price?brl(r.lu):'—'}</b></div>
-        <div><small>Margem</small><b class="pcx-mg">${price?mg.toFixed(1).replace('.',',')+'%':'—'}</b></div>
-      </div>
-      <details class="proc-edit"${view.prOpen===x.id?' open':''}><summary>Editar cadastro</summary><div class="card"><label>Procedimento</label><input data-p="${esc(x.id)}" data-f="nome" value="${esc(x.nome)}"><div class="row" style="align-items:flex-start">${f('min','Tempo (min)')}${f('preco','Valor cobrado (R$)')}</div><div class="row" style="align-items:flex-start">${f('custo','Outros custos do procedimento (R$)')}${f('lab','Laboratório (R$)')}</div>${pmHtml(x)}<div class="row" style="align-items:flex-start"><div><label>Comissionamento</label><div class="row" style="align-items:flex-start"><select data-p="${esc(x.id)}" data-f="parTipo" aria-label="Tipo de comissão"><option value="reais"${(x.parTipo||'reais')==='reais'?' selected':''}>R$</option><option value="pct"${x.parTipo==='pct'?' selected':''}>%</option></select><input data-p="${esc(x.id)}" data-f="par" inputmode="decimal" value="${esc(x.par)}" placeholder="Valor"></div></div></div><label class="chk" style="margin-top:10px"><input type="checkbox" data-pc="${esc(x.id)}"${x.parc?' checked':''}>Executado por dentista parceiro</label><div data-pres="${esc(x.id)}" style="margin-top:10px">${prRes(x)}</div><div style="margin-top:14px;padding-top:12px;border-top:1px solid #eee;display:flex;justify-content:flex-end"><button class="danger sm" data-act="rmpr" data-id="${esc(x.id)}" type="button">${delArm===x.id?'Confirmar exclusão':'Excluir procedimento'}</button></div></div></details>
-    </article>`;
+  const compositions=new Map(Array.from(document.querySelectorAll('.nc-composition')).map(el=>[el.closest('.nc-card')?.dataset.procedureId,el.open]));
+  const m=window.NexoProcedureCatalog.model(),sort=view.prSort||'name',filter=view.prFilter||'all';
+  const ordered=window.NexoProcedureCatalog.filterRows(m.items,{sort}),visible=window.NexoProcedureCatalog.filterRows(m.items,{sort,filter,query:view.prq}),ids=new Set(visible.map(r=>r.id));
+  const cards=ordered.map(r=>{
+    const x=r.procedure,f=(k,l)=>`<div><label>${l}</label><input data-p="${esc(x.id)}" data-f="${k}" inputmode="decimal" value="${esc(x[k])}"></div>`;
+    return `<article class="nc-card" data-procedure-id="${esc(r.id)}"${ids.has(r.id)?'':' hidden'}><div class="nc-card-head">${NexoProcedureCatalog.headHtml(r)}</div><div class="nc-card-metrics">${NexoProcedureCatalog.metricsHtml(r)}</div><div class="nc-card-footer"><details class="nc-composition"${(compositions.has(r.id)?compositions.get(r.id):view.prCompositions?.[r.id])?' open':''}><summary>ⓘ Ver composição do preço</summary><div class="nc-composition-body" data-pres="${esc(x.id)}">${prRes(x)}</div></details><details class="nc-editor"${view.prOpen===x.id?' open':''}><summary>${pmLvl('pr')>=2?'Editar procedimento':'Consultar cadastro'}</summary><div class="nc-editor-body"><label>Procedimento</label><input data-p="${esc(x.id)}" data-f="nome" value="${esc(x.nome)}"><div class="row" style="align-items:flex-start">${f('min','Tempo (min)')}${f('preco','Valor cobrado (R$)')}</div><div class="row" style="align-items:flex-start">${f('custo','Outros custos do procedimento (R$)')}${f('lab','Laboratório (R$)')}</div>${pmHtml(x)}<div class="row" style="align-items:flex-start"><div><label>Comissionamento</label><div class="row" style="align-items:flex-start"><select data-p="${esc(x.id)}" data-f="parTipo" aria-label="Tipo de comissão"><option value="reais"${(x.parTipo||'reais')==='reais'?' selected':''}>R$</option><option value="pct"${x.parTipo==='pct'?' selected':''}>%</option></select><input data-p="${esc(x.id)}" data-f="par" inputmode="decimal" value="${esc(x.par)}" placeholder="Valor"></div></div></div><label class="chk" style="margin-top:10px"><input type="checkbox" data-pc="${esc(x.id)}"${x.parc?' checked':''}>Executado por dentista parceiro</label><div style="margin-top:14px;padding-top:12px;border-top:1px solid #eee;display:flex;justify-content:flex-end"><button class="danger sm" data-act="rmpr" data-id="${esc(x.id)}" type="button">${delArm===x.id?'Confirmar exclusão':'Excluir procedimento'}</button></div></div></details></div></article>`;
   }).join('');
-  const priced=db.pr.filter(x=>num(x.preco)>0);
-  const avgPrice=priced.length?priced.reduce((sum,x)=>sum+num(x.preco),0)/priced.length:0;
-  const avgMargin=priced.length?priced.reduce((sum,x)=>sum+prCalc(x).mg,0)/priced.length:0;
-  return `<div class="proc-page proc-modern">
-    <header class="proc-modern-heading"><div><span class="proc-eyebrow">GESTÃO DE PROCEDIMENTOS</span><h2>Seus procedimentos</h2><p>Consulte valores, custos e rentabilidade em um só lugar.</p></div><span class="proc-modern-count">${count} cadastrados</span></header>
-    <div class="proc-modern-kpis"><div class="proc-kpi"><span>Procedimentos</span><strong>${count}</strong><small>No seu catálogo</small></div><div class="proc-kpi"><span>Preço médio</span><strong>${priced.length?brl(avgPrice):'—'}</strong><small>Com preço definido</small></div><div class="proc-kpi"><span>Margem média</span><strong>${priced.length?avgMargin.toFixed(1).replace('.',',')+'%':'—'}</strong><small>Procedimentos precificados</small></div></div>
-    <div class="proc-toolbar proc-toolbar-search-only">
-      <div class="proc-toolbar-right"><input class="proc-search-input" id="prq" type="search" placeholder="Buscar procedimento" value="${esc(view.prq||'')}"></div>
-    </div>
-    <div class="proc-list-head"><div class="proc-list-title">Meus Procedimentos (${count})</div><button class="proc-add" data-act="addpr">Precificar <span class="proc-add-plus">+</span></button></div>
-    <div class="proc-cards">${cards||'<div class="empty">Nenhum procedimento encontrado.</div>'}</div>
-  </div>`;
+  const chips=[['all','Todos'],['none','Sem preço'],['below','Margem baixa'],['loss','Prejuízo']].map(([key,label])=>`<button type="button" class="ghost sm" data-nc-filter="${key}" aria-pressed="${filter===key}">${label} <b>${m.counts[key]}</b></button>`).join('');
+  return `<section class="procedure-catalog"><header class="nc-heading"><div><p class="nc-breadcrumb">Precificação / <span>Procedimentos</span></p><h1>Procedimentos</h1><p>Compare preços, custos e rentabilidade do seu catálogo.</p></div><button type="button" class="ghost nc-new" data-act="addpr">＋ Novo procedimento</button></header><div class="nc-kpis">${NexoProcedureCatalog.statsHtml(m)}</div><div class="nc-toolbar" data-ro-ok><label class="nc-search"><span class="sr-only">Buscar procedimento</span><input id="prq" type="search" placeholder="Buscar por nome do procedimento" value="${esc(view.prq||'')}"></label><label class="nc-sort"><span class="sr-only">Ordenar procedimentos</span><select id="nc-sort">${[['name','Ordenar: Nome A–Z'],['price-desc','Ordenar: Maior preço'],['margin-desc','Ordenar: Maior margem'],['margin-asc','Ordenar: Menor margem']].map(([key,label])=>`<option value="${key}"${sort===key?' selected':''}>${label}</option>`).join('')}</select></label></div><div class="nc-filters" role="group" aria-label="Filtrar procedimentos">${chips}</div><h2 class="nc-list-count">${visible.length} ${visible.length===1?'procedimento':'procedimentos'}${visible.length!==m.total?' de '+m.total:''}</h2><div class="nc-grid">${cards}</div><div class="nc-empty"${visible.length?' hidden':''}>Nenhum procedimento encontrado. Ajuste a busca ou o filtro.</div><p class="nc-disclaimer">Lucro e margem são estimativas com os custos, comissões, impostos e taxas cadastrados. Complete os custos e a duração para calcular a rentabilidade. Meta atual: ${m.target.toFixed(1).replace('.',',')}%.</p></section>`;
 }
 function hcRes(r){
   return `<div class="tot" style="border:0;margin:0;padding:0"><span>Horas produtivas por mês</span><span>${r.hrs.toFixed(1).replace('.',',')} h</span></div><div class="tot"><span>Custo da hora clínica</span><span>${brl(r.custo)}</span></div><div class="tot" style="font-size:15px;font-weight:600"><span>Só a estrutura (sem pró-labore)</span><span>${brl(r.estr)}</span></div><div class="tot"><span>Hora com margem e impostos</span><span>${r.pv<1?brl(r.preco):'inviável'}</span></div><p class="note">Margem é a parte do preço de venda que sobra como lucro (30% significa R$ 30 de lucro a cada R$ 100 cobrados). Não inclui materiais e laboratório. A "estrutura" é usada nos procedimentos feitos por dentista parceiro, porque o pró-labore é o seu trabalho.</p>`;

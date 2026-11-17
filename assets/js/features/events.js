@@ -49,6 +49,7 @@ document.addEventListener('input',e=>{
   if(t.id==='pfQ'){view.pfQ=t.value;const pos=t.selectionStart;render();setTimeout(()=>{const e=document.getElementById('pfQ');if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(_){}}},0);return}
   if(t.id==='prq'){
     view.prq=t.value;
+    if(window.NexoProcedureCatalog&&document.querySelector('.procedure-catalog')){NexoProcedureCatalog.apply();return}
     const qv=String(view.prq||'').toLowerCase().trim();
     const cards=document.querySelectorAll('.proc-cards .proc-card');
     let visible=0;
@@ -90,9 +91,9 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
   if(t.dataset.pm){const x=db.pr.find(y=>y.id===t.dataset.pm),r=x&&(x.mats||[]).find(y=>y.id===t.dataset.mr);if(!r)return;r.q=t.value.replace(',','.');syncMat(x);
     const m=mtBy(r.mid),sb=document.querySelector(`[data-pms="${esc(r.id)}"]`);if(sb)sb.textContent=brl(m?mtUnit(m)*num(r.q):0);
     const tt=document.querySelector(`[data-pmt="${esc(x.id)}"] span:last-child`);if(tt)tt.textContent=brl(matCost(x));
-    const rs=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(rs)rs.innerHTML=prRes(x);save();return}
-  if(t.dataset.pc){const x=db.pr.find(y=>y.id===t.dataset.pc);x.parc=t.checked;const r=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(r)r.innerHTML=prRes(x);save();return}
-  if(t.dataset.p){const x=db.pr.find(y=>y.id===t.dataset.p),f=t.dataset.f;x[f]=f==='nome'?t.value:t.value.replace(',','.');if(f==='parTipo'){view.prOpen=x.id;save();render();return}const r=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(r)r.innerHTML=prRes(x);save();return}
+    const rs=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(rs)rs.innerHTML=prRes(x);window.NexoProcedureCatalog?.refresh();save();return}
+  if(t.dataset.pc){const x=db.pr.find(y=>y.id===t.dataset.pc);x.parc=t.checked;const r=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(r)r.innerHTML=prRes(x);window.NexoProcedureCatalog?.refresh();save();return}
+  if(t.dataset.p){const x=db.pr.find(y=>y.id===t.dataset.p),f=t.dataset.f;x[f]=f==='nome'?t.value:t.value.replace(',','.');if(f==='parTipo'){view.prOpen=x.id;save();render();return}const r=document.querySelector(`[data-pres="${esc(x.id)}"]`);if(r)r.innerHTML=prRes(x);window.NexoProcedureCatalog?.refresh();save();return}
   if(t.dataset.h){db.hc[t.dataset.h]=t.value.replace(',','.');$('hcr').innerHTML=hcRes(hcCalc(db.hc));const tf=$('hcfx');if(tf)tf.textContent=brl(hcFix(db.hc));window.NexoPricingOverview?.refresh();save();return}
   if(!p)return;
   if(t.dataset.k&&(t.dataset.k==='nome'||t.dataset.k==='cpf')){
