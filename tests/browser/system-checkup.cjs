@@ -45,5 +45,36 @@ assert.equal(Number((await db.query("select (dados->>'valor')::numeric amount fr
 assert.equal(await page.evaluate(()=>Object.hasOwn(db,'taxasPagamento')),false);
 assert.equal(Number((await db.query("select count(*) n from clinic_settings where slot='taxasPagamento'")).rows[0].n),0);
 console.log('Recepção sem acesso administrativo: orçamento e recebimento persistidos sem criar configuração de taxas.');
+// Desfazer um orçamento inteiro deve persistir recibos removidos, vínculos e histórico.
+await page.evaluate(async()=>{
+ const p=db.p.find(p=>p.nome==='Novo paciente sintético');
+ const details=await OralCloudData.loadPatient(p.id);if(details)Object.assign(p,details);OralCloudData.prepareDefaults(db);
+ const o=p.orcs.find(o=>o.id==='staff-budget');
+ o.status='Aprovado';o.itens[0].vid='staff-sale';
+ o.itens.push({id:'undo-item2',proc:'Segundo procedimento',valor:'50',vid:'undo-sale2'});
+ db.vd.push({id:'undo-sale2',pid:p.id,dt:'',proc:'Segundo procedimento',valor:50,rep:5,pg:[{id:'undo-receipt2',valor:50,forma:'Pix',data:tdy()}]});
+ db.vd.push({id:'untouched-sale',pid:p.id,dt:'',proc:'Outro orçamento',valor:25,rep:0,pg:[]});
+ (p.trat=p.trat||[]).push({id:'undo-treatment',oid:o.id,oiid:o.itens[0].id,vid:'staff-sale',status:'Concluído',rep:10,data:tdy()});
+ (p.evol=p.evol||[]).push({id:'undo-clinical-history',vid:'staff-sale',auto:true,data:tdy(),txt:'Registro clínico preservado'});
+ view.tab='orc';render();save();
+});
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+const undo=page.locator('[data-act="obundoall"][data-o="staff-budget"]');
+page.once('dialog',async dialog=>{assert.match(dialog.message(),/2 recebimento/);await dialog.dismiss()});
+await undo.click();
+assert.equal(Number((await db.query("select count(*) n from sales where dados->>'id'='staff-sale'")).rows[0].n),1);
+page.once('dialog',dialog=>dialog.accept());
+await undo.click();
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+assert.equal(Number((await db.query("select count(*) n from sales where dados->>'id' in ('staff-sale','undo-sale2')")).rows[0].n),0);
+assert.equal(Number((await db.query("select count(*) n from sales where dados->>'id'='untouched-sale'")).rows[0].n),1);
+assert.equal(Number((await db.query("select count(*) n from receipts where kind='object'")).rows[0].n),0);
+const archived=(await db.query("select dados from budgets where dados->>'id'='staff-budget'")).rows[0].dados.baixasDesfeitas;
+assert.equal(archived.length,1);assert.equal(archived[0].recebido,90);assert.equal(archived[0].vendas.length,2);
+assert.equal((await db.query("select dados->>'status' status from treatments where dados->>'id'='undo-treatment'")).rows[0].status,'Pendente');
+assert.equal(Number((await db.query("select count(*) n from patient_evolutions where dados->>'id'='undo-clinical-history'")).rows[0].n),1);
+await page.locator('summary').filter({hasText:'Histórico de baixas desfeitas'}).click();
+assert.equal(await undo.count(),0);
+console.log('Baixas do orçamento: cancelamento, remoção em lote e histórico persistidos no PostgreSQL isolado.');
 await page.locator('[data-act="logout"]').first().click();await page.locator('#cloudEmail').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>window.OralCloud.session),null);assert.equal(await page.locator('.ov-sidebar').count(),0);assert.deepEqual(errors,[]);console.log('Aplicação real: entrada, cadastro e persistência de paciente, agendamento, navegação de módulos, central interna e saída sem dados clínicos visíveis.');
 }finally{if(browser)await browser.close();await db.close();}})().catch(error=>{console.error(error);process.exit(1)});
