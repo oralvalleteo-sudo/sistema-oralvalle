@@ -1,0 +1,10 @@
+.nexo-agenda-followups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;margin-bottom:12px}
+.nexo-agenda-followups>.nexo-agenda-followup{margin:0!important;min-width:0;border-color:#cbd5e1}
+.nexo-agenda-followups>.nexo-agenda-followup:only-child{grid-column:1/-1}
+.nexo-agenda-followup>summary{display:flex;align-items:center;gap:8px;min-height:36px;padding:4px 0;cursor:pointer;font-family:inherit;font-size:14px!important;font-weight:600!important;line-height:1.4;color:#273444!important;list-style:none;opacity:1}
+.nexo-agenda-followup>summary::-webkit-details-marker{display:none}
+.nexo-agenda-followup>summary::before{content:'›';font-size:20px;line-height:1;transition:transform .15s}
+.nexo-agenda-followup[open]>summary::before{transform:rotate(90deg)}
+.nexo-agenda-followup>summary .badge{margin-left:auto;flex:none}
+.nexo-agenda-followup-body{margin-top:12px}
+@media(max-width:767px){.nexo-agenda-followups{grid-template-columns:1fr}}

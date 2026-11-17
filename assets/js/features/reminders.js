@@ -79,7 +79,7 @@ function mesesDesde(iso){const n=new Date(),t=new Date(iso+'T12:00:00');let m=(n
 function retBanner(){
   if(typeof pmLvl==='function'&&pmLvl('lem')<1)return '';
   const n=retPend();if(!n)return '';
-  return `<div class="card" style="margin-bottom:12px;border-color:var(--ac)"><div class="row" style="align-items:center"><div style="flex:1"><strong>${n} ${n===1?'paciente sem retorno':'pacientes sem retorno'} há mais de ${retMeses()} meses</strong><div class="note" style="margin:2px 0 0">Chame no WhatsApp para reagendar.</div></div><button class="sm" data-act="lemgo" style="flex:none">Ver lista</button></div></div>`;
+  return `<details class="card nexo-agenda-followup"><summary>Pacientes sem retorno <span class="badge">${n}</span></summary><div class="nexo-agenda-followup-body"><p class="note">${n} ${n===1?'paciente sem retorno':'pacientes sem retorno'} há mais de ${retMeses()} meses. Chame no WhatsApp para reagendar.</p><button type="button" class="ghost sm" data-act="lemgo">Ver lista</button></div></details>`;
 }
 function retHtml(){
   const {out,never}=retLista(),pend=out.filter(x=>!retRecente(x.p)).length,N=retMeses(),lim=view.retAll?out.length:8;
