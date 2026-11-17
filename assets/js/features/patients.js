@@ -159,10 +159,22 @@ function tabAgd(p){
     return `<div class="ag-appointment${s==='Compareceu'||s==='Confirmado'?' is-confirmed':''}" style="margin:6px 0${inativo?';opacity:.8':''}"><div class="ag-appointment-main"><div><strong>${esc(fd(a.data))} · ${esc(a.hora)}–${fim}</strong>${a.proc?' <span class="ag-proc">· '+esc(a.proc)+'</span>':''}${a.tipo?' <span class="ag-tipo">'+esc(a.tipo)+'</span>':''}<div class="ag-meta">${esc(dName(a.dt))} · Consultório ${esc(a.cadeira||'1')}${ev?' · Lançado na evolução':''}</div></div><span class="${cls(s)}">${esc(s)}</span></div><div class="ag-actions">${!inativo&&!a.vid?`<button class="ghost sm" data-act="agbaixa" data-id="${esc(a.id)}">Registrar pagamento</button>`:''}${a.vid?'<span class="badge stt-ok">Financeiro lançado</span>':''}${!inativo&&!a.vid&&s!=='Compareceu'?`<button class="ghost sm" data-act="agfalta" data-id="${esc(a.id)}">Marcar falta</button><button class="ghost sm" data-act="agcancel" data-id="${esc(a.id)}">Cancelar</button>`:''}${inativo?`<button class="ghost sm" data-act="agreativ" data-id="${esc(a.id)}">Reativar</button>`:''}</div></div>`}).join('');
   return `<div class="card"><h2>Agendamentos do paciente</h2><p class="note">Todos os atendimentos, faltas e cancelamentos. Ao dar baixa, o atendimento é lançado automaticamente na aba Evolução.</p>${resumo}${acompanhamento}${itens||'<p class="note" style="margin:6px 0">Nenhum agendamento para este paciente.</p>'}</div>`;
 }
-function evPendHtml(p){
-  const l=(p.trat||[]).filter(x=>!x.vid&&x.status!=='Concluído'&&x.status!=='Cancelado');
-  const rows=l.map((x,ix)=>{const m=itMult(x);return `<div class="pr-card pr-compact"><div class="pr-head"><span class="pr-av" aria-hidden="true">${ix+1}</span><div class="pr-nm">${esc(x.proc||'Tratamento')}${x.dente?' · '+dLab(x.dente)+' '+esc(x.dente):' · Geral'}<small>${m.q>1?brl(m.u)+' × '+m.q+' = ':''}${brl(x.valor)} · ${esc(dName(x.dt))}</small></div><button class="sm" data-act="trbaixa" data-id="${esc(x.id)}">Concluir procedimento</button></div>${x.obs?`<small class="note" style="display:block;margin:8px 0 0">${esc(x.obs)}</small>`:''}</div>`}).join('');
-  return `<div class="card"><h2 style="margin:0 0 4px">Procedimentos do tratamento (${l.length})</h2><p class="note" style="margin:0 0 6px">Os procedimentos registrados para o paciente aparecem aqui. Ao dar baixa, o procedimento é concluído, a venda e a comissão são lançadas e o registro entra na evolução.</p>${rows||'<p class="note" style="margin:6px 0">Nenhum procedimento pendente. Registre novos procedimentos na Evolução.</p>'}</div>`;
+function nexoPendingProcedures(p){
+  const treatments=Array.isArray(p.trat)?p.trat:[];
+  const pending=treatments.filter(t=>!t.vid&&t.status!=='Concluído'&&t.status!=='Cancelado').map(t=>({item:t,treatment:true,budget:(p.orcs||[]).find(o=>String(o.id)===String(t.oid))}));
+  // Itens criados diretamente no orçamento também precisam permanecer visíveis.
+  (p.orcs||[]).filter(o=>o.status==='Aprovado').forEach(o=>{
+    (o.itens||[]).forEach(it=>{
+      const linked=treatments.some(t=>(it.tid&&String(t.id)===String(it.tid))||(t.oiid&&String(t.oiid)===String(it.id)&&String(t.oid)===String(o.id)));
+      if(!linked&&!it.vid&&it.status!=='Concluído'&&it.status!=='Cancelado')pending.push({item:it,treatment:false,budget:o});
+    });
+  });
+  return pending;
+}
+function evPendHtml(p,readOnly=false){
+  const l=nexoPendingProcedures(p);
+  const rows=l.map(({item:x,treatment,budget},ix)=>`<div class="pr-card pr-compact" data-pending-procedure="${esc(x.id||'')}"><div class="pr-head"><span class="pr-av" aria-hidden="true">${ix+1}</span><div class="pr-nm">${esc(x.proc||'Procedimento')}${x.dente?' · dente '+esc(x.dente):''}<small>${esc(dName(x.dt))}${budget?' · Orçamento '+esc(budget.data||'sem data'):''}</small></div><span class="badge">A realizar</span>${treatment&&!readOnly?`<button class="sm" data-act="trbaixa" data-id="${esc(x.id)}">Concluir procedimento</button>`:''}</div>${x.obs?`<small class="note" style="display:block;margin:8px 0 0">${esc(x.obs)}</small>`:''}${!treatment?'<p class="note" style="margin:6px 0 0">Item do orçamento aprovado. Cadastre o tratamento vinculado na Evolução para registrar sua execução.</p>':''}</div>`).join('');
+  return `<section class="card nexo-pending-procedures" aria-label="Procedimentos a realizar"><h2 style="margin:0 0 4px">Procedimentos a realizar (${l.length})</h2><p class="note" style="margin:0 0 10px">Esta lista acompanha a execução clínica. O procedimento continua aqui mesmo com pagamento parcial ou total, até ser concluído. Concluídos e cancelados ficam fora da lista.</p>${rows||'<p class="note" style="margin:6px 0">Nenhum procedimento pendente nos registros disponíveis deste paciente.</p>'}</section>`;
 }
 // Sincroniza a seleção do odontograma incorporado com o campo de dente da evolução.
 if (!window.__nexoOdoReferenceListener) {
