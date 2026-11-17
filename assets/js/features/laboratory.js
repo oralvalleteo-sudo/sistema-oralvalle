@@ -136,7 +136,7 @@ function treatmentSummary(pid){
 }
 function form(o={}){
  const patients=(db.p||[]).filter(p=>!p.arq),where=execution.get(o)||(!o.id?'laboratory':''),internal=where==='clinic';
- return `<section class="card nxlab-form"><h3>${o.id?'Editar trabalho':'Novo trabalho'}</h3>
+ return `<section class="card nxlab-form" tabindex="-1" style="scroll-margin-top:120px"><h3>${o.id?'Editar trabalho':'Novo trabalho'}</h3>
  <div class="nxlab-grid"><label class="nxlab-field"><span>Paciente *</span><input id="nxlab-patient-search" type="search" autocomplete="off" placeholder="Buscar pelo nome do paciente" value="${safe(patients.find(p=>String(p.id)===String(o.patient_id))?.nome||'')}"><select id="nxlab-patient" aria-label="Selecionar paciente">${labPatientOptions(patients,o.patient_id)}</select><small id="nxlab-patient-count">${o.patient_id?'Paciente selecionado':patients.length+' pacientes disponíveis. Escolha um nome na lista.'}</small></label>
  <label class="nxlab-field"><span>Procedimento do prontuário (opcional)</span><select id="nxlab-treatment"><option value="">Sem vínculo</option>${patientTreatments(o.patient_id).filter(t=>t.status!=='Cancelado').map(t=>`<option value="${safe(t.id)}" ${String(linkFor(o.id).treatment_id||'')===String(t.id)?'selected':''}>${safe(treatmentLabel(t))}</option>`).join('')}</select><small>${labTreatmentHint(o.patient_id)}</small></label>
  <label class="nxlab-field"><span>Local de execução *</span><select id="nxlab-execution"><option value=""${!where?' selected':''}>Selecione o local</option><option value="laboratory"${where==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${internal?' selected':''}>Na clínica</option></select><small>A escolha do local não registra nem quita pagamentos.</small></label>
@@ -210,7 +210,7 @@ function careQueue(){
   .filter(p=>!search||labNormalize(p.nome).includes(labNormalize(search)))
   .sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR'));
  if(!list.length)return '';
- return `<section class="card nxlab-care"><h3>Prótese e implantes — trabalhos a definir (${list.length})</h3><p class="note">Pacientes em acompanhamento sem trabalho laboratorial em aberto. Defina a peça, o local de execução e o responsável. Esta lista não cria custos nem pagamentos.</p>${list.map(p=>`<div class="nxlab-actions" style="justify-content:space-between;border-top:1px solid var(--line,#d9dfe6);padding:12px 0"><div><strong>${safe(p.nome)}</strong><p class="note">${[p.protAtivo&&p.protEtapa!=='Tratamento concluído'?'Prótese':'',p.implAtivo&&p.implEtapa!=='Tratamento concluído'?'Implantodontia':''].filter(Boolean).join(' · ')}</p></div>${canEdit()?`<button type="button" class="ghost sm" data-lab="care-new" data-id="${safe(p.id)}">Cadastrar trabalho</button>`:''}</div>`).join('')}</section>`;
+ return `<details class="card nxlab-care"${view.labCareOpen?' open':''}><summary style="cursor:pointer;font:inherit;font-weight:600;color:var(--text,#243247);padding:4px 0">Prótese e implantes — trabalhos a definir (${list.length})</summary><p class="note">Pacientes em acompanhamento sem trabalho laboratorial em aberto. Defina a peça, o local de execução e o responsável. Esta lista não cria custos nem pagamentos.</p>${list.map(p=>`<div class="nxlab-actions" style="justify-content:space-between;border-top:1px solid var(--line,#d9dfe6);padding:12px 0"><div><strong>${safe(p.nome)}</strong><p class="note">${[p.protAtivo&&p.protEtapa!=='Tratamento concluído'?'Prótese':'',p.implAtivo&&p.implEtapa!=='Tratamento concluído'?'Implantodontia':''].filter(Boolean).join(' · ')}</p></div>${canEdit()?`<button type="button" class="ghost sm" data-lab="care-new" data-id="${safe(p.id)}">Cadastrar trabalho</button>`:''}</div>`).join('')}</details>`;
 }
 window.nexoLabHtml=function(){
  if(!allowed())return '<div class="card">Você não possui permissão para consultar os trabalhos de laboratório.</div>';
@@ -254,6 +254,10 @@ function exportCsv(){
  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
  const a=document.createElement('a');a.href=url;a.download='nexodent-laboratorio-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+function revealForm(){
+ requestAnimationFrame(()=>{const form=document.querySelector('.nxlab-form');if(!form)return;form.focus({preventScroll:true});form.scrollIntoView({block:'start',behavior:'smooth'});});
+}
+document.addEventListener('toggle',event=>{if(event.target.isConnected&&event.target.matches?.('.nxlab-care'))view.labCareOpen=event.target.open;},true);
 async function execute(action,id){
  if(action==='section-work'||action==='section-money'){if(busy)return;labSection=action==='section-money'?'money':'work';renderLab();return;}
  if(action==='export'){if(allowed())exportCsv();return;}
@@ -262,10 +266,10 @@ async function execute(action,id){
  if(action==='toggle'){view.labExpanded=String(view.labExpanded||'')===String(id)?null:id;renderLab();return;}
  if(action==='details'){view.labDetails=view.labDetails===id?null:id;renderLab();return;}
  if(!canEdit())return;
- if(action==='care-new'){const p=carePatients().find(p=>String(p.id)===String(id));if(!p)return;careDraft={patient_id:String(p.id),shade:p.protCor||'',instructions:'Paciente em acompanhamento de '+[p.protAtivo?'prótese':'',p.implAtivo?'implantodontia':''].filter(Boolean).join(' e ')+'. Definir a peça e confirmar a necessidade laboratorial.'};editing='new';renderLab();setTimeout(()=>$id('nxlab-patient-search')?.scrollIntoView({block:'center',behavior:'smooth'}),0);return;}
- if(action==='new'){careDraft=null;editing='new';renderLab();return;}
+ if(action==='care-new'){const p=carePatients().find(p=>String(p.id)===String(id));if(!p)return;careDraft={patient_id:String(p.id),shade:p.protCor||'',instructions:'Paciente em acompanhamento de '+[p.protAtivo?'prótese':'',p.implAtivo?'implantodontia':''].filter(Boolean).join(' e ')+'. Definir a peça e confirmar a necessidade laboratorial.'};editing='new';renderLab();revealForm();return;}
+ if(action==='new'){careDraft=null;editing='new';renderLab();revealForm();return;}
  if(action==='cancel'){careDraft=null;editing=null;renderLab();return;}
- if(action==='edit'){editing=id;renderLab();return;}
+ if(action==='edit'){editing=id;renderLab();revealForm();return;}
  if(action==='delete'){
   const target=orders.find(o=>String(o.id)===String(id));if(!target)return;
   if(!confirm('Excluir definitivamente o trabalho de laboratório de '+patientName(target.patient_id)+'? Esta ação não pode ser desfeita.'))return;
