@@ -1,0 +1,18 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});try{
+ const p=await b.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>d.accept());
+ await p.route('https://expense-import.invalid/**',r=>r.fulfill({contentType:'text/html',body:'<main id="app"></main>'}));await p.goto('https://expense-import.invalid');
+ await p.addScriptTag({content:`let view={h:'cash'},epoch=1,rows=[],writes=0;window.pmLvl=()=>2;window.OralCloud={clinicId:'clinic-one',request:async(path,opt)=>{if(opt){writes++;rows.push(structuredClone(opt.body));return null;}const id=new URL('https://api.invalid'+path).searchParams.get('id')?.slice(3);return rows.filter(r=>!id||r.id===id);}};window.NexoCash={refreshForImport:async()=>{epoch++},importContext:()=>({clinicId:OralCloud.clinicId,epoch,expenses:structuredClone(rows),automatic:[{id:'LABPAY-test',amount:2000,date:'2026-11-03'}],warnings:[]})};window.render=()=>document.getElementById('app').innerHTML=NexoCashImport.html();`});
+ for(const path of ['assets/js/features/cash-model.js','assets/js/features/expense-import-model.js','assets/js/features/expense-import.js'])await p.addScriptTag({path});
+ const file={name:'despesas.csv',mimeType:'text/csv',buffer:Buffer.from('Descrição;Categoria;Valor;Data\nInsumo exemplo;Materiais;10,50;01/11/2026\nOutro exemplo;Serviços;20,00;03/11/2026')};
+ async function open(){const chooser=p.waitForEvent('filechooser');await p.evaluate(()=>NexoCashImport.open());await(await chooser).setFiles(file);await p.waitForFunction(()=>document.querySelector('[data-expense-import="refresh"]')&&!document.querySelector('[data-expense-import="refresh"]').disabled)}
+ await open();assert.equal(await p.locator('[data-expense-import="commit"]').isDisabled(),true);
+ await p.locator('#nx-import-mode').selectOption('paid');await p.waitForFunction(()=>!document.querySelector('[data-expense-import="refresh"]').disabled);
+ assert.equal(await p.locator('[data-import-row="0"]').isChecked(),true);assert.equal(await p.locator('[data-import-row="1"]').isChecked(),false);
+ await p.locator('[data-expense-import="commit"]').click();await p.waitForFunction(()=>!NexoCashImport.running&&document.querySelector('[role="status"]').textContent.includes('confirmada'));
+ const first=await p.evaluate(()=>({writes,rows}));assert.equal(first.writes,1);assert.equal(first.rows[0].paid_at,'2026-11-01');assert.equal(first.rows[0].due_date,null);assert.equal(first.rows[0].payment_method,'Não informada na planilha');
+ await p.locator('[data-expense-import="close"]').click();await open();await p.locator('#nx-import-mode').selectOption('paid');await p.waitForFunction(()=>!document.querySelector('[data-expense-import="refresh"]').disabled);assert.equal(await p.locator('[data-import-row="0"]').isDisabled(),true);assert.equal(await p.evaluate(()=>writes),1);
+ // A clinic switch cannot submit a preview made for another clinic.
+ await p.locator('[data-import-row="1"]').check();await p.evaluate(()=>{OralCloud.clinicId='clinic-two';epoch++});await p.evaluate(()=>document.querySelector('[data-expense-import="commit"]').click());await p.waitForFunction(()=>!NexoCashImport.running);assert.equal(await p.evaluate(()=>writes),1);assert.deepEqual(errors,[]);
+ console.log('Import preview: paid confirmation, automatic overlap, verified ambiguous response, reimport and clinic isolation passed.');
+ }finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
