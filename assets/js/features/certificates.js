@@ -58,7 +58,7 @@ function tabArquivos(p){
   const arq=Array.isArray(p.arquivos)?p.arquivos:[];
   const signed=arq.filter(f=>f && (f.assinaturaTipo || f.sha256 || /assinad/i.test(String(f.categoria||''))));
   const fold=(title,body,count)=>{
-    const current=Array.from(document.querySelectorAll('.ov-doc-fold[data-doc-patient]')).find(el=>el.dataset.docPatient===String(p.id)&&el.dataset.docFold===title);
+    const current=typeof document==='undefined'?null:Array.from(document.querySelectorAll('.ov-doc-fold[data-doc-patient]')).find(el=>el.dataset.docPatient===String(p.id)&&el.dataset.docFold===title);
     const expanded=current?.open===true;
     const icons={'Receituários e Atestados':'▤','Laudos, Termos e Autorizações':'✎','Receituário':'▤','Atestado':'▣','Adicionar arquivos':'＋','Radiografias':'◉','Fotografias clínicas':'▧','Laudos e exames':'▤','Termos e autorizações':'✎','Receituários e atestados':'▤','Outros documentos':'▦','Histórico de documentos com assinatura':'◷'};
     return `<details class="ov-doc-fold" data-doc-patient="${esc(String(p.id))}" data-doc-fold="${esc(title)}"${expanded?' open':''}><summary><span class="ov-doc-icon" aria-hidden="true">${icons[title]||'▤'}</span><span class="ov-doc-title">${title}</span>${count==null?'':`<span class="ov-doc-count">${count} ${count===1?'arquivo':'arquivos'}</span>`}<span class="ov-doc-chevron" aria-hidden="true">⌄</span></summary><div class="ov-doc-fold-body">${body}</div></details>`;
