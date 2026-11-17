@@ -3,23 +3,35 @@
  const numeric=v=>Number(typeof v==='string'&&v.includes(',')?v.replace(/\./g,'').replace(',','.'):v);
  const cents=v=>{const n=numeric(v);return Number.isFinite(n)&&n>0?Math.round(n*100):0};
  const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')&&Number.isFinite(new Date(d+'T12:00:00Z').getTime())&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;
- function calculate({sales=[],commissions=[],lab=[],expenses=[],from,to}){
+ function referenceMonth(e,today){const raw=e.reference_month||e.created_at||e.paid_at||e.due_date||today;return String(raw||'').slice(0,7);}
+ function inReference(e,from,to,today){const month=referenceMonth(e,today);return month>=from.slice(0,7)&&month<=to.slice(0,7);}
+ function categoryKey(s){return String(s||'Outros').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+ function calculate({sales=[],commissions=[],lab=[],expenses=[],from,to,today=new Date().toLocaleDateString('en-CA')}){
+  expenses=expenses.filter(e=>!e.voided_at);
   const warnings=[],all=[],seen=new Set();let openings=0;
   function amount(v,ref){const n=numeric(v);if(!Number.isFinite(n)||n<0)warnings.push('Valor inválido: '+ref);return cents(v);}
-  function add(row){if(seen.has(row.id))return;seen.add(row.id);if(!row.cents)return;if(!validDate(row.date)){warnings.push('Pagamento sem data válida: '+row.id);return;}all.push(row)}
+  function add(row){if(seen.has(row.id))return;seen.add(row.id);if(!row.cents)return;if(!validDate(row.date)){warnings.push('Pagamento sem data válida: '+row.id);return;}if(row.date>today){warnings.push('Pagamento com data futura precisa ser revisado: '+row.id);return;}all.push(row)}
   for(const sale of sales)for(const [i,p] of (Array.isArray(sale.pg)?sale.pg:[]).entries())add({id:'IN-'+sale.id+'-'+(p.id||i),date:p.data,cents:amount(p.valor,'Recebimento '+sale.id),direction:1,source:'Paciente',description:sale.proc||'Recebimento de paciente'});
   for(const p of commissions)add({id:'CP-'+p.id,date:p.data,cents:amount(p.valor,'CP-'+p.id),direction:-1,source:'Dentista',description:p.obs||'Repasse pago ao dentista'});
   for(const p of lab){if(p.kind==='opening'){openings++;continue;}add({id:'LABPAY-'+p.id,date:p.paid_at,cents:amount(p.amount,'LABPAY-'+p.id),direction:-1,source:'Laboratório',description:'Pagamento ao laboratório · '+(p.source_order_id||'')})}
   const auto=new Map(all.filter(x=>x.direction<0).map(x=>[x.id,x])),refs=new Map();
   for(const e of expenses)if(e.external_reference){const ref=String(e.external_reference);refs.set(ref,(refs.get(ref)||0)+1)}
-  for(const e of expenses){amount(e.amount,'EXP-'+e.id);if(!e.paid_at)continue;const ref=String(e.external_reference||''),match=auto.get(ref),value=cents(e.amount);
+  for(const e of expenses){amount(e.amount,'EXP-'+e.id);if(e.paid_at>today){warnings.push('Pagamento com data futura precisa ser revisado: '+e.description);continue;}if(!e.paid_at)continue;const ref=String(e.external_reference||''),match=auto.get(ref),value=cents(e.amount);
    if(match&&value===match.cents&&refs.get(ref)===1){if(e.paid_at!==match.date)warnings.push('Datas diferentes no vínculo '+ref+'; considerada a data do pagamento original.');continue;}
    if(ref)warnings.push('Confira o vínculo '+ref+': origem indisponível, repetida ou valor divergente.');
-   add({id:'EXP-'+e.id,date:e.paid_at,cents:value,direction:-1,source:'Despesa manual',description:(e.category||'Outros')+' · '+e.description});
+   add({id:'EXP-'+e.id,date:e.paid_at,cents:value,direction:-1,source:'Despesa manual',category:e.category||'Outros',reference_month:referenceMonth(e,today),description:(e.category||'Outros')+' · '+e.description});
   }
-  const rows=all.filter(x=>x.date>=from&&x.date<=to).sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id)),income=rows.filter(x=>x.direction>0).reduce((s,x)=>s+x.cents,0),outcome=rows.filter(x=>x.direction<0).reduce((s,x)=>s+x.cents,0);
-  const pending=expenses.filter(e=>!e.paid_at&&validDate(e.due_date)&&e.due_date<=to);
-  return {rows,income,outcome,balance:income-outcome,pending:pending.reduce((s,e)=>s+cents(e.amount),0),warnings:[...new Set(warnings)],openings};
+  const rows=all.filter(x=>x.reference_month?(x.reference_month>=from.slice(0,7)&&x.reference_month<=to.slice(0,7)):(x.date>=from&&x.date<=to)).sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id)),income=rows.filter(x=>x.direction>0).reduce((s,x)=>s+x.cents,0),outcome=rows.filter(x=>x.direction<0).reduce((s,x)=>s+x.cents,0);
+  const pending=expenses.filter(e=>(!e.paid_at||e.paid_at>today)&&inReference(e,from,to,today));
+  const groupMap=new Map();
+  function group(label){const key=categoryKey(label);if(!groupMap.has(key))groupMap.set(key,{label:String(label||'Outros').trim(),paid:0,pending:0,count:0});return groupMap.get(key);}
+  for(const row of rows.filter(r=>r.direction<0)){const g=group(row.category||row.source);g.paid+=row.cents;g.count++;}
+  for(const e of pending){const g=group(e.category||'Outros');g.pending+=cents(e.amount);g.count++;}
+  const categories=[...groupMap.values()].map(g=>({...g,total:g.paid+g.pending})).sort((a,b)=>b.total-a.total||a.label.localeCompare(b.label,'pt-BR'));
+  const repeated=reviews(expenses,today).filter(g=>g.length>1);if(repeated.length)warnings.push(repeated.length+' grupo(s) de contas repetidas aguardam revisão.');
+  return {rows,income,outcome,balance:income-outcome,categories,registered:outcome+pending.reduce((s,e)=>s+cents(e.amount),0),pending:pending.reduce((s,e)=>s+cents(e.amount),0),warnings:[...new Set(warnings)],openings};
  }
- return {calculate,cents,validDate};
+ function billKey(e){const normal=s=>String(s||'').trim().toLowerCase();return JSON.stringify([normal(e.description).replace(/\s+/g,' '),normal(e.category),normal(e.supplier),cents(e.amount),e.due_date||null,referenceMonth(e)]);}
+ function reviews(expenses,today){const groups=new Map();for(const e of expenses){if(e.voided_at||e.external_reference||(e.paid_at&&e.paid_at<=today))continue;const key=billKey(e)+JSON.stringify([e.paid_at||null,e.planned_paid_at||null,e.payment_method||null]);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(e);}return [...groups.values()].filter(g=>g.length>1||g[0].paid_at>today).map(g=>g.sort((a,b)=>String(a.id).localeCompare(String(b.id))));}
+ return {calculate,cents,validDate,billKey,reviews,referenceMonth,inReference,categoryKey};
 });

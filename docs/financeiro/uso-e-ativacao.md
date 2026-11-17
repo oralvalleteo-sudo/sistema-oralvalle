@@ -1,34 +1,35 @@
-# Financeiro — versão 328
+# Financeiro — versão 331
 
-Nova entrada Financeiro no menu da clínica, com permissão compartilhada com Vendas e Pagamentos recebidos. Níveis Oculto / Só ver / Ver e alterar permanecem no editor de acessos. O plano da clínica precisa liberar o módulo financeiro.
+Resumo gerencial mensal de entradas, despesas pagas e contas a pagar. A permissão é compartilhada com Vendas e Pagamentos recebidos: Oculto / Só ver / Ver e alterar. O plano da clínica precisa liberar Financeiro. Recebimentos individuais permanecem nas áreas de pacientes; esta aba e o CSV trazem totais de entradas e detalhamento de gastos.
 
-## Ativar despesas compartilhadas
+## Ativação
 
-Execute inteiro `supabase/migrations/202611170019_general_expenses.sql` no SQL Editor como postgres. Foi testado em banco local; não foi aplicado ao banco real por falta de credencial administrativa neste ambiente. Se a tabela já existe, os dados não são apagados. Caso uma instalação anterior tenha colunas diferentes, revise a mensagem do banco antes de alterar dados.
+Executar inteiro `supabase/migrations/202611170020_expense_duplicates_and_schedule.sql` depois da migração `202611170019_general_expenses.sql`, já usada pelo cadastro de despesas. O ambiente desta revisão não tem credencial administrativa do banco real: não aplicou SQL nem alterou os registros da clínica.
 
-O arquivo cria o cadastro de despesas gerais usado também pelos relatórios existentes, habilita RLS e restringe consulta/edição por clínica e permissão financeira. Usuários autenticados não recebem permissão de DELETE. A versão atual permite cadastrar e registrar pagamento; não oferece exclusão de despesas financeiras.
+A migração acrescenta mês de referência, data prevista, revisão concorrente, cancelamento lógico e auditoria privada. O vencimento deixa de ser obrigatório. Registros antigos recebem mês de referência a partir da data de criação, no fuso de São Paulo. Não muda valores, quitações ou vencimentos existentes automaticamente e não exclui contas fisicamente. As permissões de DELETE são revogadas; a ação Excluir utiliza uma RPC que preserva o original na auditoria.
 
-## Operação
+## Uso
 
-- Escolha o período e consulte Entradas recebidas, Saídas pagas, Saldo do período e Despesas manuais a pagar até a data final.
-- Nova despesa: descrição, categoria, favorecido, valor e vencimento. Data de pagamento em branco significa conta a pagar. Se já foi paga, informe data e forma.
-- Registrar pagamento: confirme a data, forma e valor. Contas pendentes não reduzem o saldo antes desse registro.
-- Exportar CSV respeita o período e inclui avisos de dados parciais.
+- Escolher mês inicial e final. Despesas manuais seguem seu mês de referência, mesmo quando pagas atrasadas ou em outro mês. Entradas dos pacientes e pagamentos automáticos usam suas datas efetivas. O saldo é um resumo gerencial; não representa saldo bancário nem inclui saldo inicial.
+- Nova despesa: descrição, categoria livre ou sugerida, mês e valor. Vencimento e pagamento previsto são opcionais. Fornecedor sai do formulário; dados antigos desse campo são preservados nas edições.
+- Pagamento realizado significa que a conta já foi paga e exige data até hoje e forma de pagamento. Sem esse campo, fica a pagar. Previsão futura não quita a conta quando chega ao calendário.
+- Ao registrar pagamento, a conta sai das pendentes e entra em Gastos do período. O histórico permite consultar e editar pagas e outros meses. A lista tem soma automática.
+- O painel de categorias tem gráfico e tabela com Pagas / A pagar / Total. Nomes equivalentes são agrupados na visualização. Unir categorias renomeia as categorias manuais selecionadas em toda a clínica, inclusive meses anteriores, depois de confirmação. Valores e pagamentos permanecem preservados e as alterações são auditadas.
+- Editar e Excluir foram preservados. A edição usa revisão concorrente; se outro usuário mudou o lançamento, é necessário atualizar. Excluir retira dos totais e mantém histórico de auditoria. Não apaga o registro físico.
+- O CSV contém totais e gastos, com data do pagamento e mês de referência, sem listar recebimentos individuais de pacientes.
 
-## Fontes e limites
+## CEMIG e duplicidades
 
-Recebimentos são os registros de pagamentos dos pacientes, mesmo quando a venda ocorreu antes do período. Laboratório usa parcelas individuais registradas em `nexodent_lab_payment_events`; eventos de abertura não são dinheiro novo. Repasses usam os pagamentos registrados em `db.cp`, nunca apenas comissões geradas. Valores são brutos; despesas de taxas bancárias precisam ser registradas quando aplicável. Custos estimados de precificação e obrigações ainda não pagas não entram como saídas efetivas.
+Após ativar o SQL e atualizar o aplicativo, Financeiro → Contas para revisar → Corrigir para a pagar. Para a CEMIG que aparece uma única vez, mas foi marcada como paga em 22/11 antes do pagamento acontecer, a revisão move essa data para Pagamento previsto e deixa Pagamento realizado vazio. Mantém o vencimento original; não presume que o vencimento de outubro deveria ser novembro.
 
-Os dados clínicos/financeiros já carregados são usados conforme a sessão autorizada. Para incluir laboratório, o usuário precisa de Laboratório e Pacientes; para repasses, de Comissões. Falhas de carregamento ou fontes sem permissão exibem aviso e saldo PARCIAL. Não apresentar o saldo como extrato bancário: não inclui saldo inicial nem transações que a clínica não registrou.
+Se ainda houver cópias idênticas, Manter uma conta e corrigir cópias deixa somente uma ativa e preserva as outras na auditoria. Não faz esse procedimento automaticamente sobre pagamentos passados ou vinculados: eles exigem revisão individual. Registros apagados antes desta versão não são recriados nem presumidos recuperáveis.
 
-Vínculos antigos explícitos CP-ID ou LABPAY-ID eliminam duplicidade apenas quando únicos, pagos e com valor idêntico. A data do pagamento original prevalece; divergências geram avisos. Despesas sem vínculo não são deduzidas por coincidência de valor. Conferir cadastros históricos que já tenham pagamentos duplicados antes de usar o saldo para decisões.
+Uma mesma conta ativa (descrição normalizada, categoria, fornecedor histórico, valor, vencimento e mês) não pode ser inserida de novo. A interface confere antes de enviar; o servidor serializa a verificação por clínica. Contas realmente diferentes devem ser identificadas pela descrição/documento adequado. A correção da versão 330 também mantém o identificador de uma tentativa e verifica o registro se a resposta de gravação ficar incerta.
 
-## Visualização a partir da versão 329
+## Fontes automáticas e limites
 
-Os recebimentos individuais dos pacientes não aparecem na lista de gastos nem no CSV desta aba. Continuam compondo o total de entradas e o saldo do período. A lista detalha apenas saídas pagas; o CSV traz os totais e os gastos. Os registros originais permanecem nas áreas de pagamentos.
+Laboratório usa parcelas individuais efetivamente registradas em `nexodent_lab_payment_events`. Saldos de abertura não são dinheiro novo. Repasses vêm dos pagamentos em `db.cp`, nunca de comissões apenas calculadas. Não há criação duplicada de despesas manuais para representar esses pagamentos. O Financeiro consulta fontes novamente ao entrar e reage a eventos de pagamento laboratorial. Uma atualização antiga não pode sobrepor o recarregamento depois de uma gravação.
 
-## Correção de confirmação — versão 330
+Recebimentos são brutos; taxas bancárias precisam ser lançadas quando aplicável. Valores estimados de precificação e obrigações ainda não pagas não são saídas efetivas. Fontes sem acesso ou com consulta incompleta aparecem como parciais. Para consultar laboratório, são necessários Laboratório e Pacientes; para repasses, Comissões e módulo ativo. As regras de servidor continuam protegendo os dados.
 
-O cliente HTTP descartava o cabeçalho Prefer, e o Supabase podia gravar uma despesa sem retornar seu conteúdo. A interface então apresentava falha de confirmação. O transporte agora preserva Prefer sem permitir substituir as credenciais. Antes de reenviar a mesma tentativa, a interface confere seu identificador; após uma resposta incompleta, consulta o registro e valida seus dados. Tentativas anteriores podem já estar gravadas: usar Atualizar e Mostrar todas as despesas cadastradas antes de recadastrar. Não remover nem recriar registros financeiros por suposição. Despesas com pagamento no período também aparecem na lista mesmo se o vencimento foi anterior. A opção Mostrar todas e a confirmação após salvar deixam visíveis registros fora do filtro, sem alterar os totais do período.
-
-A política compartilhada de campos solicita autocomplete=off nos formulários e campos operacionais, sem renomear campos, alterar dados ou retirar datalists próprios. Login/senha mantêm suas configurações. A interface não apaga o histórico pessoal do navegador nem controla extensões externas. Nenhum novo SQL é necessário.
+Vínculos antigos explícitos CP-ID ou LABPAY-ID eliminam duplicidade apenas quando únicos, pagos e com valor idêntico; o pagamento original prevalece. Divergências exigem conferência. Valores coincidentes, sem vínculo, não são deduzidos por suposição. Os testes usam dados sintéticos e verificam cálculos, permissões, isolamento de clínica, rollback, auditoria, formulários e atualização das fontes; não certificam os registros reais nem todo o produto.
