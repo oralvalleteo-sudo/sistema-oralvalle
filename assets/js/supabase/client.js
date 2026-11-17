@@ -19,9 +19,12 @@
   }
 
   async function send(path, options = {}, token) {
+    // Prefer controla o retorno do PostgREST; nunca permite substituir credenciais.
+    const preference = Object.entries(options.headers || {}).find(([key]) => key.toLowerCase() === 'prefer')?.[1];
     const response = await fetch(config.url + path, {
       method: options.method || 'GET',
       headers: {
+        ...(preference ? { Prefer: String(preference) } : {}),
         apikey: config.publishableKey,
         ...(token ? { Authorization: 'Bearer ' + token } : {}),
         ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),

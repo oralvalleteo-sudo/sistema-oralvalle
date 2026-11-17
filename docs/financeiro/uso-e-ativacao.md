@@ -26,3 +26,9 @@ Vínculos antigos explícitos CP-ID ou LABPAY-ID eliminam duplicidade apenas qua
 ## Visualização a partir da versão 329
 
 Os recebimentos individuais dos pacientes não aparecem na lista de gastos nem no CSV desta aba. Continuam compondo o total de entradas e o saldo do período. A lista detalha apenas saídas pagas; o CSV traz os totais e os gastos. Os registros originais permanecem nas áreas de pagamentos.
+
+## Correção de confirmação — versão 330
+
+O cliente HTTP descartava o cabeçalho Prefer, e o Supabase podia gravar uma despesa sem retornar seu conteúdo. A interface então apresentava falha de confirmação. O transporte agora preserva Prefer sem permitir substituir as credenciais. Antes de reenviar a mesma tentativa, a interface confere seu identificador; após uma resposta incompleta, consulta o registro e valida seus dados. Tentativas anteriores podem já estar gravadas: usar Atualizar e Mostrar todas as despesas cadastradas antes de recadastrar. Não remover nem recriar registros financeiros por suposição. Despesas com pagamento no período também aparecem na lista mesmo se o vencimento foi anterior. A opção Mostrar todas e a confirmação após salvar deixam visíveis registros fora do filtro, sem alterar os totais do período.
+
+A política compartilhada de campos solicita autocomplete=off nos formulários e campos operacionais, sem renomear campos, alterar dados ou retirar datalists próprios. Login/senha mantêm suas configurações. A interface não apaga o histórico pessoal do navegador nem controla extensões externas. Nenhum novo SQL é necessário.
