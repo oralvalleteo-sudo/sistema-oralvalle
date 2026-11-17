@@ -80,13 +80,13 @@ console.log('Baixas do orçamento: cancelamento, remoção em lote e histórico 
 const clinicalHistoryBefore=Number((await db.query("select count(*) n from patient_evolutions where kind='object'")).rows[0].n);
 await page.evaluate(async()=>{const p=db.p.find(p=>p.nome==='Novo paciente sintético');const details=await OralCloudData.loadPatient(p.id);Object.assign(p,details);OralCloudData.prepareDefaults(db);db.dt.push({id:'staff-dentist',nome:'Dentista sintético',modo:'fixo',base:'bruto',ativo:true,pct:20});const o=p.orcs.find(o=>o.id==='staff-budget');o.status='Aprovado';o.itens=[{id:'staff-item',proc:'Consulta sintética',valor:'100',dt:'staff-dentist',obs:'',tid:'staff-treatment'},{id:'staff-item-2',proc:'Retorno sintético',valor:'200',dt:'staff-dentist',obs:'',tid:'staff-treatment-2'}];p.trat=[{id:'staff-treatment',oiid:'staff-item',oid:o.id,proc:'Consulta sintética',valor:'100',dt:'staff-dentist',status:'Pendente',mats:[]},{id:'staff-treatment-2',oiid:'staff-item-2',oid:o.id,proc:'Retorno sintético',valor:'200',dt:'staff-dentist',status:'Pendente',mats:[]}];view.tab='orc';view.orcOpen={[o.id]:true};save();render()});
 await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
-assert.equal(await page.locator('[data-pending-procedure]').count(),2);
+assert.equal(await page.locator('.nexo-pending-procedures').count(),0);
 await page.locator('[data-act="oball"][data-o="staff-budget"]').click();assert.equal(await page.locator('#oab').inputValue(),'');await page.locator('#oab').fill('50');await page.locator('[data-act="oballconf"]').click();await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
 assert.equal(Number((await db.query("select count(*) n from treatments where kind='object' and dados->>'status'='Pendente'")).rows[0].n),2);
-assert.equal(await page.locator('[data-pending-procedure]').count(),2);
+assert.equal(await page.locator('.nexo-pending-procedures').count(),0);
 assert.equal(Number((await db.query("select count(*) n from patient_evolutions where kind='object'")).rows[0].n),clinicalHistoryBefore);
 assert.equal(Number((await db.query("select count(*) n from sales where kind='object' and dados->>'clinicalPending'='true'")).rows[0].n),2);
-await page.locator('[data-act="tab"][data-t="odo"]').click();page.once('dialog',dialog=>dialog.accept());await page.locator('[data-act="trbaixa"][data-id="staff-treatment"]').first().click();await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+await page.locator('[data-act="tab"][data-t="odo"]').click();assert.equal(await page.locator('.nexo-pending-procedures').evaluate(el=>el.open),false);assert.equal(await page.locator('[data-pending-procedure]').first().isVisible(),false);await page.locator('.nexo-pending-procedures > summary').click();assert.equal(await page.locator('[data-pending-procedure]').first().isVisible(),true);page.once('dialog',dialog=>dialog.accept());await page.locator('[data-act="trbaixa"][data-id="staff-treatment"]').first().click();await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
 assert.equal(Number((await db.query("select count(*) n from treatments where kind='object' and dados->>'status'='Concluído'")).rows[0].n),1);
 assert.equal(await page.locator('[data-pending-procedure]').count(),1);
 assert.equal(Number((await db.query("select count(*) n from sales where kind='object'")).rows[0].n),3);
