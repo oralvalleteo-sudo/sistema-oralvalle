@@ -137,8 +137,8 @@ function treatmentSummary(pid){
 function form(o={}){
  const patients=(db.p||[]).filter(p=>!p.arq),where=execution.get(o)||(!o.id?'laboratory':''),internal=where==='clinic';
  return `<section class="card nxlab-form" tabindex="-1" style="scroll-margin-top:120px"><h3>${o.id?'Editar trabalho':'Novo trabalho'}</h3>
- <div class="nxlab-grid"><label class="nxlab-field"><span>Paciente *</span><input id="nxlab-patient-search" type="search" autocomplete="off" placeholder="Buscar pelo nome do paciente" value="${safe(patients.find(p=>String(p.id)===String(o.patient_id))?.nome||'')}"><select id="nxlab-patient" aria-label="Selecionar paciente">${labPatientOptions(patients,o.patient_id)}</select><small id="nxlab-patient-count">${o.patient_id?'Paciente selecionado':patients.length+' pacientes disponíveis. Escolha um nome na lista.'}</small></label>
- <label class="nxlab-field"><span>Procedimento do prontuário (opcional)</span><select id="nxlab-treatment"><option value="">Sem vínculo</option>${patientTreatments(o.patient_id).filter(t=>t.status!=='Cancelado').map(t=>`<option value="${safe(t.id)}" ${String(linkFor(o.id).treatment_id||'')===String(t.id)?'selected':''}>${safe(treatmentLabel(t))}</option>`).join('')}</select><small>${labTreatmentHint(o.patient_id)}</small></label>
+ <div class="nxlab-grid"><label class="nxlab-field"><span>Paciente *</span><select id="nxlab-patient" aria-label="Selecionar paciente">${labPatientOptions(patients,o.patient_id)}</select><small id="nxlab-patient-count">${o.patient_id?'Paciente selecionado':patients.length+' pacientes disponíveis. Escolha um nome na lista.'}</small></label>
+
  <label class="nxlab-field"><span>Local de execução *</span><select id="nxlab-execution"><option value=""${!where?' selected':''}>Selecione o local</option><option value="laboratory"${where==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${internal?' selected':''}>Na clínica</option></select><small>A escolha do local não registra nem quita pagamentos.</small></label>
  ${input('Valor a pagar ao laboratório (se houver)','nxlab-cost',linkFor(o.id).cost||0,'number','min="0" step="0.01"')}
  <label class="nxlab-field"><span id="nxlab-responsible-label">${internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável *'}</span><input id="nxlab-lab" type="text" maxlength="160" value="${safe(o.laboratory||'')}"${internal?'':' required'}><small>Para execução interna sem laboratório externo, deixe o valor a pagar em zero.</small></label>
@@ -160,7 +160,7 @@ function card(o){
  const obs=o.status==='Em observação';
  const expanded=String(view.labExpanded||'')===String(o.id);
  return `<article class="card nxlab-card ${expanded?'nxlab-expanded':'nxlab-collapsed'}"><button type="button" class="nxlab-summary" data-lab="toggle" data-id="${safe(o.id)}" aria-expanded="${expanded}" aria-label="${expanded?'Recolher':'Mostrar'} detalhes de ${safe(patientName(o.patient_id))}"><span class="nxlab-summary-name"><strong>${safe(patientName(o.patient_id))}</strong><span class="nxlab-sub">${safe(o.work_description)} · ${safe(o.teeth||'Sem região')} · ${safe(execution.label(execution.get(o)))}</span></span><span class="nxlab-summary-stage">Etapa: ${safe(o.stage||'—')}</span><span class="nxlab-summary-right"><span class="nxlab-pill ${obs?'nxlab-alert':''}">${safe(o.status)}</span><span class="nxlab-chevron" aria-hidden="true">›</span></span></button>${expanded?`
- <div class="nxlab-details"><span><b>Local de execução:</b> ${safe(execution.label(execution.get(o)))}</span><span><b>Responsável:</b> ${safe(o.laboratory)}</span><span><b>Cor:</b> ${safe(o.shade||'—')}</span><span><b>Etapa:</b> ${safe(o.stage)}</span><span><b>Envio:</b> ${safe(date(o.sent_at)||'—')}</span><span><b>Entrega prevista:</b> ${safe(date(o.due_at)||'—')}</span><span><b>Recebido:</b> ${safe(date(o.received_at)||'—')}</span>${treatmentSummary(o.patient_id)}<span><b>Tratamento vinculado:</b> ${safe(linkedTreatment(o)?treatmentLabel(linkedTreatment(o)):'Não vinculado')}</span><span><b>Custo laboratório:</b> ${safe(money(linkFor(o.id).cost))}</span></div>
+ <div class="nxlab-details"><span><b>Local de execução:</b> ${safe(execution.label(execution.get(o)))}</span><span><b>Responsável:</b> ${safe(o.laboratory)}</span><span><b>Cor:</b> ${safe(o.shade||'—')}</span><span><b>Etapa:</b> ${safe(o.stage)}</span><span><b>Envio:</b> ${safe(date(o.sent_at)||'—')}</span><span><b>Entrega prevista:</b> ${safe(date(o.due_at)||'—')}</span><span><b>Recebido:</b> ${safe(date(o.received_at)||'—')}</span>${treatmentSummary(o.patient_id)}<span><b>Custo laboratório:</b> ${safe(money(linkFor(o.id).cost))}</span></div>
  ${missingTreatment(o)?'<p class="nxlab-note"><b>Atenção:</b> o procedimento vinculado foi excluído do prontuário. Este trabalho não aparece na lista Em aberto; use Excluir para removê-lo definitivamente.</p>':''}
  ${obs?`<p class="nxlab-note"><b>Em observação:</b> ${safe(o.observation_reason||'Motivo não informado')}</p>`:''}
  ${o.instructions?`<p><b>Instruções:</b> ${safe(o.instructions)}</p>`:''}
@@ -296,7 +296,7 @@ async function execute(action,id){
   if(f.status==='Em observação'&&!f.observation_reason){alert('Informe o motivo da observação.');return;}
   const original=editing==='new'?null:orders.find(x=>x.id===editing);
   const invalid=validateOrder(f,original);if(invalid){if(invalid!=='cancel')alert(invalid);return;}
-  pendingLink={tid:$id('nxlab-treatment')?.value||'',cost:Number($id('nxlab-cost')?.value||0)};
+  pendingLink={tid:original&&String(original.patient_id)===String(f.patient_id)?linkFor(original.id).treatment_id||'':'',cost:Number($id('nxlab-cost')?.value||0)};
   if(!Number.isFinite(pendingLink.cost)||pendingLink.cost<0){alert('Informe um custo laboratorial válido.');return;}
   if(where==='clinic'&&pendingLink.cost>0&&f.laboratory==='Na clínica'){alert('Identifique o laboratório responsável pelo valor a pagar ou deixe esse valor em zero para execução somente interna.');return;}
   o={...(original||{}),...f,...(cloud()?{treatment_id:pendingLink.tid||null,laboratory_cost:pendingLink.cost}:{}),id:original?.id||crypto.randomUUID(),history:[...(original?.history||[]),{at:stamp(),text:(original?'Dados e etapa atualizados':'Trabalho cadastrado')+' • Local: '+execution.label(where),execution_location:where}],comments:original?.comments||[],updated_at:stamp(),_new:!original};
@@ -323,45 +323,10 @@ function updateExecutionForm(){
 }
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-execution')updateExecutionForm();});
 function labNormalize(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();}
-function labUpdateTreatments(pid){
- const sel=$id('nxlab-treatment');if(!sel)return;
- const old=sel.dataset.patient===String(pid)?sel.value:'';
- const list=patientTreatments(pid).filter(t=>t.status!=='Cancelado');
- sel.innerHTML='<option value="">Sem vínculo</option>'+list.map(t=>`<option value="${safe(t.id)}">${safe(treatmentLabel(t))}</option>`).join('');
- sel.dataset.patient=String(pid||'');
- if(list.some(t=>String(t.id)===old))sel.value=old;
- const hint=sel.parentElement?.querySelector('small');
- if(hint)hint.textContent=labTreatmentHint(pid);
-}
-function labChoosePatient(id){
- const p=(db.p||[]).find(p=>String(p.id)===String(id));if(!p)return;
- $id('nxlab-patient-search').value=p.nome;
- $id('nxlab-patient').value=String(p.id);
- const box=$id('nxlab-patient-suggestions');if(box){box.innerHTML='';box.style.display='none';}
- const count=$id('nxlab-patient-count');if(count)count.textContent='Paciente selecionado';
- labUpdateTreatments(p.id);
-}
 function labPatientOptions(patients,selected){
  const counts={};patients.forEach(p=>{counts[p.nome]=(counts[p.nome]||0)+1});
  return '<option value="">Selecione o paciente</option>'+patients.slice().sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR')).map(p=>`<option value="${safe(p.id)}"${String(p.id)===String(selected)?' selected':''}>${safe(p.nome)}${counts[p.nome]>1?' · '+safe(p.tel||String(p.id)):''}</option>`).join('');
 }
-function labTreatmentHint(pid){
- if(!pid)return 'Escolha o paciente acima para consultar os procedimentos do prontuário.';
- return patientTreatments(pid).filter(t=>t.status!=='Cancelado').length?'Vincule a peça a um procedimento existente, se desejar.':'Este paciente ainda não tem procedimentos cadastrados. Você pode salvar o trabalho sem vínculo.';
-}
-function labPatientMatch(){
- const input=$id('nxlab-patient-search'),select=$id('nxlab-patient'),count=$id('nxlab-patient-count');
- if(!input||!select)return;
- const q=labNormalize(input.value),patients=(db.p||[]).filter(p=>!p.arq),matches=patients.filter(p=>!q||labNormalize(p.nome).includes(q));
- const exact=matches.filter(p=>labNormalize(p.nome)===q),previous=select.value;
- const chosen=exact.length===1?String(exact[0].id):matches.some(p=>String(p.id)===previous)?previous:'';
- select.innerHTML=labPatientOptions(matches,chosen);select.value=chosen;
- labUpdateTreatments(chosen);
- if(count)count.textContent=chosen?'Paciente selecionado':matches.length?matches.length+' paciente(s) encontrado(s). Escolha um nome na lista.':'Nenhum paciente encontrado. Limpe a busca para ver todos.';
-}
-document.addEventListener('input',e=>{if(e.target.id==='nxlab-patient-search')labPatientMatch();});
-document.addEventListener('change',e=>{if(e.target.id==='nxlab-patient-search')labPatientMatch();if(e.target.id==='nxlab-patient'){if(e.target.value)labChoosePatient(e.target.value);else labUpdateTreatments('');}});
-document.addEventListener('click',e=>{const btn=e.target.closest('[data-nxlab-patient-id]');if(btn){e.preventDefault();labChoosePatient(btn.dataset.nxlabPatientId);}});
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-lab]');if(btn){e.preventDefault();execute(btn.dataset.lab,btn.dataset.id);}});
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-filter'){filter=e.target.value;renderLab();}if(e.target.id==='nxlab-execution-filter'){executionFilter=e.target.value;renderLab();}if(e.target.id==='nxlab-search'){search=e.target.value;renderLab();}});
 document.addEventListener('keydown',e=>{if(e.target.id==='nxlab-search'&&e.key==='Enter'){search=e.target.value;renderLab();}});
