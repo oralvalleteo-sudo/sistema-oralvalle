@@ -62,7 +62,7 @@ function canEdit(){return typeof pmLvl!=='function'||pmLvl('lab')>=2&&pmLvl('pac
 function renderLab(){if(isLab()&&typeof render==='function')render();}
 function fetchOrders(force=false){
  const context=clinic()||'local';
- if(!force&&fetchTask&&fetchTaskClinic===context)return fetchTask;
+ if(fetchTask&&fetchTaskClinic===context)return fetchTask;
  const sequence=++orderEpoch;fetchTaskClinic=context;
  const task=fetchOrdersImpl(force,sequence);fetchTask=task;
  task.finally(()=>{if(fetchTask===task)fetchTask=null;}).catch(()=>{});
@@ -147,7 +147,6 @@ function form(o={}){
  ${input('Previsão de entrega','nxlab-due',date(o.due_at),'date')}
  <div id="nxlab-received-field"${internal?' hidden':''}>${input('Data de recebimento','nxlab-received',date(o.received_at),'date')}</div>
  ${select('Etapa atual','nxlab-stage',execution.stages(STAGES,where),o.stage||STAGES[0])}
- ${select('Situação','nxlab-status',execution.states(STATES,where),o.status||STATES[0])}
  ${textarea('Motivo da observação (obrigatório se Em observação)','nxlab-observation',o.observation_reason)}
  ${textarea('Instruções para o trabalho','nxlab-instructions',o.instructions)}
  </div><div class="nxlab-actions"><button type="button" data-lab="save">${o.id?'Salvar alterações':'Cadastrar trabalho'}</button><button class="ghost" type="button" data-lab="cancel">Cancelar</button></div></section>`;
@@ -157,7 +156,7 @@ function card(o){
  const comments=Array.isArray(o.comments)?o.comments:[];
  const obs=o.status==='Em observação';
  const expanded=String(view.labExpanded||'')===String(o.id)||String(editing)===String(o.id);
- return `<article class="card nxlab-card ${expanded?'nxlab-expanded':'nxlab-collapsed'}"><button type="button" class="nxlab-summary" data-lab="toggle" data-id="${safe(o.id)}" aria-expanded="${expanded}" aria-label="${expanded?'Recolher':'Mostrar'} detalhes de ${safe(patientName(o.patient_id))}"><span class="nxlab-summary-name"><strong>${safe(patientName(o.patient_id))}</strong><span class="nxlab-sub">${safe(o.work_description)} · ${safe(o.teeth||'Sem região')} · ${safe(execution.label(execution.get(o)))}</span></span><span class="nxlab-summary-stage">Etapa: ${safe(o.stage||'—')}</span><span class="nxlab-summary-right"><span class="nxlab-pill ${obs?'nxlab-alert':''}">${safe(o.status)}</span><span class="nxlab-chevron" aria-hidden="true">›</span></span></button>${expanded?(String(editing)===String(o.id)?form(o):`
+ return `<article class="card nxlab-card ${expanded?'nxlab-expanded':'nxlab-collapsed'}"><button type="button" class="nxlab-summary" data-lab="toggle" data-id="${safe(o.id)}" aria-expanded="${expanded}" aria-label="${expanded?'Recolher':'Mostrar'} detalhes de ${safe(patientName(o.patient_id))}"><span class="nxlab-summary-name"><strong>${safe(patientName(o.patient_id))}</strong><span class="nxlab-sub">${safe(o.work_description)} · ${safe(o.teeth||'Sem região')} · ${safe(execution.label(execution.get(o)))}</span></span><span class="nxlab-summary-stage">Etapa: ${safe(o.stage||'—')}</span><span class="nxlab-summary-right"><span class="nxlab-chevron" aria-hidden="true">›</span></span></button>${expanded?(String(editing)===String(o.id)?form(o):`
  <div class="nxlab-details"><span><b>Local de execução:</b> ${safe(execution.label(execution.get(o)))}</span><span><b>Responsável:</b> ${safe(o.laboratory)}</span><span><b>Cor:</b> ${safe(o.shade||'—')}</span><span><b>Etapa:</b> ${safe(o.stage)}</span><span><b>Envio:</b> ${safe(date(o.sent_at)||'—')}</span><span><b>Entrega prevista:</b> ${safe(date(o.due_at)||'—')}</span><span><b>Recebido:</b> ${safe(date(o.received_at)||'—')}</span>${treatmentSummary(o.patient_id)}<span><b>Custo laboratório:</b> ${safe(money(linkFor(o.id).cost))}</span></div>
  ${missingTreatment(o)?'<p class="nxlab-note"><b>Atenção:</b> o procedimento vinculado foi excluído do prontuário. Este trabalho não aparece na lista Em aberto; use Excluir para removê-lo definitivamente.</p>':''}
  ${obs?`<p class="nxlab-note"><b>Em observação:</b> ${safe(o.observation_reason||'Motivo não informado')}</p>`:''}
@@ -227,32 +226,24 @@ window.nexoLabHtml=function(){
  ${error?`<p class="nxlab-error">${safe(error)}</p>`:''}${loading?'<p>Carregando trabalhos...</p>':''}
  <div class="nxlab-metrics"><div><strong>${totals.open}</strong><span>Em aberto</span></div><div><strong>${totals.late}</strong><span>Atrasados</span></div><div><strong>${totals.observed}</strong><span>Em observação</span></div><div><strong>${totals.delivered}</strong><span>Entregues</span></div><div><strong>${totals.soon}</strong><span>Próximos 7 dias</span></div><div><strong>${totals.noDeadline}</strong><span>Sem prazo definido</span></div></div>
  ${editing==='new'?form(careDraft||{}):''}
- <div class="nxlab-filters"><label>Situação<select id="nxlab-filter"><option value="ativos" ${filter==='ativos'?'selected':''}>Em aberto</option><option value="observacao" ${filter==='observacao'?'selected':''}>Em observação</option><option value="atrasados" ${filter==='atrasados'?'selected':''}>Atrasados</option><option value="proximos" ${filter==='proximos'?'selected':''}>Próximos 7 dias</option><option value="sem-prazo" ${filter==='sem-prazo'?'selected':''}>Sem prazo definido</option><option value="todos" ${filter==='todos'?'selected':''}>Todos</option></select></label><label>Local<select id="nxlab-execution-filter"><option value="all"${executionFilter==='all'?' selected':''}>Todos os locais</option><option value="laboratory"${executionFilter==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${executionFilter==='clinic'?' selected':''}>Na clínica</option></select></label><label>Buscar<input id="nxlab-search" type="search" placeholder="Buscar paciente, laboratório ou trabalho" value="${safe(search)}"></label></div>
- ${careQueue()}<div>${items.length?'<div class="ov-work-columns" aria-hidden="true"><span>Paciente e trabalho</span><span>Etapa</span><span>Status</span></div>'+items.map(card).join(''):'<div class="card nxlab-empty">Nenhum trabalho encontrado.</div>'}</div></div>`;
+ <div class="nxlab-filters"><label>Filtrar por<select id="nxlab-filter"><option value="ativos" ${filter==='ativos'?'selected':''}>Em aberto</option><option value="observacao" ${filter==='observacao'?'selected':''}>Em observação</option><option value="atrasados" ${filter==='atrasados'?'selected':''}>Atrasados</option><option value="proximos" ${filter==='proximos'?'selected':''}>Próximos 7 dias</option><option value="sem-prazo" ${filter==='sem-prazo'?'selected':''}>Sem prazo definido</option><option value="todos" ${filter==='todos'?'selected':''}>Todos</option></select></label><label>Local<select id="nxlab-execution-filter"><option value="all"${executionFilter==='all'?' selected':''}>Todos os locais</option><option value="laboratory"${executionFilter==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${executionFilter==='clinic'?' selected':''}>Na clínica</option></select></label><label>Buscar<input id="nxlab-search" type="search" placeholder="Buscar paciente, laboratório ou trabalho" value="${safe(search)}"></label></div>
+ ${careQueue()}<div>${items.length?'<div class="ov-work-columns" aria-hidden="true"><span>Paciente e trabalho</span><span>Etapa atual</span></div>'+items.map(card).join(''):'<div class="card nxlab-empty">Nenhum trabalho encontrado.</div>'}</div></div>`;
 };
 async function persist(o){
  if(cloud()){
   const id=clinic();if(!id)throw Error('Clínica não selecionada.');
-  const creating=!!o._new;
-  const path='/rest/v1/nexodent_lab_orders'+(creating?'':'?id=eq.'+encodeURIComponent(o.id)+'&clinic_id=eq.'+encodeURIComponent(id));
+  const path='/rest/v1/nexodent_lab_orders'+(o._new?'':'?id=eq.'+encodeURIComponent(o.id)+'&clinic_id=eq.'+encodeURIComponent(id));
   const body={...o,clinic_id:id};delete body._new;
-  // Primeiro grava. Em seguida consulta a linha diretamente: respostas minimal,
-  // RLS sem linha afetada ou gravações não persistidas não podem virar falso sucesso.
-  await OralCloud.request(path,{method:creating?'POST':'PATCH',body});
-  const verify=await OralCloud.request('/rest/v1/nexodent_lab_orders?select=*&id=eq.'+encodeURIComponent(o.id)+'&clinic_id=eq.'+encodeURIComponent(id));
-  if(!Array.isArray(verify)||verify.length!==1||String(verify[0].id)!==String(o.id)){
-   throw Error(creating
-    ?'O trabalho não foi encontrado no banco após o cadastro. Verifique a permissão INSERT (RLS) da tabela nexodent_lab_orders.'
-    :'As alterações não foram encontradas no banco. Verifique a permissão UPDATE (RLS) da tabela nexodent_lab_orders.');
-  }
-  const saved=verify[0],ix=orders.findIndex(x=>String(x.id)===String(saved.id));
-  if(ix>=0)orders[ix]=saved;else orders.unshift(saved);
+  const method=o._new?'POST':'PATCH';
+ await OralCloud.request(path,{method,body});
+  const saved={...o};delete saved._new;const ix=orders.findIndex(x=>String(x.id)===String(saved.id));
+  if(ix>=0)orders[ix]={...orders[ix],...saved};else orders.unshift({...saved,clinic_id:id});
   publishOrders();
  }else{const ix=orders.findIndex(x=>x.id===o.id);if(ix>=0)orders[ix]=o;else orders.unshift(o);localWrite();}
- orderEpoch++;fetchTask=null;fetchTaskClinic=null;
+orderEpoch++;fetchTask=null;
  await fetchOrders(true);
 }
-function readForm(){const v=id=>($id(id)?.value||'').trim();return {patient_id:v('nxlab-patient'),laboratory:v('nxlab-lab'),work_description:v('nxlab-work'),shade:v('nxlab-shade'),teeth:v('nxlab-teeth'),sent_at:v('nxlab-sent')||null,due_at:v('nxlab-due')||null,received_at:v('nxlab-received')||null,stage:v('nxlab-stage'),status:v('nxlab-status'),observation_reason:v('nxlab-observation'),instructions:v('nxlab-instructions')};}
+function readForm(){const v=id=>($id(id)?.value||'').trim();return {patient_id:v('nxlab-patient'),laboratory:v('nxlab-lab'),work_description:v('nxlab-work'),shade:v('nxlab-shade'),teeth:v('nxlab-teeth'),sent_at:v('nxlab-sent')||null,due_at:v('nxlab-due')||null,received_at:v('nxlab-received')||null,stage:v('nxlab-stage'),status:(orders.find(x=>String(x.id)===String(editing))?.status||'Em andamento'),observation_reason:v('nxlab-observation'),instructions:v('nxlab-instructions')};}
 function exportCsv(){
  const fields=['Paciente','Local de execução','Responsável','Trabalho','Dentes','Cor','Etapa','Situação','Envio','Previsão','Recebimento','Observação','Tratamentos cadastrados','Tratamentos concluídos','Custos cadastrados','Tratamento vinculado','Custo laboratório'];
  const today=isoToday();
@@ -326,7 +317,7 @@ async function execute(action,id){
 }
 function updateExecutionForm(){
  const where=$id('nxlab-execution')?.value,internal=where==='clinic';
- for(const [id,all,get] of [['nxlab-stage',STAGES,execution.stages],['nxlab-status',STATES,execution.states]]){const el=$id(id);if(!el)continue;const previous=el.value,choices=get(all,where);el.innerHTML=options(choices,choices.includes(previous)?previous:choices[0]);}
+ for(const [id,all,get] of [['nxlab-stage',STAGES,execution.stages]]){const el=$id(id);if(!el)continue;const previous=el.value,choices=get(all,where);el.innerHTML=options(choices,choices.includes(previous)?previous:choices[0]);}
  const field=$id('nxlab-lab');if(field)field.required=false;
  const label=$id('nxlab-responsible-label');if(label)label.textContent=internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável (opcional)';
  for(const id of ['nxlab-sent-field','nxlab-received-field'])if($id(id))$id(id).hidden=internal;
