@@ -38,3 +38,20 @@ html body{background:var(--preview-bg)!important;color:var(--preview-ink)}
 html.crm-embedded .crm-main{background:var(--preview-bg)!important;padding:24px!important}
 @media(max-width:1100px){.crm-main .metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:700px){.crm-main{padding:14px!important}.crm-main .metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}.crm-main .metrics>div{padding:13px!important}.crm-main .metrics strong{font-size:23px!important}.crm-main .intro{align-items:flex-start!important;flex-wrap:wrap!important}.crm-main .intro h1{font-size:25px!important}.crm-main .board-heading{padding:14px!important}.crm-main #board{padding:8px!important}.crm-view-tabs{overflow-x:auto!important;flex-wrap:nowrap!important}.crm-view-tabs button{white-space:nowrap!important}}
+
+/* Ações da tela de oportunidades */
+.crm-main :is(.crm-integrations-link, #new, #refresh, .crm-clear-filters-56, #crm-export-csv-57, .crm-stage-toggle):not(:disabled) {
+  background: #a9450c !important;
+  color: #fff !important;
+  border-color: #a9450c !important;
+}
+.crm-main :is(.crm-integrations-link, #new, #refresh, .crm-clear-filters-56, #crm-export-csv-57, .crm-stage-toggle):not(:disabled):hover {
+  background: #873607 !important;
+  border-color: #873607 !important;
+}
+.crm-main :is(#new, #refresh, .crm-clear-filters-56, #crm-export-csv-57):disabled {
+  background: #edf0f3 !important;
+  color: #586574 !important;
+  border-color: #d1d9e0 !important;
+  opacity: 1;
+}
