@@ -2,10 +2,14 @@ const test=require('node:test'),assert=require('node:assert/strict'),{filterRows
 const items=[{id:'a',name:'Restauração estética',price:350,margin:40,status:'above'},{id:'b',name:'Pino de fibra',price:200,margin:20,status:'below'},{id:'c',name:'Sem preço',price:0,margin:null,status:'none'},{id:'d',name:'Atendimento',price:50,margin:-10,status:'loss'}];
 test('busca sem acentos combina com filtros e não altera o catálogo original',()=>{const before=JSON.stringify(items);assert.deepEqual(filterRows(items,{query:'RESTAURACAO'}).map(x=>x.id),['a']);assert.deepEqual(filterRows(items,{filter:'loss'}).map(x=>x.id),['d']);assert.deepEqual(filterRows(items,{filter:'below',query:'restauracao'}),[]);assert.equal(filterRows(items,{query:''}).length,4);assert.equal(JSON.stringify(items),before)});
 test('ordena preços e margens com dados incompletos ao final e mantém sem preço separado de prejuízo',()=>{assert.deepEqual(filterRows(items,{sort:'price-desc'}).map(x=>x.id),['a','b','d','c']);assert.deepEqual(filterRows(items,{sort:'margin-asc'}).map(x=>x.id),['d','b','a','c']);assert.deepEqual(filterRows(items,{sort:'margin-desc'}).map(x=>x.id),['a','b','d','c']);assert.deepEqual(filterRows(items,{filter:'none'}).map(x=>x.id),['c'])});
-test('cartão e composição apresentam o mesmo custo total com comissão sobre a base líquida',()=>{
+test('cartão e composição apresentam o mesmo preço sugerido e custo total com comissão sobre a base líquida',()=>{
  const vm=require('node:vm'),fs=require('node:fs'),pricing=require('../assets/js/features/pricing-overview');
  const procedure={id:'p',nome:'Teste',min:60,preco:500,mat:20,lab:30,custo:10,parc:true,parTipo:'pct',par:25};
  const context=vm.createContext({db:{pr:[procedure],hc:{alu:1000,eqp:1000,luz:100,net:100,fix:0,pl:1000,dias:5,hdia:8,occ:100,mg:30,imp:5,cart:2,com:20}},window:{NexoPricingOverview:pricing},document:{addEventListener(){}},num:x=>Number(x)||0,r2:n=>Math.round(n*100)/100,brl:n=>Number(n).toFixed(2),esc:String});
  vm.runInContext(fs.readFileSync('assets/js/calculations.js','utf8'),context);const source=fs.readFileSync('assets/js/features/catalogs.js','utf8');vm.runInContext(source.slice(source.indexOf('function rw('),source.indexOf('const PF_ST=')),context);vm.runInContext(fs.readFileSync('assets/js/features/procedure-catalog.js','utf8'),context);
  const row=context.window.NexoProcedureCatalog.model().items[0],html=context.prRes(procedure),total=html.match(/<span>Custo total<\/span><span>([^<]+)<\/span>/)[1];assert.equal(total,row.cost.toFixed(2));assert.ok(Math.abs(row.cost+row.profit-500)<1e-8);assert.ok(row.calc.comValorPct>0);
+ const metrics=context.window.NexoProcedureCatalog.metricsHtml;
+ const suggested=html.match(/Sugerido: ([^<]+)/)[1];
+ assert.ok(metrics(row).includes('<small>Preço sugerido</small><strong>'+suggested+'</strong>'));
+ assert.ok(metrics({...row,calc:{ok:false,sug:0}}).includes('<small>Preço sugerido</small><strong>—</strong>'));
 });

@@ -25,7 +25,11 @@ function statsHtml(m){return `<article><i>${icon('list')}</i><div><span>Procedim
 function headHtml(r){const labels={above:'Margem adequada',below:'Margem baixa',loss:'Prejuízo',none:'Sem preço',unknown:'Dados pendentes'},x=r.procedure,materials=(x.mats||[]).length;
  return `<span class="nc-procedure-icon">${icon('tooth')}</span><div class="nc-identity"><h2>${esc(r.name)}</h2><p>${r.minutes>0?r.minutes+' min':'Duração não informada'} <span aria-hidden="true">|</span> ${materials?materials+' '+(materials===1?'material':'materiais'):num(x.mat)>0?'Com materiais':'Sem materiais'}${x.parc?' · Parceiro':''}</p></div><div class="nc-price"><strong>${r.price>0?brl(r.price):'—'}</strong><span class="nc-status ${r.status}">${labels[r.status]}</span></div>`;
 }
-function metricsHtml(r){return `<div><small>Custo total</small><strong>${r.cost===null?'—':brl(r.cost)}</strong></div><div><small>Lucro estimado</small><strong${r.profit<0?' class="nc-negative"':''}>${r.profit===null?'—':brl(r.profit)}</strong></div><div><small>Margem estimada</small><strong>${r.margin===null?'—':r.margin.toFixed(1).replace('.',',')+'%'}</strong></div>`;}
+function metricsHtml(r){
+ const {ok,sug}=r.calc;
+ const suggested=ok&&Number.isFinite(sug)&&sug>0?brl(sug):'—';
+ return `<div><small>Custo total</small><strong>${r.cost===null?'—':brl(r.cost)}</strong></div><div><small>Lucro estimado</small><strong${r.profit<0?' class="nc-negative"':''}>${r.profit===null?'—':brl(r.profit)}</strong></div><div><small>Margem estimada</small><strong>${r.margin===null?'—':r.margin.toFixed(1).replace('.',',')+'%'}</strong></div><div><small>Preço sugerido</small><strong>${suggested}</strong></div>`;
+}
 function apply(){
  const page=document.querySelector('.procedure-catalog');if(!page)return;
  const m=model(),visible=filterRows(m.items,{query:view.prq,filter:view.prFilter||'all',sort:view.prSort||'name'}),visibleIds=new Set(visible.map(r=>r.id));
