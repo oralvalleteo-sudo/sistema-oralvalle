@@ -18,7 +18,6 @@ function ovIcon(name){
     lem:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     dt:'<path d="M7 3C4.5 3 3 5 3 7.5c0 2 1 3.5 1.5 5.5.5 2 .7 4.5 1.5 7 .3 1 1.7 1 2-.2.4-1.8.8-4.3 2-4.3s1.6 2.5 2 4.3c.3 1.2 1.7 1.2 2 .2.8-2.5 1-5 1.5-7 .5-2 1.5-3.5 1.5-5.5C21 5 19.5 3 17 3c-1.8 0-3 1-5 1S8.8 3 7 3z"/>',
     cm:'<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
-    pg:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
     vd:'<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h3l2.7 11.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6"/>',
     hc:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     pr:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 13 2 2 4-4"/>',
@@ -54,7 +53,6 @@ function ovSidebar(active){
       ${item('wa','WhatsApp')}
       ${item('sigdoc','Documentos e Assinaturas')}
       ${pmSee('dt')||pmSee('cm')?`<button class="ov-nav-btn${active==='dt'||active==='cm'?' on':''}" data-act="nav" data-t="${pmSee('dt')?'dt':'cm'}"><span class="ico">${ovIcon('dt')}</span><span>Dentistas</span></button>`:''}
-      ${item('vd','Pagamentos Recebidos','pg')}
       ${item('vd','Vendas')}
       ${pmSee('reports')?`<button class="ov-nav-btn${active==='reports'?' on':''}" data-act="nav" data-t="reports"><span class="ico">${ovIcon('reports')}</span><span>Relatórios</span></button>`:''}
     </nav>
