@@ -1,15 +1,16 @@
 /* Menu lateral: azul-petróleo e seleção pêssego, no desktop e no celular.
-   Escopo restrito à navegação; não modifica ações, permissões ou conteúdo. */
+   A marca do cabeçalho usa o mesmo fundo no desktop. */
+.ov-shell { --ov-sidebar-bg: #263f49; }
 html[data-ov-mode] .ov-sidebar,
 html[data-ov-mode] .ov-mobile-nav {
-  background: #263f49 !important;
+  background: var(--ov-sidebar-bg, #263f49) !important;
   color: #edf4f6;
   border-color: #35535e;
 }
 html[data-ov-mode] .ov-sidebar {
   padding: 0 14px 28px;
   scrollbar-width: thin;
-  scrollbar-color: #64818b #263f49;
+  scrollbar-color: #64818b var(--ov-sidebar-bg, #263f49);
 }
 html[data-ov-mode] .ov-sidebar .ov-side-title {
   height: auto;
