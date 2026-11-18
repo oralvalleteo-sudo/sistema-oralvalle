@@ -114,18 +114,21 @@ function lembretesHtml(){
   });
   const hoje=tdy();
   const pend=list.filter(x=>!x.feito).length;
-  const TIPOS=['Geral','Paciente','Financeiro','Agenda','Administrativo','Retorno'],rp=retPend(),op=orthoLista().length;
-  const tabs=[['todos','Todos',pend],['aniversarios','Aniversários',ovBirthdayToday().length],['ret','Sem retorno',rp],['ortho','Ortodontia',op]].concat(TIPOS.map(t=>[t,t,list.filter(x=>!x.feito&&(x.tipo||'Geral')===t).length]));
+  const TIPOS=['Geral','Paciente','Financeiro','Agenda','Administrativo','Retorno'],rp=retPend(),op=orthoLista().length,birthdays=ovBirthdayToday().length;
+  const tabs=[['todos','Todos',pend],['aniversarios','Aniversários',birthdays],['ret','Sem retorno',rp],['ortho','Ortodontia',op]].concat(TIPOS.map(t=>[t,t,list.filter(x=>!x.feito&&(x.tipo||'Geral')===t).length]));
   const T=tabs.some(x=>x[0]===view.lemTab)?view.lemTab:'todos';
   const shown=T==='todos'?list:list.filter(x=>(x.tipo||'Geral')===T),tipoSel=TIPOS.includes(T)?T:'Geral';
   const tabsHtml=`<nav class="lem-tabs" aria-label="Assuntos dos lembretes">${tabs.map(([key,label,count])=>`<button type="button"${T===key?' aria-current="page"':''} data-act="lemtab" data-t="${key}"><strong>${label}</strong>${count?`<span class="lem-n">${count}</span>`:''}</button>`).join('')}</nav>`;
-  const retNote=`<div class="card" style="margin-bottom:12px;border-color:var(--ac)"><div class="row" style="align-items:center"><div style="flex:1"><strong>${rp} ${rp===1?'paciente sem retorno':'pacientes sem retorno'} há mais de ${retMeses()} meses</strong></div><button class="sm" data-act="lemtab" data-t="ret" style="flex:none">Ver lista</button></div></div>`;
-  return `<div class="ov-reminders-page"><div class="ov-page-head"><h1>Lembretes</h1><span class="badge">${pend} pendente${pend===1?'':'s'}</span></div>
-  ${tabsHtml}<div class="ov-reminders-content">${T==='aniversarios'?ovBirthdayHtml():T==='ret'?retHtml():T==='ortho'?orthoHtml(false):`${T==='todos'?ovBirthdayHtml():''}${T==='todos'&&rp?retNote:''}
+  const alerts=T==='todos'&&(rp||birthdays)?`<div class="ov-reminder-alerts">
+    ${rp?`<button type="button" class="ghost" data-act="lemtab" data-t="ret">${rp} sem retorno há mais de ${retMeses()} meses <span aria-hidden="true">→</span></button>`:''}
+    ${birthdays?`<button type="button" class="ghost" data-act="lemtab" data-t="aniversarios">${birthdays} aniversariante${birthdays===1?'':'s'} hoje <span aria-hidden="true">→</span></button>`:''}
+  </div>`:'';
+  return `<div class="ov-reminders-page"><div class="ov-page-head"><h1>Lembretes</h1><span class="ov-reminder-count">${pend} pendente${pend===1?'':'s'}</span></div>
+  ${tabsHtml}<div class="ov-reminders-content">${T==='aniversarios'?ovBirthdayHtml():T==='ret'?retHtml():T==='ortho'?orthoHtml(false):`
   <div class="ov-reminder-grid">
     <section class="ov-reminder-form">
       <details class="nd-lem-create">
-        <summary>Adicionar lembrete</summary>
+        <summary><span aria-hidden="true">+</span> Adicionar lembrete</summary>
         <div>
       <label for="lemTitulo">O que você precisa lembrar?</label>
       <input id="lemTitulo" placeholder="Ex.: Ligar para paciente sobre retorno" autocomplete="off">
@@ -144,17 +147,20 @@ function lembretesHtml(){
         </div>
       </details>
     </section>
-    <section>
+    ${alerts}
+    <section aria-label="Lista de lembretes">
       ${shown.length?`<div class="ov-reminder-list">${shown.map(x=>{
         const when=x.data?(fd(x.data)+(x.hora?' · '+x.hora:'')): 'Sem data';
         const cls=x.feito?' done':'';
         return `<article class="ov-reminder-item${cls}">
           <div class="ov-reminder-top">
             <input class="ov-reminder-check" type="checkbox" data-lem-check="${esc(x.id)}" ${x.feito?'checked':''} aria-label="Concluir lembrete">
+            <div>
             <div class="ov-reminder-title">${esc(x.titulo||'Lembrete sem título')}</div>
-          </div>
           <div class="ov-reminder-meta"><span class="ov-reminder-pill">${esc(x.tipo||'Geral')}</span><span class="ov-reminder-pill">${esc(when)}</span></div>
           ${x.obs?`<div class="ov-reminder-note">${esc(x.obs)}</div>`:''}
+            </div>
+          </div>
           <div class="ov-reminder-actions"><button class="ghost sm" data-act="togglelem" data-id="${esc(x.id)}">${x.feito?'Reabrir':'Concluir'}</button><button class="danger sm" data-act="rmlem" data-id="${esc(x.id)}">${delArm===x.id?'Confirmar exclusão':'Excluir'}</button></div>
         </article>`;}).join('')}</div>`:
       `<div class="ov-reminder-empty"><strong>${T==='todos'?'Nenhum lembrete cadastrado':'Nenhum lembrete em '+T}</strong></div>`}

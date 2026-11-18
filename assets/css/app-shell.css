@@ -1409,29 +1409,46 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button[aria-current] { border-color: #eba775; background: #fff0e4; color: #863c12; }
 :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) small { color: var(--fin-muted); line-height: 1.35; }
 :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+.ov-reminders-page .lem-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
 .ov-reminders-page .lem-tabs button {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-content: center;
+  display: inline-flex;
   align-items: center;
-  min-height: 46px;
+  gap: 7px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: 20px;
 }
-.ov-reminders-page .lem-n {
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: #fff;
+.ov-reminders-page .lem-n,
+.ov-reminders-page .ov-reminder-count {
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #e7eff2;
   color: var(--fin-text);
   font-size: 12px;
 }
+.ov-reminders-page .ov-reminder-count { padding: 5px 10px; }
 .ov-reminders-page .ov-reminders-content { margin-top: 18px; }
 .ov-reminders-page .nd-lem-create > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   width: fit-content;
   padding: 10px 16px;
-  border: 1px solid #eba775;
   border-radius: 9px;
-  background: #fff0e4;
-  color: #863c12;
+  background: #263f49;
+  color: #fff;
+  list-style: none;
   cursor: pointer;
   font-weight: 700;
+}
+.ov-reminders-page .nd-lem-create > summary::-webkit-details-marker { display: none; }
+.ov-reminders-page .nd-lem-create > summary span { font-size: 19px; line-height: 1; }
+.ov-reminders-page .ov-reminder-alerts { display: flex; flex-wrap: wrap; gap: 8px; }
+.ov-reminders-page .ov-reminder-alerts button {
+  min-height: 34px;
+  padding: 5px 10px;
+  text-align: left;
+  white-space: normal;
 }
 .cfg-page .cfg-panels { margin-top: 18px; }
 .cfg-page .cfg-panels:not(.cfg-panels-financeiro) { display: grid; gap: 14px; }
@@ -2738,15 +2755,25 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
 .ov-reminder-grid .nd-lem-create > summary { min-height:42px; box-sizing:border-box; }
 .ov-reminder-grid .nd-lem-create[open] > div { margin-top:12px; padding:20px !important; border:1px solid #e3e7ec; border-radius:12px; background:#fff; }
 .ov-reminder-grid .ov-reminder-list { display:grid !important; grid-template-columns:minmax(0,1fr); gap:14px !important; margin:0 !important; padding:0 !important; }
-.ov-reminder-grid .ov-reminder-item { display:flex !important; flex-direction:column; gap:10px; min-width:0; padding:18px !important; border:1px solid #dce2e9 !important; border-radius:12px !important; background:#fff !important; box-shadow:0 2px 8px rgba(23,35,54,.045); box-sizing:border-box; }
+.ov-reminder-grid .ov-reminder-item { display:grid !important; min-width:0; padding:18px !important; border:1px solid #dce2e9 !important; border-radius:12px !important; background:#fff !important; box-shadow:0 2px 8px rgba(23,35,54,.045); box-sizing:border-box; }
 .ov-reminder-grid .ov-reminder-top { display:flex; align-items:flex-start; gap:12px; min-width:0; }
 .ov-reminder-grid .ov-reminder-check { flex:0 0 auto; width:17px; height:17px; margin:3px 0 0; accent-color:#e97700; }
 .ov-reminder-grid .ov-reminder-title { flex:1; min-width:0; overflow-wrap:anywhere; font-size:14px; font-weight:650; line-height:1.45; color:#222b36; }
-.ov-reminder-grid .ov-reminder-meta { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 0 29px; }
+.ov-reminder-grid .ov-reminder-meta { display:flex; flex-wrap:wrap; gap:7px; margin:6px 0 0; }
 .ov-reminder-grid .ov-reminder-pill { display:inline-flex; align-items:center; padding:4px 9px; border-radius:20px; background:#fff6ed; border:1px solid #f5e3d3; color:#795030; font-size:11px; }
-.ov-reminder-grid .ov-reminder-note { margin-left:29px; line-height:1.5; color:#526071; overflow-wrap:anywhere; }
-.ov-reminder-grid .ov-reminder-actions { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 0 29px; }
+.ov-reminder-grid .ov-reminder-note { margin-top:5px; line-height:1.5; color:#526071; overflow-wrap:anywhere; }
+.ov-reminder-grid .ov-reminder-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .ov-reminder-grid .ov-reminder-actions button { min-height:30px; padding:5px 12px; border-radius:7px; }
+.ov-reminder-grid .ov-reminder-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.ov-reminder-grid .ov-reminder-top > div { min-width: 0; }
+@media (max-width: 650px) {
+  .ov-reminder-grid .ov-reminder-item { grid-template-columns: minmax(0, 1fr); }
+  .ov-reminder-grid .ov-reminder-actions { justify-content: flex-start; margin-left: 29px; }
+}
 .ov-reminder-grid .ov-reminder-item.done { opacity:.72; }
 @media(max-width:600px) { .ov-reminder-grid {gap:14px !important;} .ov-reminder-grid .ov-reminder-list {grid-template-columns:minmax(0,1fr);} .ov-reminder-grid .ov-reminder-item {padding:14px !important;} }
 /* sidebar-petroleum.css */
