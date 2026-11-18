@@ -54,7 +54,17 @@ document.addEventListener('change',e=>{const t=e.target,p=cur();
   else if(t.id==='atData'){view.at.data=t.value||tdy();render()}
   else if(t.id==='atDias'){view.at.dias=t.value.replace(/\D/g,'');render()}
 });
-function tabArquivos(p){
+const patientAttachmentGroups = [
+  ['Radiografias', /radiograf/i],
+  ['Fotografias clínicas', /imagem cl[ií]nica|fotograf/i],
+  ['Receituários e atestados', /receitu[aá]rio|atestado/i],
+  ['Laudos, Termos e Autorizações', /exame|laudo|relat[oó]rio|tomograf|termo|autoriza|consent/i],
+  ['Outros documentos', /./]
+];
+function patientAttachmentGroup(category){
+  return patientAttachmentGroups.find(([,pattern])=>pattern.test(String(category||'Outros')))?.[0]||'Outros documentos';
+}
+function tabArquivos(p,renderAttachments){
   const arq=Array.isArray(p.arquivos)?p.arquivos:[];
   const signed=arq.filter(f=>f && (f.assinaturaTipo || f.sha256 || /assinad/i.test(String(f.categoria||''))));
   const fold=(title,body,count)=>{
@@ -64,8 +74,6 @@ function tabArquivos(p){
     return `<details class="ov-doc-fold" data-doc-patient="${esc(String(p.id))}" data-doc-fold="${esc(title)}"${expanded?' open':''}><summary><span class="ov-doc-icon" aria-hidden="true">${icons[title]||'▤'}</span><span class="ov-doc-title">${title}</span>${count==null?'':`<span class="ov-doc-count">${count} ${count===1?'arquivo':'arquivos'}</span>`}<span class="ov-doc-chevron" aria-hidden="true">⌄</span></summary><div class="ov-doc-fold-body">${body}</div></details>`;
   };
   const history=`<p class="sub">Cópias arquivadas no prontuário. Assinatura desenhada não equivale a ICP-Brasil. O histórico abaixo não comprova identidade nem impede alterações no banco.</p>${signed.length?`<div style="overflow-x:auto"><table style="width:100%;text-align:left"><thead><tr><th>Documento</th><th>Profissional</th><th>Assinatura</th><th>Data</th><th>Integridade</th></tr></thead><tbody>${signed.map(f=>`<tr><td>${esc(f.nome||'Documento')}</td><td>${esc(f.dentistaNome||'Não informado')} ${esc(f.dentistaCro||'')}</td><td>${esc(f.assinaturaTipo||'Não verificada')}</td><td>${esc(f.assinadoEm||f.dataEnvio||'')}</td><td>${f.sha256?`<button type="button" class="ghost sm" data-act="verificarArquivoAssinado" data-id="${esc(String(f.id))}">Verificar SHA-256</button>`:'Sem hash registrado'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="note">Nenhum documento com assinatura identificado nos arquivos deste paciente.</p>'}`;
-  const categories=[['Radiografias',f=>/radiograf/i.test(String(f.categoria||''))],['Laudos, Termos e Autorizações',f=>/exame|laudo|tomograf|termo|autoriza|consent/i.test(String(f.categoria||''))],['Outros documentos',f=>!/imagem cl[ií]nica|fotograf/i.test(String(f.categoria||''))]];
-  const used=new Set();
   const fileCard=f=>{
     // Dados de anexos podem vir de importações antigas. Não executar HTML/SVG ou URLs arbitrárias.
     const safe=/^data:(application\/pdf|image\/(?:png|jpeg|webp|gif))(?:;filename=[a-zA-Z0-9_.-]+)?;base64,[a-zA-Z0-9+/]+=*$/i.test(String(f.data||''));
@@ -73,9 +81,8 @@ function tabArquivos(p){
     const preview=url&&/^data:image\//i.test(f.data)?`<a href="${url}" target="_blank" rel="noopener"><img src="${url}" loading="lazy" alt="${esc(f.nome)}"></a>`:'<div class="ov-file-doc">PDF<br>▤</div>';
     return `<article class="ov-file-card"><div class="ov-file-preview">${preview}</div><div class="ov-file-name" title="${esc(f.nome)}">${esc(f.nome)}</div><div class="ov-file-meta">${esc(f.categoria||'Documento')} · ${esc(f.dataEnvio||'')}</div><div class="row" style="margin-top:8px">${url?`<a class="ghost sm ov-file-open" href="${url}" target="_blank" rel="noopener">Abrir</a>`:'<span class="note">Formato indisponível para abertura segura</span>'}<button class="danger sm" data-act="rmArquivo" data-id="${esc(String(f.id))}">Excluir</button></div></article>`;
   };
-  const grouped=categories.map(([title,test],idx)=>{
-    const files=arq.filter((f,i)=>!used.has(i)&&(idx===categories.length-1||test(f)));
-    files.forEach(f=>used.add(arq.indexOf(f)));
+  const grouped=renderAttachments?renderAttachments(fold):patientAttachmentGroups.map(([title])=>{
+    const files=arq.filter(file=>patientAttachmentGroup(file.categoria)===title);
     return fold(title,files.length?`<div class="ov-file-grid">${files.map(fileCard).join('')}</div>`:'<p class="note">Nenhum arquivo nesta categoria.</p>',files.length);
   }).join('');
   const upload=`<p class="sub">Anexe radiografias, atestados, exames e outros arquivos ao prontuário deste paciente.</p><label for="arqCategoria">Tipo de arquivo</label><select id="arqCategoria"><option>Radiografia</option><option>Atestado</option><option>Receituário</option><option>Imagem clínica</option><option>Exame</option><option>Outro documento</option></select><label for="arqFiles">Selecionar arquivos (imagem ou PDF)</label><input id="arqFiles" type="file" accept="image/*,application/pdf" multiple><p class="note" style="margin-top:6px">Para evitar que o navegador fique sem espaço, cada arquivo pode ter até 1,5 MB. Os anexos ficam salvos neste navegador; faça backups regularmente.</p>`;

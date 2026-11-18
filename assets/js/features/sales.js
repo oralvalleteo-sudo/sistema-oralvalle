@@ -16,15 +16,6 @@ function ovFinDetail(type){
   const [title,items,kind]=selected;
   const amount=kind==='payment'?payments.reduce((s,x)=>s+num(x.p.valor),0):kind==='pending'?pending.reduce((s,v)=>s+saldoV(v),0):kind==='commission'?sum(monthly,'rep'):kind==='net'?sum(monthly,'valor')-sum(monthly,'rep'):sum(items,'valor');
   const headers=kind==='payment'?['Data do recebimento','Paciente','Procedimento','Forma','Recebido']:kind==='pending'?['Data da venda','Paciente','Procedimento','Recebido','Pendente']:kind==='commission'?['Data','Paciente','Dentista','Procedimento','Comissão']:kind==='net'?['Data','Paciente','Venda','Comissão','Sobra']:['Data','Paciente','Procedimento','Valor'];
-  const cells=(v,arr,index)=>`<tr style="background:${index%2===0?'#25292b':'#17191b'}">`+arr.map((x,i)=>`<td style="padding:11px 10px;${i===arr.length-1?'text-align:right;white-space:nowrap':''};border-bottom:1px solid #383c3e">${esc(x)}</td>`).join('')+'</tr>';
-  const rows=items.map((item,index)=>{
-    const v=kind==='payment'?item.v:item;
-    if(kind==='payment')return cells(v,[fd(item.p.data),pName(v.pid),v.proc||'Atendimento',item.p.forma||'—',brl(item.p.valor)],index);
-    if(kind==='pending')return cells(v,[fd(v.data),pName(v.pid),v.proc||'Atendimento',brl(recebido(v)),brl(saldoV(v))],index);
-    if(kind==='commission')return cells(v,[fd(v.data),pName(v.pid),dName(v.dt),v.proc||'Atendimento',brl(v.rep)],index);
-    if(kind==='net')return cells(v,[fd(v.data),pName(v.pid),brl(v.valor),brl(v.rep),brl(num(v.valor)-num(v.rep))],index);
-    return cells(v,[fd(v.data),pName(v.pid),v.proc||'Atendimento',brl(v.valor)],index);
-  }).join('');
   // A exportação reutiliza exatamente os dados apresentados na janela.
   const reportRows=items.map(item=>{
     const v=kind==='payment'?item.v:item;
@@ -34,9 +25,10 @@ function ovFinDetail(type){
     if(kind==='net')return [fd(v.data),pName(v.pid),brl(v.valor),brl(v.rep),brl(num(v.valor)-num(v.rep))];
     return [fd(v.data),pName(v.pid),v.proc||'Atendimento',brl(v.valor)];
   });
+  const rows=reportRows.map(row=>`<tr>${row.map(value=>`<td>${esc(value)}</td>`).join('')}</tr>`).join('');
   window.ovFinCurrentReport={title,headers,rows:reportRows,total:brl(amount),count:items.length,period:month};
   const dialog=document.getElementById('ov-fin-detail-dialog');if(!dialog)return;
-  dialog.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="ov-fin-detail-title" style="margin:0">${esc(title)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="sm" data-act="ovFinPdf">⬇ Gerar PDF</button><form method="dialog"><button type="submit" class="ghost sm">✕ Fechar</button></form></div></div><p class="note" style="margin:12px 0">${items.length} registro(s) · Total: <strong>${brl(amount)}</strong></p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left;font-size:14px"><thead><tr style="background:#38302a;color:#ffb36b">${headers.map(h=>`<th style="padding:10px 8px;white-space:nowrap">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length}" style="padding:16px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div><p style="text-align:right"><strong>Total: ${brl(amount)}</strong></p>`;
+  dialog.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="ov-fin-detail-title" style="margin:0">${esc(title)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="sm" data-act="ovFinPdf">⬇ Gerar PDF</button><form method="dialog"><button type="submit" class="ghost sm">✕ Fechar</button></form></div></div><p class="note" style="margin:12px 0">${items.length} registro(s) · Total: <strong>${brl(amount)}</strong></p><div class="ov-fin-detail-scroll"><table class="ov-fin-detail-table"><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length}" style="padding:16px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div><p style="text-align:right"><strong>Total: ${brl(amount)}</strong></p>`;
   if(!dialog.open)dialog.showModal();
 }
 async function ovFinPdf(){
@@ -108,7 +100,7 @@ function vdHtml(){
   const taxasMes=db.vd.reduce((s,v)=>s+(v.pg||[]).filter(p=>String(p.data||'').slice(0,7)===m).reduce((a,p)=>a+ovFeeTax(p),0),0);
   let h='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">'+ovFinCard('Vendas de hoje',sum(dia,'valor'),dia.length+' atendimento(s)','today')+ovFinCard('Vendas do mês',sum(mes,'valor'),mes.length+' atendimento(s)','month')+ovFinCard('Recebido no mês',recMes,'','received')+ovFinCard('A receber de pacientes',aRec,'','pending')+ovFinCard('Comissões do mês',sum(mes,'rep'),'','commission')+ovFinCard('Sobra após comissões (mês)',sum(mes,'valor')-sum(mes,'rep'),'','net')+'</div>';
   h+=`<div class="card" style="margin:10px 0"><b>Taxas da operadora no mês: ${brl(taxasMes)}</b><br><b>Recebimento líquido do mês: ${brl(recMes-taxasMes)}</b><p class="note" style="margin:4px 0 0">Recebido bruto menos taxas registradas. Não representa saldo bancário conciliado.</p></div>`;
-  h+='<dialog id="ov-fin-detail-dialog" aria-labelledby="ov-fin-detail-title" style="width:min(900px,94vw);max-height:85vh;overflow:auto;border:1px solid #555;border-radius:14px;background:#191b1c;color:#eee;padding:20px;box-shadow:0 16px 60px #0009"></dialog>';
+  h+='<dialog id="ov-fin-detail-dialog" aria-labelledby="ov-fin-detail-title" class="ov-fin-detail-dialog"></dialog>';
   const pts=db.p.filter(p=>!p.arq||p.id===pre.pid),dts=db.dt.filter(d=>d.ativo!==false||d.id===pre.dt);
   if(!pts.length||!dts.length)h+='<div class="empty">Cadastre ao menos um paciente e um dentista ativo para lançar vendas.</div>';
   else{

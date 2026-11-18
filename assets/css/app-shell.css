@@ -1385,44 +1385,15 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 .nx-report-table tbody tr:nth-child(even) > td { background: #eef4f6; }
 
 /* Anexos do prontuário */
-.ov-cloud-files {
-  margin: 16px 0 20px;
-  overflow: hidden;
-  border: 1px solid #d6e0e5;
-  border-radius: 14px;
-  background: #fff;
-  color: #233b47;
-}
-.ov-cloud-files-header { padding: 16px 18px; background: #f4f7f8; }
-.ov-cloud-files-header h2 { margin: 0; font-size: 19px; }
-.ov-cloud-files-header h2 span,
-.ov-cloud-files .ov-file-filter span {
-  display: inline-block;
-  padding: 2px 7px;
-  border-radius: 12px;
-  background: #e6eef2;
-  color: #233b47;
-  font-size: 12px;
-  vertical-align: middle;
-}
-.ov-cloud-files .ov-file-filters { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
-.ov-cloud-files .ov-file-filter {
-  padding: 6px 10px;
-  border: 1px solid #d6e0e5;
-  border-radius: 8px;
-  background: #fff;
-  color: #233b47;
-}
-.ov-cloud-files .ov-file-filter[aria-pressed="true"] { background: #fff0e4; border-color: #eba775; color: #863c12; }
-.ov-cloud-file-list > p, .ov-cloud-file-list > button { margin: 14px 18px; }
 .ov-cloud-file {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 13px 18px;
-  border-top: 1px solid #e4eaee;
+  padding: 10px 8px;
+  border-top: 1px solid var(--ln);
 }
+.ov-cloud-file:first-child { border-top: 0; }
 .ov-cloud-file-icon {
   display: grid;
   place-items: center;
@@ -1797,6 +1768,38 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   align-self:center!important;
   justify-self:center!important;
   transform:none!important;
+}
+
+.ov-procedure-search { position: relative; min-width: 0; }
+.ov-procedure-search .ag-sug-i { cursor: pointer; }
+.ov-procedure-search .ag-sug-i[aria-selected="true"] { background: #fff1e2; color: #8f4600; }
+
+.ov-fin-detail-dialog {
+  width: min(900px, 94vw);
+  max-height: 85vh;
+  overflow: auto;
+  border: 1px solid var(--ln);
+  border-radius: 14px;
+  background: var(--card, var(--sf));
+  color: var(--ink);
+  padding: 20px;
+  box-shadow: 0 16px 48px rgb(24 37 48 / 22%);
+}
+.ov-fin-detail-dialog::backdrop { background: rgb(24 37 48 / 28%); }
+.ov-fin-detail-scroll { overflow-x: auto; border: 1px solid var(--ln); border-radius: 8px; }
+.ov-fin-detail-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+.ov-fin-detail-table :is(th, td) { padding: 10px 12px; color: var(--ink); }
+.ov-fin-detail-table th { background: var(--bg); white-space: nowrap; }
+.ov-fin-detail-table td { border-top: 1px solid var(--ln); }
+.ov-fin-detail-table tbody tr:nth-child(even) { background: var(--bg); }
+.ov-fin-detail-table :is(th, td):last-child { text-align: right; white-space: nowrap; }
+
+.ov-attachment-list { max-height: 420px; overflow-y: auto; }
+.ov-evolution-feedback:not(:empty) {
+  display: block;
+  margin-top: 8px;
+  color: var(--wr);
+  font-size: 13px;
 }
 /* patients-refresh.css */
 /* NexoDent — acabamento visual isolado da listagem de pacientes.
