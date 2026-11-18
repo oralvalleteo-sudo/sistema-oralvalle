@@ -544,6 +544,63 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   text-transform:none !important;
 }
 
+/* Anexos do prontuário */
+.ov-cloud-files {
+  margin: 16px 0 20px;
+  overflow: hidden;
+  border: 1px solid #d6e0e5;
+  border-radius: 14px;
+  background: #fff;
+  color: #233b47;
+}
+.ov-cloud-files-header { padding: 16px 18px; background: #f4f7f8; }
+.ov-cloud-files-header h2 { margin: 0; font-size: 19px; }
+.ov-cloud-files-header h2 span,
+.ov-cloud-files .ov-file-filter span {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background: #e6eef2;
+  color: #233b47;
+  font-size: 12px;
+  vertical-align: middle;
+}
+.ov-cloud-files .ov-file-filters { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.ov-cloud-files .ov-file-filter {
+  padding: 6px 10px;
+  border: 1px solid #d6e0e5;
+  border-radius: 8px;
+  background: #fff;
+  color: #233b47;
+}
+.ov-cloud-files .ov-file-filter[aria-pressed="true"] { background: #fff0e4; border-color: #eba775; color: #863c12; }
+.ov-cloud-file-list > p, .ov-cloud-file-list > button { margin: 14px 18px; }
+.ov-cloud-file {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border-top: 1px solid #e4eaee;
+}
+.ov-cloud-file-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #e8f0f3;
+  color: #315461;
+  font-size: 19px;
+}
+.ov-cloud-file-info { min-width: 0; overflow-wrap: anywhere; }
+.ov-cloud-file-info p { margin: 3px 0 0; color: #506673; font-size: 13px; }
+.ov-cloud-file-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 650px) {
+  .ov-cloud-file { grid-template-columns: auto minmax(0, 1fr); }
+  .ov-cloud-file-actions { grid-column: 2; }
+}
+
 /* Configurações */
 .cfg-page, .cfg-financeiro, .ov-reminders-page {
   --fin-border: #d6e0e5;
