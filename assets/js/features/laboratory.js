@@ -62,7 +62,7 @@ function canEdit(){return typeof pmLvl!=='function'||pmLvl('lab')>=2&&pmLvl('pac
 function renderLab(){if(isLab()&&typeof render==='function')render();}
 function fetchOrders(force=false){
  const context=clinic()||'local';
- if(fetchTask&&fetchTaskClinic===context)return fetchTask;
+ if(!force&&fetchTask&&fetchTaskClinic===context)return fetchTask;
  const sequence=++orderEpoch;fetchTaskClinic=context;
  const task=fetchOrdersImpl(force,sequence);fetchTask=task;
  task.finally(()=>{if(fetchTask===task)fetchTask=null;}).catch(()=>{});
@@ -236,19 +236,17 @@ async function persist(o){
   const creating=!!o._new;
   const path='/rest/v1/nexodent_lab_orders'+(creating?'':'?id=eq.'+encodeURIComponent(o.id)+'&clinic_id=eq.'+encodeURIComponent(id));
   const body={...o,clinic_id:id};delete body._new;
-  const method=creating?'POST':'PATCH';
-  // Exigir a linha gravada evita informar sucesso quando o Supabase/RLS não
-  // inseriu ou atualizou nenhum registro (resposta minimal podia ocultar isso).
-  const result=await OralCloud.request(path,{method,body,headers:{'Prefer':'return=representation'}});
-  const rows=Array.isArray(result)?result:(result&&typeof result==='object'?[result]:[]);
-  const saved=rows.find(row=>String(row.id)===String(o.id)&&String(row.clinic_id)===String(id));
-  if(!saved){
+  // Primeiro grava. Em seguida consulta a linha diretamente: respostas minimal,
+  // RLS sem linha afetada ou gravações não persistidas não podem virar falso sucesso.
+  await OralCloud.request(path,{method:creating?'POST':'PATCH',body});
+  const verify=await OralCloud.request('/rest/v1/nexodent_lab_orders?select=*&id=eq.'+encodeURIComponent(o.id)+'&clinic_id=eq.'+encodeURIComponent(id));
+  if(!Array.isArray(verify)||verify.length!==1||String(verify[0].id)!==String(o.id)){
    throw Error(creating
-    ?'O Supabase não confirmou o cadastro. Verifique a permissão de INSERT (RLS) da tabela nexodent_lab_orders.'
-    :'O Supabase não confirmou a alteração. O registro não foi encontrado para esta clínica ou a permissão de UPDATE (RLS) bloqueou a gravação.');
+    ?'O trabalho não foi encontrado no banco após o cadastro. Verifique a permissão INSERT (RLS) da tabela nexodent_lab_orders.'
+    :'As alterações não foram encontradas no banco. Verifique a permissão UPDATE (RLS) da tabela nexodent_lab_orders.');
   }
-  const ix=orders.findIndex(x=>String(x.id)===String(saved.id));
-  if(ix>=0)orders[ix]={...orders[ix],...saved};else orders.unshift(saved);
+  const saved=verify[0],ix=orders.findIndex(x=>String(x.id)===String(saved.id));
+  if(ix>=0)orders[ix]=saved;else orders.unshift(saved);
   publishOrders();
  }else{const ix=orders.findIndex(x=>x.id===o.id);if(ix>=0)orders[ix]=o;else orders.unshift(o);localWrite();}
  orderEpoch++;fetchTask=null;fetchTaskClinic=null;
