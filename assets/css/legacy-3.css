@@ -544,6 +544,10 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   text-transform:none !important;
 }
 
+/* Listas de relatórios */
+.nx-report-table tbody tr:nth-child(odd) > td { background: #fff; }
+.nx-report-table tbody tr:nth-child(even) > td { background: #eef4f6; }
+
 /* Anexos do prontuário */
 .ov-cloud-files {
   margin: 16px 0 20px;
