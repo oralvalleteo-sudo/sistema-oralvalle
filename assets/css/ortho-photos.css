@@ -7,3 +7,15 @@
 .ortho-gallery-actions .ortho-manage,.ortho-gallery-actions .ortho-upload{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:38px;min-width:126px;padding:9px 14px;margin:0;border-radius:8px;font:600 13px/18px inherit;white-space:nowrap;text-align:center}
 .ortho-gallery-actions .ortho-manage{font-family:inherit;font-size:13px;font-weight:600;line-height:18px}
 .ortho-gallery-actions .ortho-upload{font-family:inherit;font-size:13px;font-weight:600;line-height:18px;border:1px solid #ed6b23}
+/* Zoom de fotos */
+.nz-overlay{position:fixed;inset:0;z-index:100000;background:rgba(10,18,24,.94);display:flex;flex-direction:column;color:#edf4f6;font-family:inherit}
+.nz-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#263f49;border-bottom:1px solid #35535e;flex-wrap:wrap}
+.nz-title{flex:1 1 140px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600}
+.nz-bar button{min-width:40px;min-height:38px;padding:6px 12px;border-radius:8px;border:1px solid #4a6a75;background:#304f5b;color:#edf4f6;font-size:15px;font-weight:600;cursor:pointer}
+.nz-bar button:hover{background:#3a5d6a}.nz-bar button:focus-visible{outline:3px solid #ffc9a1;outline-offset:2px}
+.nz-bar .nz-close{background:#f28c28;border-color:#f28c28;color:#1d1307}
+.nz-pct{min-width:48px;text-align:center;font-size:13px;font-variant-numeric:tabular-nums}
+.nz-stage{position:relative;flex:1;overflow:hidden;touch-action:none;cursor:zoom-in;user-select:none}
+.nz-stage.nz-zoomed{cursor:grab}.nz-stage.nz-zoomed:active{cursor:grabbing}
+.nz-stage img{position:absolute;left:0;top:0;max-width:none;max-height:none;transform-origin:0 0;will-change:transform;-webkit-user-drag:none}
+.ov-file-preview img,.ortho-thumb img{cursor:zoom-in}
