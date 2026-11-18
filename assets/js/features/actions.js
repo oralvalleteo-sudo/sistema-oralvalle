@@ -266,7 +266,7 @@ const A={
     if(!confirm('Confirmar '+(kind==='ortho'?'alta ortodôntica':'conclusão do tratamento')+' de '+p.nome+'? O paciente sairá desta lista.'))return;
     const label=kind==='ortho'?'Ortodontia':kind==='impl'?'Implantodontia':'Prótese';
     (p.evol=p.evol||[]).push({id:uid(),data:tdy(),n:'',txt:'['+label+'] Tratamento finalizado / alta registrada.'});
-    if(kind==='ortho')p.orthoMensal=false;else if(kind==='impl'){p.implAtivo=false;p.implEtapa='Tratamento concluído'}else{p.protAtivo=false;p.protEtapa='Tratamento concluído'}
+    if(kind==='ortho')p.orthoMensal=false;else if(kind==='impl'){p.implAtivo=false;p.implEtapa='Tratamento concluído';p.implAltaEm=tdy()}else{p.protAtivo=false;p.protEtapa='Tratamento concluído';p.protAltaEm=tdy()}
     save();render();toast('Alta registrada no prontuário');
   },
   nav:(b,d)=>{view.obx=null;view.obxAll=null;view.h=d.t;view.id=null;view.trForm=false;view.trDraft=null;view.link=null;view.novoPac=false;delArm=null;view.prOpen=null;if(d.t==='pf'){view.pfPid='';view.pfNew=false}if(d.t!=='cm')view.cmDent='';render();topo()},
