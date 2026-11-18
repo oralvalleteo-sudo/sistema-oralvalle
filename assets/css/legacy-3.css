@@ -573,29 +573,46 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button[aria-current] { border-color: #eba775; background: #fff0e4; color: #863c12; }
 :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) small { color: var(--fin-muted); line-height: 1.35; }
 :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+.ov-reminders-page .lem-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
 .ov-reminders-page .lem-tabs button {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-content: center;
+  display: inline-flex;
   align-items: center;
-  min-height: 46px;
+  gap: 7px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: 20px;
 }
-.ov-reminders-page .lem-n {
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: #fff;
+.ov-reminders-page .lem-n,
+.ov-reminders-page .ov-reminder-count {
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #e7eff2;
   color: var(--fin-text);
   font-size: 12px;
 }
+.ov-reminders-page .ov-reminder-count { padding: 5px 10px; }
 .ov-reminders-page .ov-reminders-content { margin-top: 18px; }
 .ov-reminders-page .nd-lem-create > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   width: fit-content;
   padding: 10px 16px;
-  border: 1px solid #eba775;
   border-radius: 9px;
-  background: #fff0e4;
-  color: #863c12;
+  background: #263f49;
+  color: #fff;
+  list-style: none;
   cursor: pointer;
   font-weight: 700;
+}
+.ov-reminders-page .nd-lem-create > summary::-webkit-details-marker { display: none; }
+.ov-reminders-page .nd-lem-create > summary span { font-size: 19px; line-height: 1; }
+.ov-reminders-page .ov-reminder-alerts { display: flex; flex-wrap: wrap; gap: 8px; }
+.ov-reminders-page .ov-reminder-alerts button {
+  min-height: 34px;
+  padding: 5px 10px;
+  text-align: left;
+  white-space: normal;
 }
 .cfg-page .cfg-panels { margin-top: 18px; }
 .cfg-page .cfg-panels:not(.cfg-panels-financeiro) { display: grid; gap: 14px; }
