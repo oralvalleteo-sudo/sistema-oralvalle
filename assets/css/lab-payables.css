@@ -108,3 +108,28 @@
     white-space: nowrap;
   }
 }
+
+/* Mantém os botões de exclusão alinhados na mesma coluna em todas as linhas. */
+.nxlab-money-patients .nxlab-money-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.nxlab-money-patients .nxlab-money-actions [data-lab-money="delete"] {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+@media (max-width: 760px) {
+  .nxlab-money-patients .nxlab-money-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .nxlab-money-patients .nxlab-money-actions [data-lab-money="delete"] {
+    margin-inline-start: auto;
+  }
+}
