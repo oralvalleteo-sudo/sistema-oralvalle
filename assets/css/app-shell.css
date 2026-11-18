@@ -1385,17 +1385,82 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   text-transform:none !important;
 }
 
-/* Nexodent 100: abas financeiras no padrão dos status das propostas */
-.ov-fin-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
-.ov-fin-tab{appearance:none;background:transparent;color:inherit;border:1px solid #777;border-radius:11px;padding:13px 17px;font:600 14px Figtree,inherit;cursor:pointer;text-decoration:none;min-height:46px}
-.ov-fin-tab.is-active{border-color:#f58200;background:rgba(245,130,0,.12);color:#ff8a18}
-.ov-fin-tab:hover{border-color:#f58200}
-.cfg-financeiro .cfg-card[hidden]{display:none!important}
-
-/* Nexodent 102: categorias financeiras compactas em linha única */
-.cfg-financeiro .ov-fin-tabs{display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;max-width:100%;padding:2px 0 8px;margin:10px 0 12px;scrollbar-width:thin}
-.cfg-financeiro .ov-fin-tab{flex:0 0 auto;white-space:nowrap;padding:8px 10px;min-height:36px;font-family:Figtree,sans-serif;font-size:12px;font-weight:600;border-radius:8px;line-height:1.2}
-.cfg-financeiro .cfg-card[hidden]{display:none!important}
+/* Configurações financeiras */
+.cfg-financeiro {
+  --fin-border: #d6e0e5;
+  --fin-text: #233b47;
+  --fin-muted: #506673;
+  color: var(--fin-text);
+}
+.cfg-financeiro .ov-fin-intro {
+  margin: 18px 0;
+  padding: 19px 22px;
+  border: 1px solid #d4e6e7;
+  border-radius: 14px;
+  background: #edf6f6;
+}
+.cfg-financeiro .ov-fin-intro h2,
+.cfg-financeiro .ov-fin-panel h2 { margin: 0; font-size: 21px; color: var(--fin-text); }
+.cfg-financeiro .ov-fin-intro p { margin: 5px 0 0; color: var(--fin-muted); }
+.cfg-financeiro .ov-fin-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 27%) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.cfg-financeiro :is(.ov-fin-methods, .ov-fin-editor) {
+  min-width: 0;
+  border: 1px solid var(--fin-border);
+  border-radius: 14px;
+  background: #fff;
+}
+.cfg-financeiro .ov-fin-methods { padding: 14px; }
+.cfg-financeiro .ov-fin-methods h3 { margin: 2px 4px 12px; font-size: 15px; color: var(--fin-text); }
+.cfg-financeiro .ov-fin-tabs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.cfg-financeiro .ov-fin-tab {
+  display: grid;
+  gap: 2px;
+  min-height: 48px;
+  margin: 0;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #f3f6f8;
+  color: var(--fin-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cfg-financeiro .ov-fin-tab:hover { border-color: #aabfc8; }
+.cfg-financeiro .ov-fin-tab.is-active { border-color: #eba775; background: #fff0e4; color: #863c12; }
+.cfg-financeiro .ov-fin-tab small,
+.cfg-financeiro .ov-fin-fields label small { color: var(--fin-muted); font-size: 12px; line-height: 1.45; }
+.cfg-financeiro .ov-fin-tab:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+.cfg-financeiro .ov-fin-panel { padding: 22px; }
+.cfg-financeiro .cfg-card[hidden] { display: none !important; }
+.cfg-financeiro .ov-fin-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr));
+  gap: 16px;
+  align-items: start;
+  margin-top: 16px;
+}
+.cfg-financeiro .ov-fin-fields label { display: grid; gap: 5px; min-width: 0; margin: 0; }
+.cfg-financeiro .ov-fin-fields :is(input, select) { width: 100%; min-width: 0; margin: 0; }
+.cfg-financeiro .ov-fin-installments { min-width: 0; margin: 24px 0 0; padding: 0; border: 0; }
+.cfg-financeiro .ov-fin-installments legend { padding: 0; font-weight: 700; }
+.cfg-financeiro .ov-fin-installments .ov-fin-fields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.cfg-financeiro .ov-fin-footer { padding: 14px 22px; border-top: 1px solid var(--fin-border); text-align: right; }
+@media (max-width: 760px) {
+  .cfg-financeiro .ov-fin-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .cfg-financeiro .ov-fin-tabs { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); }
+  .cfg-financeiro .ov-fin-panel, .cfg-financeiro .ov-fin-footer { padding: 16px; }
+  .cfg-financeiro .ov-fin-footer button { width: 100%; }
+}
 
 /* Nexodent 111: agenda fluida — cartões no fluxo, sem sobrepor os horários. */
 .ag-flow-list .ag-flow-row{grid-template-columns:55px minmax(0,1fr)!important;column-gap:0;align-items:start}
