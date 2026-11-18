@@ -954,8 +954,10 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 .ov-fin-detail-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
 .ov-fin-detail-table :is(th, td) { padding: 10px 12px; color: var(--ink); }
 .ov-fin-detail-table th { background: var(--bg); white-space: nowrap; }
-.ov-fin-detail-table td { border-top: 1px solid var(--ln); }
-.ov-fin-detail-table tbody tr:nth-child(even) { background: var(--bg); }
+.ov-fin-detail-table td { border-top: 1px solid var(--ln); background: var(--card, var(--sf)); }
+.ov-fin-detail-table tbody tr:nth-child(even) > td {
+  background: color-mix(in srgb, var(--card, var(--sf)) 91%, var(--ink));
+}
 .ov-fin-detail-table :is(th, td):last-child { text-align: right; white-space: nowrap; }
 
 .ov-attachment-list { max-height: 420px; overflow-y: auto; }
