@@ -4,6 +4,40 @@
 .ov-top .ov-brand,.ov-top .ov-brand-name,.ov-top .ov-user,.ov-top .ov-user-name,.ov-top .nexo-header-name strong{color:#111326!important;-webkit-text-fill-color:#111326!important;opacity:1!important;text-shadow:none!important}
 .ov-top .ov-brand-sub,.ov-top .ov-user-name small,.ov-top .nexo-header-name small{color:#505974!important;-webkit-text-fill-color:#505974!important;opacity:1!important;text-shadow:none!important}
 .ov-top .ov-mobile-menu,.ov-top .ov-sair,.ov-top .ov-icon-btn{background:#fff!important;color:#20283d!important;-webkit-text-fill-color:#20283d!important;border:1px solid #dce0e8!important;box-shadow:0 2px 4px #20283d0d;text-shadow:none!important}
+@media (min-width: 761px) {
+  .ov-shell > .ov-top {
+    display: grid;
+    grid-template-columns: inherit;
+    align-items: stretch;
+    padding: 0;
+    border-bottom: 0;
+  }
+  .ov-shell > .ov-top .ov-brand {
+    gap: 12px;
+    padding: 0 20px;
+    background: var(--ov-sidebar-bg);
+  }
+  .ov-shell > .ov-top .nexo-header-symbol {
+    flex-basis: 58px;
+    width: 58px;
+    height: 58px;
+  }
+  .ov-shell > .ov-top .nexo-header-name strong {
+    font-size: 27px;
+    color: #edf4f6 !important;
+    -webkit-text-fill-color: currentColor !important;
+  }
+  .ov-shell > .ov-top .nexo-header-name small {
+    font-size: 11px;
+    color: #d0dfe4 !important;
+    -webkit-text-fill-color: currentColor !important;
+  }
+  .ov-shell > .ov-top .ov-user {
+    justify-self: end;
+    align-self: center;
+    padding-right: 30px;
+  }
+}
 .ov-top button:focus-visible{outline:3px solid #e74a00!important;outline-offset:3px}
 #apptBanner{left:410px;right:410px;max-width:900px;top:calc(12px + env(safe-area-inset-top,0px))}
 #apptBanner .appt-item,#apptBanner .appt-item.now{background:linear-gradient(110deg,#fffaf5,#fff0e7)!important;color:#101326!important;border:1px solid #ffb68e;border-radius:22px;padding:13px 16px;gap:18px;box-shadow:0 5px 16px #e9681426,0 1px 3px #e968141a}
