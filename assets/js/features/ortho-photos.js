@@ -576,7 +576,8 @@ window.NexoOrthoPhotos={gallery};
  let open=null;
 
  function openZoom(src,title){
-  if(!src||open)return;
+  if(!src||(open&&open.isConnected))return;
+  open=null;
   const ov=document.createElement('div');
   ov.className='nz-overlay';
   ov.innerHTML='<div class="nz-bar" role="toolbar" aria-label="Zoom da foto">'
