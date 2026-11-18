@@ -3013,30 +3013,23 @@ html[data-ov-mode] .ov-sidebar .ov-nav-btn:focus-visible {
   html[data-ov-mode] .ov-sidebar .ov-nav-btn { transition: none; }
 }
 
-/* Correção 371: garantir que a etapa atual volte a aparecer nas tarjas de paciente. */
+/* Fix 372: ensure the current treatment stage badge is visible in specialty patient rows. */
 .ov-specialty-page .ov-modern-summary {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) max-content 24px !important;
-  align-items: center !important;
-  gap: 16px !important;
+  display: flex !important; align-items: center !important; gap: 12px !important;
+  min-width: 0 !important; position: relative !important; padding-right: 38px !important;
 }
+.ov-specialty-page .ov-modern-name { flex: 1 1 30% !important; min-width: 120px !important; }
+.ov-specialty-page .ov-modern-date { flex: 1 1 32% !important; min-width: 130px !important; }
 .ov-specialty-page .ov-modern-status {
-  display: inline-flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  align-items: center !important;
-  justify-self: start !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  white-space: normal !important;
+  display: inline-flex !important; visibility: visible !important; opacity: 1 !important;
+  flex: 0 0 auto !important; width: auto !important; max-width: 32% !important;
+  position: relative !important; z-index: 2 !important; margin-left: auto !important;
+  white-space: normal !important; overflow: visible !important;
 }
+.ov-specialty-page .ov-care-arrow { position: absolute !important; right: 0 !important; top: 50% !important; transform: translateY(-50%) !important; }
 @media (max-width: 650px) {
-  .ov-specialty-page .ov-modern-summary {
-    grid-template-columns: minmax(0, 1fr) max-content 22px !important;
-    gap: 8px 12px !important;
-  }
-  .ov-specialty-page .ov-modern-name { grid-column: 1; grid-row: 1 !important; }
-  .ov-specialty-page .ov-modern-date { grid-column: 1; grid-row: 2 !important; }
-  .ov-specialty-page .ov-modern-status { grid-column: 2; grid-row: 1 / 3 !important; }
-  .ov-specialty-page .ov-care-arrow { grid-column: 3; grid-row: 1 / 3 !important; }
+  .ov-specialty-page .ov-modern-summary { flex-wrap: wrap !important; gap: 8px 12px !important; padding-right: 30px !important; }
+  .ov-specialty-page .ov-modern-name { flex: 1 1 calc(100% - 40px) !important; min-width: 0 !important; }
+  .ov-specialty-page .ov-modern-date { flex: 1 1 55% !important; min-width: 0 !important; }
+  .ov-specialty-page .ov-modern-status { max-width: 42% !important; margin-left: auto !important; }
 }
