@@ -2860,22 +2860,50 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
 @media(max-width:600px) { .ov-reminder-grid {gap:14px !important;} .ov-reminder-grid .ov-reminder-list {grid-template-columns:minmax(0,1fr);} .ov-reminder-grid .ov-reminder-item {padding:14px !important;} }
 
 /* Laboratório e acompanhamento clínico */
+.nxlab-workspace, .nxlab-navigation {
+  --work-accent: #8b481c;
+  --work-tint: #fff2e7;
+  --work-border: #e4b89a;
+}
+.ov-specialty-page[data-specialty="implantodontia"] {
+  --work-accent: #245687;
+  --work-tint: #ebf4ff;
+  --work-border: #a8c9ea;
+}
+.ov-specialty-page[data-specialty="protese"] {
+  --work-accent: #68408b;
+  --work-tint: #f5eefb;
+  --work-border: #d0b6e7;
+}
+.ov-specialty-page[data-specialty="ortodontia"] {
+  --work-accent: #216459;
+  --work-tint: #e9f6f1;
+  --work-border: #a5d3c3;
+}
 .nxlab-navigation { margin: 0 0 16px; }
 .nxlab-navigation [aria-pressed="true"] {
-  background: #fff0e4 !important;
-  border-color: #eba775 !important;
-  color: #863c12 !important;
+  background: var(--work-tint) !important;
+  border-color: var(--work-border) !important;
+  color: var(--work-accent) !important;
 }
 .nxlab-workspace .nxlab-top,
 .ov-specialty-page > .ov-modern-head {
   background: #fff !important;
-  border-color: #dce5eb !important;
+  border-color: var(--work-border) !important;
+  border-inline-start: 4px solid var(--work-accent) !important;
   border-radius: 14px !important;
   box-shadow: none !important;
 }
 .ov-specialty-page > .ov-modern-head { padding: 18px !important; }
 .nxlab-workspace .nxlab-metrics > div,
 .ov-specialty-page .ov-modern-stats > div { box-shadow: none !important; border-radius: 12px !important; }
+.nxlab-workspace .nxlab-metrics > div:first-child,
+.ov-specialty-page .ov-modern-stats > div:first-child {
+  background: var(--work-tint) !important;
+  border-color: var(--work-border) !important;
+}
+.ov-specialty-page > .ov-modern-list > h2 { border-left-color: var(--work-accent) !important; }
+.ov-specialty-page .ov-care-arrow { color: var(--work-accent) !important; }
 .nxlab-workspace .nxlab-filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
@@ -2899,8 +2927,8 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
     padding: 10px 20px;
     margin-bottom: 8px;
     border-radius: 8px;
-    background: #eef3f5;
-    color: #304d5b;
+    background: var(--work-tint);
+    color: var(--work-accent);
     font-weight: 700;
   }
   .nxlab-workspace .nxlab-summary,
