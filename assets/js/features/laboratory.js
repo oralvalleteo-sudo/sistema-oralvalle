@@ -233,15 +233,25 @@ window.nexoLabHtml=function(){
 async function persist(o){
  if(cloud()){
   const id=clinic();if(!id)throw Error('Clínica não selecionada.');
-  const path='/rest/v1/nexodent_lab_orders'+(o._new?'':'?id=eq.'+encodeURIComponent(o.id)+'&clinic_id=eq.'+encodeURIComponent(id));
+  const creating=!!o._new;
+  const path='/rest/v1/nexodent_lab_orders'+(creating?'':'?id=eq.'+encodeURIComponent(o.id)+'&clinic_id=eq.'+encodeURIComponent(id));
   const body={...o,clinic_id:id};delete body._new;
-  const method=o._new?'POST':'PATCH';
- await OralCloud.request(path,{method,body});
-  const saved={...o};delete saved._new;const ix=orders.findIndex(x=>String(x.id)===String(saved.id));
-  if(ix>=0)orders[ix]={...orders[ix],...saved};else orders.unshift({...saved,clinic_id:id});
+  const method=creating?'POST':'PATCH';
+  // Exigir a linha gravada evita informar sucesso quando o Supabase/RLS não
+  // inseriu ou atualizou nenhum registro (resposta minimal podia ocultar isso).
+  const result=await OralCloud.request(path,{method,body,headers:{'Prefer':'return=representation'}});
+  const rows=Array.isArray(result)?result:(result&&typeof result==='object'?[result]:[]);
+  const saved=rows.find(row=>String(row.id)===String(o.id)&&String(row.clinic_id)===String(id));
+  if(!saved){
+   throw Error(creating
+    ?'O Supabase não confirmou o cadastro. Verifique a permissão de INSERT (RLS) da tabela nexodent_lab_orders.'
+    :'O Supabase não confirmou a alteração. O registro não foi encontrado para esta clínica ou a permissão de UPDATE (RLS) bloqueou a gravação.');
+  }
+  const ix=orders.findIndex(x=>String(x.id)===String(saved.id));
+  if(ix>=0)orders[ix]={...orders[ix],...saved};else orders.unshift(saved);
   publishOrders();
  }else{const ix=orders.findIndex(x=>x.id===o.id);if(ix>=0)orders[ix]=o;else orders.unshift(o);localWrite();}
-orderEpoch++;fetchTask=null;
+ orderEpoch++;fetchTask=null;fetchTaskClinic=null;
  await fetchOrders(true);
 }
 function readForm(){const v=id=>($id(id)?.value||'').trim();return {patient_id:v('nxlab-patient'),laboratory:v('nxlab-lab'),work_description:v('nxlab-work'),shade:v('nxlab-shade'),teeth:v('nxlab-teeth'),sent_at:v('nxlab-sent')||null,due_at:v('nxlab-due')||null,received_at:v('nxlab-received')||null,stage:v('nxlab-stage'),status:v('nxlab-status'),observation_reason:v('nxlab-observation'),instructions:v('nxlab-instructions')};}
