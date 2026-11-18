@@ -18,4 +18,4 @@
 .nz-stage{position:relative;flex:1;overflow:hidden;touch-action:none;cursor:zoom-in;user-select:none}
 .nz-stage.nz-zoomed{cursor:grab}.nz-stage.nz-zoomed:active{cursor:grabbing}
 .nz-stage img{position:absolute;left:0;top:0;max-width:none;max-height:none;transform-origin:0 0;will-change:transform;-webkit-user-drag:none}
-.ov-file-preview img,.ortho-thumb img{cursor:zoom-in}
+.ov-file-preview img,.ortho-thumb,.ortho-thumb img{cursor:default}
