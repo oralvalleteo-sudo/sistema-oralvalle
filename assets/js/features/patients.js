@@ -123,7 +123,7 @@ function evolHtml(p,only){
 function nexoTimeline(p){
   const events=[];
   const stamp=v=>{const t=String(v||'');if(/^\d{4}-\d{2}-\d{2}/.test(t))return t.slice(0,10);const m=t.match(/^(\d{2})\/(\d{2})\/(\d{4})/);return m?`${m[3]}-${m[2]}-${m[1]}`:''};
-  (p.evol||[]).forEach(e=>events.push({date:stamp(e.data),type:'Evolução',title:e.auto?'Procedimento registrado':'Evolução clínica',detail:e.txt||'',id:e.id}));
+  (p.evol||[]).forEach(e=>events.push({date:stamp(e.data),type:'Evolução',title:e.auto||e.performedByDentistId?'Procedimento registrado':'Evolução clínica',detail:e.txt||'',id:e.id}));
   (p.trat||[]).filter(t=>t.vid||t.status==='Concluído').forEach(t=>events.push({date:stamp(t.data||t.concluidoEm||t.updated_at),type:'Tratamento',title:t.proc||'Procedimento',detail:(t.dente?'Dente '+t.dente+' · ':'')+(t.dt?'Profissional: '+dName(t.dt):'Profissional não informado'),id:t.id}));
   (p.arquivos||[]).forEach(f=>events.push({date:stamp(f.dataEnvio||f.assinadoEm),type:'Documento',title:f.nome||'Arquivo',detail:f.categoria||'Documento',id:f.id}));
   events.sort((a,b)=>b.date.localeCompare(a.date)||a.type.localeCompare(b.type));
