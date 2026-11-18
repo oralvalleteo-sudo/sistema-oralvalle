@@ -8,10 +8,9 @@
   PM_SAFE.add('cloudfileopen');
   PM_SAFE.add('cloudfileverify');
   PM_SAFE.add('cloudfilesretry');
-  PM_SAFE.add('cloudfilefilter');
   function entry(patient) {
     const key = JSON.stringify(patient.id);
-    if (!cache.has(key)) cache.set(key, { rows: null, loading: false, error: '', signatures: new Set(), filter: 'Todos' });
+    if (!cache.has(key)) cache.set(key, { rows: null, loading: false, error: '', signatures: new Set() });
     return cache.get(key);
   }
   function redraw(patient, token) {
@@ -110,33 +109,26 @@
   tabArquivos = function (patient) {
     const state = entry(patient);
     if (!state.rows && !state.loading && !state.error) metadata(patient).catch(() => {});
-    const base = nativeFilesTab({ ...patient, arquivos: [] });
-    const list = state.rows?.filter(row => row.slot === 'arquivos' && row.position >= 0) || [];
-    const categories = ['Todos', 'Receituário', 'Atestado', 'Relatório', 'Outros'];
-    const classified = list.map((row, index) => ({ row, index, category: String(row.dados?.categoria || 'Outros') }));
-    const categoryOf = item => categories.includes(item.category) && item.category !== 'Todos' ? item.category : 'Outros';
-    const count = category => category === 'Todos' ? classified.length : classified.filter(item => categoryOf(item) === category).length;
-    const active = categories.includes(state.filter) ? state.filter : 'Todos';
-    const filters = categories.map((category, index) => `<button type="button" class="ov-file-filter" data-act="cloudfilefilter" data-category-index="${index}" aria-pressed="${category === active}">${esc(category)} <span>${count(category)}</span></button>`).join('');
-    const visible = classified.filter(item => active === 'Todos' || categoryOf(item) === active);
-    const content = state.error
-      ? `<p role="alert">${esc(state.error)}</p><button data-act="cloudfilesretry">Tentar novamente</button>`
-      : state.loading ? '<p role="status">Carregando arquivos...</p>'
-        : visible.map(({row, index}) => `<article class="ov-cloud-file"><span class="ov-cloud-file-icon" aria-hidden="true">▤</span><div class="ov-cloud-file-info"><strong>${esc(row.dados?.nome || 'Arquivo')}</strong>
+    return nativeFilesTab({ ...patient, arquivos: [] }, fold => {
+      const slot = '<div id="nexo-signature-upload-slot"></div>';
+      if (state.error) return slot + `<p role="alert">${esc(state.error)}</p><button data-act="cloudfilesretry">Tentar novamente</button>`;
+      if (!state.rows || state.loading) return slot + '<p role="status">Carregando arquivos...</p>';
+      const groups = new Map(patientAttachmentGroups.map(([title]) => [title, []]));
+      const list = state.rows.filter(row => row.slot === 'arquivos' && row.position >= 0);
+      list.forEach((row, index) => {
+        groups.get(patientAttachmentGroup(row.dados?.categoria)).push(`<article class="ov-cloud-file">
+          <span class="ov-cloud-file-icon" aria-hidden="true">▤</span><div class="ov-cloud-file-info"><strong>${esc(row.dados?.nome || 'Arquivo')}</strong>
           <p>${esc(row.dados?.categoria || 'Outros')} · ${esc(row.dados?.dataEnvio || 'Data não informada')}</p></div>
           <div class="ov-cloud-file-actions"><button class="ghost sm" data-act="cloudfileopen" data-index="${index}">Abrir / baixar</button>
           ${row.dados?.sha256?`<button class="ghost sm" data-act="cloudfileverify" data-index="${index}">Verificar integridade</button>`:''}
-          <button class="danger sm" data-act="cloudfiledelete" data-index="${index}">Excluir</button></div></article>`).join('') || '<p>Nenhum documento nesta categoria.</p>';
-    const marker = '<h2>Arquivos anexados';
-    const markerAt = base.indexOf(marker);
-    const header = markerAt >= 0 ? base.slice(0, markerAt) : base;
-    return header
+          <button class="danger sm" data-act="cloudfiledelete" data-index="${index}">Excluir</button></div></article>`);
+      });
+      return slot + Array.from(groups, ([title, files]) =>
+        fold(title, files.length ? `<div class="ov-cloud-file-list ov-attachment-list">${files.join('')}</div>`
+          : '<p class="note">Nenhum arquivo nesta categoria.</p>', files.length)).join('');
+    })
       .replace('Para evitar que o navegador fique sem espaço, cada arquivo pode ter até 1,5 MB.', 'Cada novo arquivo pode ter até 1,5 MB.')
-      .replace('Os anexos ficam salvos neste navegador; faça backups regularmente.', 'Os anexos ficam no Supabase; faça backups regularmente.')
-      + `<div id="nexo-signature-upload-slot"></div><section class="ov-cloud-files" aria-labelledby="ov-cloud-files-heading">
-        <header class="ov-cloud-files-header"><h2 id="ov-cloud-files-heading">Arquivos anexados <span>${list.length}</span></h2><div class="ov-file-filters" role="group" aria-label="Filtrar arquivos por categoria">${filters}</div></header>
-        <div class="ov-cloud-file-list">${content}</div>
-      </section>`;
+      .replace('Os anexos ficam salvos neste navegador; faça backups regularmente.', 'Os anexos ficam no Supabase; faça backups regularmente.');
   };
   // Resumo somente leitura de documentos na linha do tempo clínica.
   // Os arquivos permanecem no armazenamento existente e são abertos na aba Documentos.
@@ -172,14 +164,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     if (document.body) timelineObserver.observe(document.body, {childList:true,subtree:true});
   });
-  A.cloudfilefilter = (button, data, patient) => {
-    if (!patient) return;
-    const categories = ['Todos', 'Receituário', 'Atestado', 'Relatório', 'Outros'];
-    const category = categories[Number(data.categoryIndex)];
-    if (!category) return;
-    entry(patient).filter = category;
-    render();
-  };
   A.cloudfilesretry = () => { const patient = cur(); if (!patient) return; cache.delete(JSON.stringify(patient.id)); render(); };
   async function checkedBytes(row){
     const data=row.dados?.data;

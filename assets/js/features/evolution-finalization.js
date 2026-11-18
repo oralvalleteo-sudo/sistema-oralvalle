@@ -34,20 +34,35 @@
       btn.style.cssText='background:#ea7000;color:#fff;margin-right:6px';
       del.before(btn);
       const owner=patient.id;
+      const clinic=OralCloud.clinicId;
+      const feedback=document.createElement('span');
+      feedback.className='ov-evolution-feedback';
+      feedback.setAttribute('role','status');
+      container.firstElementChild.append(feedback);
+      const stillCurrent=()=>ready()&&OralCloud.clinicId===clinic&&cur()?.id===owner&&container.isConnected;
       btn.addEventListener('click',async()=>{
         if(!ready()){alert('Conecte-se ao Supabase para finalizar.');return;}
         btn.disabled=true;
+        feedback.textContent='';
         try{
           const state=await status(owner,evolution,true);
+          if(!stillCurrent())return;
           if(state.is_finalized){mark(container,state);return;}
           if(!confirm('Finalizar esta evolução clínica permanentemente? Após a confirmação, o registro não poderá ser editado nem excluído.'))return;
-          const result=await call('nexodent_finalize_evolution',{p_clinic:OralCloud.clinicId,p_record_id:rowId(owner,evolution)});
+          const result=await call('nexodent_finalize_evolution',{p_clinic:clinic,p_record_id:rowId(owner,evolution)});
+          if(!stillCurrent())return;
           const item=Array.isArray(result)?result[0]:result;
           if(!item?.finalized_at)throw Error('O Supabase não confirmou a finalização.');
           const finalized={is_finalized:true,finalized_at:item.finalized_at};cache.set(key(owner,evolution),finalized);
           mark(container,finalized);alert('Evolução finalizada e protegida no Supabase.');
-        }catch(error){alert('Não foi possível finalizar: '+(error?.message||String(error)));}
-        finally{if(!cache.get(key(owner,evolution))?.is_finalized)btn.disabled=false;}
+        }catch(error){
+          if(!stillCurrent())return;
+          const message=String(error?.message||error);
+          feedback.textContent=message.includes('NEXODENT_ONLY_RESPONSIBLE_DENTIST_CAN_FINALIZE')
+            ? 'Somente o dentista responsável por esta evolução pode finalizá-la. Entre com a conta vinculada a esse profissional. Se já estiver na conta correta, confira o vínculo em Dentistas.'
+            : 'Não foi possível finalizar a evolução. Atualize o prontuário e tente novamente.';
+        }
+        finally{if(stillCurrent()&&!cache.get(key(owner,evolution))?.is_finalized)btn.disabled=false;}
       });
       status(owner,evolution).then(value=>mark(container,value)).catch(error=>{
         btn.textContent='Finalização indisponível';btn.title=error?.message||String(error);

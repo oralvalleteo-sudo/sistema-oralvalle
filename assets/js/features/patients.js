@@ -299,13 +299,67 @@ function obPanel(o,it,i){
 }
 function itemHtml(o,it,i){
   const base=`data-o="${esc(o.id)}" data-i="${i}"`;
-  return `<div class="oitem"><div class="oitem-h"><span class="oitem-n">Item ${i+1}</span></div><div class="it"><input placeholder="Procedimento" list="prl" ${base} data-f="proc" value="${esc(it.proc)}"><input placeholder="Dente" inputmode="numeric" ${base} data-f="dente" value="${esc(it.dente)}"><input placeholder="R$" inputmode="decimal" ${base} data-f="valor" value="${esc(it.valor)}"><button class="danger sm" aria-label="Remover item" data-act="rmi" data-o="${esc(o.id)}" data-i="${i}">×</button></div>
+  return `<div class="oitem"><div class="oitem-h"><span class="oitem-n">Item ${i+1}</span></div><div class="it"><div class="ov-procedure-search"><input placeholder="Procedimento" aria-label="Procedimento" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ov-proc-${esc(o.id)}-${i}" autocomplete="off" ${base} data-f="proc" value="${esc(it.proc)}"><div id="ov-proc-${esc(o.id)}-${i}" class="ag-sug" role="listbox" aria-label="Procedimentos" hidden></div></div><input placeholder="Dente" inputmode="numeric" ${base} data-f="dente" value="${esc(it.dente)}"><input placeholder="R$" inputmode="decimal" ${base} data-f="valor" value="${esc(it.valor)}"><button class="danger sm" aria-label="Remover item" data-act="rmi" data-o="${esc(o.id)}" data-i="${i}">×</button></div>
   <input style="margin-bottom:6px" placeholder="O que precisa ser feito (aparece na impressão)" ${base} data-f="obs" value="${esc(it.obs||'')}">
   <div class="row" style="margin-bottom:4px"><select ${base} data-f="dt" aria-label="Dentista que vai executar">${dentOpts(it.dt,'Dentista a definir')}</select>${it.vid||it.paymentSaleId?'<span class="badge" style="flex:none">Financeiro lançado</span>':(o.status==='Aprovado'&&view.obx!==o.id+':'+it.id?`<button class="sm" data-act="obaixa" data-o="${esc(o.id)}" data-i="${i}">Registrar pagamento</button>`:'')}</div>
   ${obPanel(o,it,i)}
   ${qOf(it)>1?(()=>{const m=itMult(it);return `<div class="note" style="margin:0 0 6px">${brl(m.u)} × ${m.q} dentes = ${brl(m.t)}</div>`})():''}
   <div class="note oitem-last" data-cpi="${o.id}:${i}">${esc(cpText(o,it))}</div></div>`;
 }
+function budgetProcedureOptions(input){
+  const list=input.nextElementSibling;
+  const query=agNorm(input.value);
+  const names=[...new Set(db.pr.map(item=>item.nome).filter(Boolean))];
+  const matches=query?names.filter(name=>agNorm(name).includes(query)).slice(0,8):[];
+  list.innerHTML=matches.map((name,index)=>`<div id="${esc(list.id)}-${index}" class="ag-sug-i" role="option" aria-selected="false">${esc(name)}</div>`).join('');
+  list.hidden=!matches.length;
+  input.setAttribute('aria-expanded',String(!list.hidden));
+  input.removeAttribute('aria-activedescendant');
+}
+function closeBudgetProcedureOptions(input){
+  input.nextElementSibling.hidden=true;
+  input.setAttribute('aria-expanded','false');
+  input.removeAttribute('aria-activedescendant');
+}
+function chooseBudgetProcedure(input,option){
+  input.value=option.textContent;
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+  closeBudgetProcedureOptions(input);
+}
+document.addEventListener('input',event=>{
+  if(event.target.matches('.ov-procedure-search input'))budgetProcedureOptions(event.target);
+});
+document.addEventListener('focusout',event=>{
+  if(event.target.matches('.ov-procedure-search input'))closeBudgetProcedureOptions(event.target);
+});
+document.addEventListener('pointerdown',event=>{
+  if(event.target.closest('.ov-procedure-search [role="option"]'))event.preventDefault();
+});
+document.addEventListener('click',event=>{
+  const option=event.target.closest('.ov-procedure-search [role="option"]');
+  if(option)chooseBudgetProcedure(option.parentElement.previousElementSibling,option);
+});
+document.addEventListener('keydown',event=>{
+  const input=event.target;
+  if(!input.matches('.ov-procedure-search input')||event.isComposing)return;
+  const list=input.nextElementSibling;
+  if(event.key==='ArrowDown'&&list.hidden)budgetProcedureOptions(input);
+  if(list.hidden)return;
+  const options=Array.from(list.children);
+  const selected=options.findIndex(option=>option.getAttribute('aria-selected')==='true');
+  if(event.key==='Escape'||(event.key==='Enter'&&selected>=0)){
+    event.preventDefault();
+    if(event.key==='Enter')chooseBudgetProcedure(input,options[selected]);
+    else closeBudgetProcedureOptions(input);
+  }else if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+    event.preventDefault();
+    const next=event.key==='ArrowDown'?Math.min(selected+1,options.length-1):Math.max(selected-1,0);
+    if(selected>=0)options[selected].setAttribute('aria-selected','false');
+    options[next].setAttribute('aria-selected','true');
+    input.setAttribute('aria-activedescendant',options[next].id);
+    options[next].scrollIntoView({block:'nearest'});
+  }
+});
 function nxPayPlan(o){
  const raw=String(o.cond||'');const m=raw.match(/^Entrada: R\$ ([\d.,]+) \(([^)]+)\); Restante: R\$ ([\d.,]+) \(([^)]+)\)(?: em (\d+)x de R\$ ([\d.,]+))?$/);
  return m?{entrada:m[1],formaEntrada:m[2],formaSaldo:m[4],parcelas:m[5]||'1'}:{entrada:'',formaEntrada:'PIX',formaSaldo:'Cartão de crédito',parcelas:'1'};
