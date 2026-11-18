@@ -60,11 +60,6 @@ button.sm{min-height:36px;padding:6px 12px;font-size:14px}
 .ret-it .ret-i{flex:1;min-width:180px}
 .ret-it small{display:block;color:var(--mut);font-size:13px}
 .ret-act{display:flex;gap:6px;flex-wrap:wrap}
-.lem-tabs{display:flex;gap:6px;overflow-x:auto;border-bottom:1.5px solid var(--ln);margin:12px 0 16px;padding-bottom:0;-webkit-overflow-scrolling:touch}
-.lem-tabs button{flex:none;white-space:nowrap;background:transparent;color:var(--mut);border-radius:0;border:0;border-bottom:3px solid transparent;margin-bottom:-1.5px;padding:11px 12px;font-size:14px}
-.lem-tabs button.on{color:var(--ac);border-bottom-color:var(--ac);font-weight:700}
-.lem-n{display:inline-block;min-width:20px;padding:1px 6px;margin-left:4px;border-radius:10px;background:var(--ln);color:var(--ink);font-size:12px;font-weight:700;text-align:center}
-.lem-tabs button.on .lem-n{background:var(--ac);color:var(--acf)}
 .orc-card{padding:8px 14px}
 .orc-h{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;color:inherit;border:0;padding:8px 0;min-height:52px;border-radius:10px}
 .orc-chev{flex:none;width:20px;color:var(--ac);font-size:18px}
@@ -1386,18 +1381,18 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 }
 
 /* Configurações */
-.cfg-page, .cfg-financeiro {
+.cfg-page, .cfg-financeiro, .ov-reminders-page {
   --fin-border: #d6e0e5;
   --fin-text: #233b47;
   --fin-muted: #506673;
   color: var(--fin-text);
 }
-.cfg-page .cfg-navigation {
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
   gap: 8px;
 }
-.cfg-page .cfg-navigation button {
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button {
   display: grid;
   align-content: start;
   gap: 4px;
@@ -1410,10 +1405,34 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   font: inherit;
   text-align: left;
 }
-.cfg-page .cfg-navigation button:hover { border-color: #aabfc8; }
-.cfg-page .cfg-navigation button[aria-current] { border-color: #eba775; background: #fff0e4; color: #863c12; }
-.cfg-page .cfg-navigation small { color: var(--fin-muted); line-height: 1.35; }
-.cfg-page .cfg-navigation button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button:hover { border-color: #aabfc8; }
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button[aria-current] { border-color: #eba775; background: #fff0e4; color: #863c12; }
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) small { color: var(--fin-muted); line-height: 1.35; }
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+.ov-reminders-page .lem-tabs button {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: center;
+  min-height: 46px;
+}
+.ov-reminders-page .lem-n {
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--fin-text);
+  font-size: 12px;
+}
+.ov-reminders-page .ov-reminders-content { margin-top: 18px; }
+.ov-reminders-page .nd-lem-create > summary {
+  width: fit-content;
+  padding: 10px 16px;
+  border: 1px solid #eba775;
+  border-radius: 9px;
+  background: #fff0e4;
+  color: #863c12;
+  cursor: pointer;
+  font-weight: 700;
+}
 .cfg-page .cfg-panels { margin-top: 18px; }
 .cfg-page .cfg-panels:not(.cfg-panels-financeiro) { display: grid; gap: 14px; }
 .cfg-page .cfg-panels > .cfg-card {
@@ -1443,7 +1462,7 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 }
 .cfg-page .cfg-panels-acesso .up-user { background: #f3f6f8; border-color: var(--fin-border); }
 @media (max-width: 760px) {
-  .cfg-page .cfg-navigation { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); }
+  :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); }
   .cfg-page .cfg-panels > .cfg-card { padding: 16px; }
   .cfg-page .cfg-logo { flex-wrap: wrap; }
   .cfg-page .cfg-logo input { max-width: 100%; }
@@ -2718,7 +2737,7 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
 .ov-reminder-grid .nd-lem-create { display:block; margin:0; }
 .ov-reminder-grid .nd-lem-create > summary { min-height:42px; box-sizing:border-box; }
 .ov-reminder-grid .nd-lem-create[open] > div { margin-top:12px; padding:20px !important; border:1px solid #e3e7ec; border-radius:12px; background:#fff; }
-.ov-reminder-grid .ov-reminder-list { display:grid !important; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:14px !important; margin:0 !important; padding:0 !important; }
+.ov-reminder-grid .ov-reminder-list { display:grid !important; grid-template-columns:minmax(0,1fr); gap:14px !important; margin:0 !important; padding:0 !important; }
 .ov-reminder-grid .ov-reminder-item { display:flex !important; flex-direction:column; gap:10px; min-width:0; padding:18px !important; border:1px solid #dce2e9 !important; border-radius:12px !important; background:#fff !important; box-shadow:0 2px 8px rgba(23,35,54,.045); box-sizing:border-box; }
 .ov-reminder-grid .ov-reminder-top { display:flex; align-items:flex-start; gap:12px; min-width:0; }
 .ov-reminder-grid .ov-reminder-check { flex:0 0 auto; width:17px; height:17px; margin:3px 0 0; accent-color:#e97700; }

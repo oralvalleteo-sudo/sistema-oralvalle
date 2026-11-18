@@ -58,11 +58,11 @@ function ovCareRow(p,kind,stages){
  ${window.NexoOrthoPhotos?NexoOrthoPhotos.gallery(p,kind):''}<div class="ret-act"><button class="sm" data-act="carebaixa" data-id="${esc(p.id)}" data-kind="${kind}">Dar baixa e evoluir</button><button class="ghost sm" data-act="carealta" data-id="${esc(p.id)}" data-kind="${kind}">Finalizar tratamento</button><button class="ghost sm" data-act="open" data-id="${esc(p.id)}">Ver ficha</button></div></details>`;
 }
 function ovModernHead(title,subtitle,total,second,third,fourth){
- return `<div class="ov-modern-head"><div class="ov-modern-title"><div><h1>${title}</h1><p class="sub">${subtitle}</p></div></div><div class="ov-modern-stats"><div><strong>${total}</strong><span>Pacientes em acompanhamento</span></div><div><strong>${second[0]}</strong><span>${second[1]}</span></div><div><strong>${third[0]}</strong><span>${third[1]}</span></div><div><strong>${fourth[0]}</strong><span>${fourth[1]}</span></div></div></div>`;
+ return `<div class="ov-modern-head">${title?`<div class="ov-modern-title"><div><h1>${title}</h1><p class="sub">${subtitle}</p></div></div>`: ''}<div class="ov-modern-stats"><div><strong>${total}</strong><span>Pacientes em acompanhamento</span></div><div><strong>${second[0]}</strong><span>${second[1]}</span></div><div><strong>${third[0]}</strong><span>${third[1]}</span></div><div><strong>${fourth[0]}</strong><span>${fourth[1]}</span></div></div></div>`;
 }
-function orthoHtml(){
+function orthoHtml(showHeading=true){
  const list=orthoLista(),mes=tdy().slice(0,7),emDia=list.filter(x=>(x.p.orthoBaixas||[]).includes(mes)).length;
- return `<div class="ov-modern-page">${ovModernHead('Ortodontia','Manutenções e retornos mensais.',list.length,[emDia,'Em dia neste mês'],[list.length-emDia,'Manutenções pendentes'],[list.filter(x=>!!x.proxima).length,'Retornos agendados'])}<section class="card ret-card ov-modern-list"><h2>Pacientes em tratamento</h2>
+ return `<div class="ov-modern-page">${ovModernHead(showHeading?'Ortodontia':'','Manutenções e retornos mensais.',list.length,[emDia,'Em dia neste mês'],[list.length-emDia,'Manutenções pendentes'],[list.filter(x=>!!x.proxima).length,'Retornos agendados'])}<section class="card ret-card ov-modern-list"><h2>Pacientes em tratamento</h2>
  ${list.length?list.map(({p,last,proxima})=>{const baixa=(p.orthoBaixas||[]).includes(mes),ret=p.orthoProximo||proxima?.data||'',ultima=p.orthoUltimaData||last;return `<details class="ret-it ov-care-collapse ov-modern-row" style="display:block"><summary class="ov-modern-summary"><span class="ov-modern-name"><strong>${esc(p.nome)}</strong><small>Ortodontia</small></span><span class="ov-modern-date">Última manutenção: ${ultima?esc(fd(ultima)):'Não registrada'}</span><span class="ov-modern-status ${baixa?'ov-modern-ok':''}">${baixa?'Em dia':'Pendente'}</span><span class="ov-care-arrow" aria-hidden="true">›</span></summary><div class="ret-i" style="margin-top:12px;min-width:0"><small>Última manutenção: ${ultima?esc(fd(ultima)):'Não registrada'}</small><small>${baixa?'✓ Baixa registrada neste mês':'Manutenção pendente neste mês'}</small><label>Próximo retorno<input type="date" data-ortho-retorno="${esc(p.id)}" value="${esc(ret)}"></label><small>Data de controle; não cria agendamento na agenda.</small></div>${window.NexoOrthoPhotos?NexoOrthoPhotos.gallery(p):''}<div class="ret-act"><button class="sm" data-act="carebaixa" data-id="${esc(p.id)}" data-kind="ortho">${baixa?'Registrar nova evolução':'Dar baixa e evoluir'}</button><button class="ghost sm" data-act="carealta" data-id="${esc(p.id)}" data-kind="ortho">Dar alta</button><button class="ghost sm" data-act="open" data-id="${esc(p.id)}">Ver ficha</button></div></details>`}).join(''):'<p class="note">Nenhum paciente em tratamento ortodôntico.</p>'}</section></div>`;
 }
 const IMPL_ETAPAS=['Avaliação e planejamento','Exames e planejamento cirúrgico','Cirurgia de implante','Osseointegração','Reabertura / cicatrizador','Moldagem / escaneamento','Prova da prótese','Instalação da prótese','Acompanhamento','Tratamento concluído'];
@@ -103,7 +103,7 @@ function ovBirthdayToday(){
 }
 function ovBirthdayHtml(){
   const hoje=ovBirthdayToday();
-  return `<section class="card" style="margin-top:12px"><h2>🎂 Aniversariantes de hoje (${hoje.length})</h2><p class="note">Lista automática com base na data de nascimento cadastrada na ficha do paciente. Atualiza todos os dias.</p>
+  return `<section class="card ov-reminder-birthdays"><h2>Aniversariantes de hoje (${hoje.length})</h2>
   ${hoje.length?hoje.map(p=>`<div class="ret-it"><div class="ret-i"><strong>🎉 ${esc(p.nome||'Paciente')}</strong><small>Aniversário hoje · ${esc(fd(p.nasc))}${p.tel?' · '+esc(p.tel):''}</small></div><div class="ret-act"><button class="ghost sm" data-act="open" data-id="${esc(p.id)}">Ver ficha</button></div></div>`).join(''):'<p class="note">Nenhum paciente faz aniversário hoje.</p>'}</section>`;
 }
 function lembretesHtml(){
@@ -115,19 +115,18 @@ function lembretesHtml(){
   const hoje=tdy();
   const pend=list.filter(x=>!x.feito).length;
   const TIPOS=['Geral','Paciente','Financeiro','Agenda','Administrativo','Retorno'],rp=retPend(),op=orthoLista().length;
-  const tabs=[['todos','Todos',pend],['aniversarios','🎂 Aniversários',ovBirthdayToday().length],['ret','Sem retorno',rp],['ortho','Ortodontia',op]].concat(TIPOS.map(t=>[t,t,list.filter(x=>!x.feito&&(x.tipo||'Geral')===t).length]));
+  const tabs=[['todos','Todos',pend],['aniversarios','Aniversários',ovBirthdayToday().length],['ret','Sem retorno',rp],['ortho','Ortodontia',op]].concat(TIPOS.map(t=>[t,t,list.filter(x=>!x.feito&&(x.tipo||'Geral')===t).length]));
   const T=tabs.some(x=>x[0]===view.lemTab)?view.lemTab:'todos';
   const shown=T==='todos'?list:list.filter(x=>(x.tipo||'Geral')===T),tipoSel=TIPOS.includes(T)?T:'Geral';
-  const tabsHtml=`<div class="lem-tabs" role="tablist" aria-label="Assuntos dos lembretes">${tabs.map(x=>`<button type="button" role="tab" aria-selected="${T===x[0]}" class="${T===x[0]?'on':''}" data-act="lemtab" data-t="${x[0]}">${x[1]}${x[2]?` <span class="lem-n">${x[2]}</span>`:''}</button>`).join('')}</div>`;
+  const tabsHtml=`<nav class="lem-tabs" aria-label="Assuntos dos lembretes">${tabs.map(([key,label,count])=>`<button type="button"${T===key?' aria-current="page"':''} data-act="lemtab" data-t="${key}"><strong>${label}</strong>${count?`<span class="lem-n">${count}</span>`:''}</button>`).join('')}</nav>`;
   const retNote=`<div class="card" style="margin-bottom:12px;border-color:var(--ac)"><div class="row" style="align-items:center"><div style="flex:1"><strong>${rp} ${rp===1?'paciente sem retorno':'pacientes sem retorno'} há mais de ${retMeses()} meses</strong></div><button class="sm" data-act="lemtab" data-t="ret" style="flex:none">Ver lista</button></div></div>`;
-  return `<div class="ov-page-head"><div><h1>Lembretes</h1><p class="sub">Anote tarefas, retornos e assuntos importantes da clínica.</p></div><span class="badge" style="font-size:14px;padding:7px 12px">${pend} pendente${pend===1?'':'s'}</span></div>
-  ${tabsHtml}${T==='aniversarios'?ovBirthdayHtml():T==='ret'?retHtml():T==='ortho'?orthoHtml():`${T==='todos'?ovBirthdayHtml():''}${T==='todos'&&rp?retNote:''}
+  return `<div class="ov-reminders-page"><div class="ov-page-head"><h1>Lembretes</h1><span class="badge">${pend} pendente${pend===1?'':'s'}</span></div>
+  ${tabsHtml}<div class="ov-reminders-content">${T==='aniversarios'?ovBirthdayHtml():T==='ret'?retHtml():T==='ortho'?orthoHtml(false):`${T==='todos'?ovBirthdayHtml():''}${T==='todos'&&rp?retNote:''}
   <div class="ov-reminder-grid">
-    <section class="ov-reminder-form" style="padding:0;border:0;background:transparent;box-shadow:none">
-      <details class="nd-lem-create" style="width:100%">
-        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:9px;background:var(--ac,#df750e);color:#fff;font-weight:700">+ Adicionar lembrete</summary>
-        <div style="padding:16px 0">
-      <h2>Novo lembrete</h2>
+    <section class="ov-reminder-form">
+      <details class="nd-lem-create">
+        <summary>Adicionar lembrete</summary>
+        <div>
       <label for="lemTitulo">O que você precisa lembrar?</label>
       <input id="lemTitulo" placeholder="Ex.: Ligar para paciente sobre retorno" autocomplete="off">
       <div class="row">
@@ -139,7 +138,7 @@ function lembretesHtml(){
       <label for="lemObs">Observação</label>
       <textarea id="lemObs" placeholder="Detalhes do lembrete..."></textarea>
       <div class="row" style="margin-top:12px;gap:8px">
-        <button data-act="addlem" style="flex:1">Salvar lembrete</button>
+        <button type="button" class="primary" data-act="addlem" style="flex:1">Salvar lembrete</button>
         <button type="button" class="ghost" style="flex:1" onclick="this.closest('details').open=false">Cancelar</button>
       </div>
         </div>
@@ -158,9 +157,9 @@ function lembretesHtml(){
           ${x.obs?`<div class="ov-reminder-note">${esc(x.obs)}</div>`:''}
           <div class="ov-reminder-actions"><button class="ghost sm" data-act="togglelem" data-id="${esc(x.id)}">${x.feito?'Reabrir':'Concluir'}</button><button class="danger sm" data-act="rmlem" data-id="${esc(x.id)}">${delArm===x.id?'Confirmar exclusão':'Excluir'}</button></div>
         </article>`;}).join('')}</div>`:
-      `<div class="ov-reminder-empty"><strong>${T==='todos'?'Nenhum lembrete cadastrado':'Nenhum lembrete em '+T}</strong>Use o formulário ao lado para escrever um lembrete.</div>`}
+      `<div class="ov-reminder-empty"><strong>${T==='todos'?'Nenhum lembrete cadastrado':'Nenhum lembrete em '+T}</strong></div>`}
     </section>
-  </div>`}`;
+  </div>`}</div></div>`;
 }
 function home(){
   const n=view.h||'ag',fn={ortho:orthoHtml,impl:implHtml,prot:protHtml,inicio:agHtml,pac:homePac,pf:pfListHtml,ag:agHtml,lab:()=>typeof window.nexoLabHtml==='function'?window.nexoLabHtml():'<div class="card">Módulo Laboratório indisponível. Atualize a página.</div>',lem:lembretesHtml,vd:vdHtml,dt:dtHtml,cm:comHtml,pr:prHtml,mt:mtHtml,hc:hcHtml,bk:bkHtml,cfg:cfgHtml,cash:()=>window.NexoCash?.html()||'<section class="card">Atualize para carregar a aba Controle.</section>',wa:nexoWaSettingsHtml,sigdoc:nexoSignHtml,conta:pmContaHtml,reports:nexoReportsHtml,privacy:()=>`<div class="nexo-crm-embed"><iframe title="Privacidade e dados" src="./legal/direitos.html?embedded=1" loading="eager"></iframe></div>`,chat:()=>`<div class="nexo-crm-embed nexo-chat-page"><iframe title="Comunicação da equipe" src="./comunicacao/index.html?embedded=1&clinic_id=${encodeURIComponent(window.OralCloud?.clinicId||'')}" loading="eager"></iframe></div>`,crm:()=>`<div class="nexo-crm-embed"><iframe title="CRM" src="./crm/index.html?embedded=1" loading="eager"></iframe></div>`}[n]||homePac;
