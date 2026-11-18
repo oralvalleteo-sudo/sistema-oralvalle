@@ -119,9 +119,7 @@ function treatmentLabel(t){return [t.proc||t.nome||t.procedimento||t.descricao||
 function money(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 function isoToday(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
 function validateOrder(f,original){
- if($id('nxlab-execution')?.value!=='clinic'&&f.due_at&&f.sent_at&&f.due_at<f.sent_at)return 'A previsão de entrega não pode ser anterior à data de envio.';
- if($id('nxlab-execution')?.value!=='clinic'&&f.received_at&&f.sent_at&&f.received_at<f.sent_at)return 'O recebimento não pode ser anterior ao envio.';
- if($id('nxlab-execution')?.value!=='clinic'&&f.status==='Entregue'&&!f.received_at)return 'Informe a data de recebimento antes de marcar como entregue.';
+ // Datas de envio, previsão e recebimento são opcionais: nunca bloqueiam o salvamento.
  const duplicate=orders.some(o=>o.id!==original?.id&&String(o.patient_id)===String(f.patient_id)&&String(o.laboratory||'').trim().toLowerCase()===f.laboratory.toLowerCase()&&String(o.work_description||'').trim().toLowerCase()===f.work_description.toLowerCase()&&!['Cancelado','Entregue'].includes(o.status));
  if(duplicate&&!confirm('Já existe um trabalho em aberto com o mesmo paciente, laboratório e descrição. Deseja cadastrar mesmo assim?'))return 'cancel';
  return '';
@@ -141,7 +139,7 @@ function form(o={}){
 
  <label class="nxlab-field"><span>Local de execução *</span><select id="nxlab-execution"><option value=""${!where?' selected':''}>Selecione o local</option><option value="laboratory"${where==='laboratory'?' selected':''}>Laboratório externo</option><option value="clinic"${internal?' selected':''}>Na clínica</option></select><small>A escolha do local não registra nem quita pagamentos.</small></label>
  ${input('Valor a pagar ao laboratório (se houver)','nxlab-cost',linkFor(o.id).cost||0,'number','min="0" step="0.01"')}
- <label class="nxlab-field"><span id="nxlab-responsible-label">${internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável *'}</span><input id="nxlab-lab" type="text" maxlength="160" value="${safe(o.laboratory||'')}"${internal?'':' required'}><small>Para execução interna sem laboratório externo, deixe o valor a pagar em zero.</small></label>
+ <label class="nxlab-field"><span id="nxlab-responsible-label">${internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável (opcional)'}</span><input id="nxlab-lab" type="text" maxlength="160" value="${safe(o.laboratory==='A definir'?'':o.laboratory||'')}"><small>Para execução interna sem laboratório externo, deixe o valor a pagar em zero.</small></label>
  ${input('Trabalho a realizar *','nxlab-work',o.work_description,'text','maxlength="240" required')}
  ${input('Cor / escala (ex.: A2)','nxlab-shade',o.shade,'text','maxlength="80"')}
  ${input('Dente(s) / região','nxlab-teeth',o.teeth,'text','maxlength="80"')}
@@ -238,8 +236,12 @@ async function persist(o){
   const path='/rest/v1/nexodent_lab_orders'+(o._new?'':'?id=eq.'+encodeURIComponent(o.id)+'&clinic_id=eq.'+encodeURIComponent(id));
   const body={...o,clinic_id:id};delete body._new;
   const method=o._new?'POST':'PATCH';
-  await OralCloud.request(path,{method,body});
+ await OralCloud.request(path,{method,body});
+  const saved={...o};delete saved._new;const ix=orders.findIndex(x=>String(x.id)===String(saved.id));
+  if(ix>=0)orders[ix]={...orders[ix],...saved};else orders.unshift({...saved,clinic_id:id});
+  publishOrders();
  }else{const ix=orders.findIndex(x=>x.id===o.id);if(ix>=0)orders[ix]=o;else orders.unshift(o);localWrite();}
+orderEpoch++;fetchTask=null;
  await fetchOrders(true);
 }
 function readForm(){const v=id=>($id(id)?.value||'').trim();return {patient_id:v('nxlab-patient'),laboratory:v('nxlab-lab'),work_description:v('nxlab-work'),shade:v('nxlab-shade'),teeth:v('nxlab-teeth'),sent_at:v('nxlab-sent')||null,due_at:v('nxlab-due')||null,received_at:v('nxlab-received')||null,stage:v('nxlab-stage'),status:v('nxlab-status'),observation_reason:v('nxlab-observation'),instructions:v('nxlab-instructions')};}
@@ -266,7 +268,7 @@ async function execute(action,id){
  if(action==='toggle'){view.labExpanded=String(view.labExpanded||'')===String(id)?null:id;renderLab();return;}
  if(action==='details'){view.labDetails=view.labDetails===id?null:id;renderLab();return;}
  if(!canEdit())return;
- if(action==='care-new'){const p=carePatients().find(p=>String(p.id)===String(id));if(!p)return;careDraft={patient_id:String(p.id),shade:p.protCor||'',instructions:'Paciente em acompanhamento de '+[p.protAtivo?'prótese':'',p.implAtivo?'implantodontia':''].filter(Boolean).join(' e ')+'. Definir a peça e confirmar a necessidade laboratorial.'};editing='new';renderLab();revealForm();return;}
+ if(action==='care-new'){const p=carePatients().find(p=>String(p.id)===String(id));if(!p)return;careDraft={patient_id:String(p.id),work_description:p.protAtivo?'Prótese':'Implante',shade:p.protCor||'',instructions:'Paciente em acompanhamento de '+[p.protAtivo?'prótese':'',p.implAtivo?'implantodontia':''].filter(Boolean).join(' e ')+'. Definir a peça e confirmar a necessidade laboratorial.'};editing='new';renderLab();revealForm();return;}
  if(action==='new'){careDraft=null;editing='new';renderLab();revealForm();return;}
  if(action==='cancel'){careDraft=null;editing=null;renderLab();return;}
  if(action==='edit'){editing=id;view.labExpanded=id;renderLab();revealForm();return;}
@@ -292,7 +294,7 @@ async function execute(action,id){
  if(action!=='save'&&!old)return;
  let o,pendingLink;
  if(action==='save'){
-  const f=readForm(),where=$id('nxlab-execution')?.value;if(!execution.valid(where)){alert('Escolha o local de execução.');return;}if(where==='clinic'&&!f.laboratory)f.laboratory='Na clínica';if(!f.patient_id||!f.laboratory||!f.work_description){alert('Informe paciente, responsável e trabalho.');return;}
+  const f=readForm(),where=$id('nxlab-execution')?.value;if(!execution.valid(where)){alert('Escolha o local de execução.');return;}if(where==='clinic'&&!f.laboratory)f.laboratory='Na clínica';if(where==='laboratory'&&!f.laboratory)f.laboratory='A definir';if(!f.patient_id||!f.work_description){alert('Informe o paciente e o trabalho a realizar.');return;}
   if(f.status==='Em observação'&&!f.observation_reason){alert('Informe o motivo da observação.');return;}
   const original=editing==='new'?null:orders.find(x=>x.id===editing);
   const invalid=validateOrder(f,original);if(invalid){if(invalid!=='cancel')alert(invalid);return;}
@@ -317,8 +319,8 @@ async function execute(action,id){
 function updateExecutionForm(){
  const where=$id('nxlab-execution')?.value,internal=where==='clinic';
  for(const [id,all,get] of [['nxlab-stage',STAGES,execution.stages],['nxlab-status',STATES,execution.states]]){const el=$id(id);if(!el)continue;const previous=el.value,choices=get(all,where);el.innerHTML=options(choices,choices.includes(previous)?previous:choices[0]);}
- const field=$id('nxlab-lab');if(field)field.required=!internal;
- const label=$id('nxlab-responsible-label');if(label)label.textContent=internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável *';
+ const field=$id('nxlab-lab');if(field)field.required=false;
+ const label=$id('nxlab-responsible-label');if(label)label.textContent=internal?'Responsável pelo trabalho (opcional)':'Laboratório responsável (opcional)';
  for(const id of ['nxlab-sent-field','nxlab-received-field'])if($id(id))$id(id).hidden=internal;
 }
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-execution')updateExecutionForm();});
