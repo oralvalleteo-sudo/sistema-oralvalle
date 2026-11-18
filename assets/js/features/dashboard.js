@@ -71,14 +71,28 @@ function ovSidebar(active){
 }
 function topCl(){return Object.assign({},CL_DEF,db.cl||{})}
 function ovTop(){
+  const active=view.id?'pac':(view.h||'ag');
+  const sections=[
+    ['Clínica',{inicio:'Agenda',ag:'Agenda',pac:'Pacientes',crm:'CRM',ortho:'Ortodontia',impl:'Implantodontia',prot:'Prótese',lem:'Lembretes',lab:'Laboratório',wa:'WhatsApp',dt:'Dentistas',cm:'Comissões'}],
+    ['Financeiro',{pf:'Proposta Financeira',vd:'Vendas',reports:'Relatórios'}],
+    ['Precificação',{hc:'Custo Hora Clínica',pr:'Procedimentos',mt:'Tabela de Materiais'}],
+    ['Controle',{cash:'Despesas',sigdoc:'Documentos e Assinaturas',chat:'Comunicação',bk:'Backup',cfg:'Configurações',conta:'Minha conta',privacy:'Privacidade e dados'}],
+  ];
+  const [section,pages]=sections.find(([,pages])=>Object.hasOwn(pages,active))||['',{}];
+  const user=ME?.nome||'';
+  const initials=user.trim().split(/\s+/).slice(0,2).map(word=>word[0]||'').join('').toLocaleUpperCase('pt-BR');
   return `<header class="ov-top"><button type="button" class="ov-mobile-menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="oral-mobile-nav">☰ <span>Menu</span></button>
     <div class="ov-brand">
       <img class="nexo-header-symbol" src="./assets/img/nexodent-symbol.png?v=276" alt="" />
       <div class="nexo-header-name"><strong>Nexodent</strong><small>Sistema de Gestão Odontológica</small></div>
     </div>
-    <div class="ov-user">
-      <div class="ov-user-name">${esc(ME?ME.nome:'')} <span style="font-size:13px">⌄</span><small>${esc(topCl().marca)}</small></div>
-      <div class="ov-top-icons"><button type="button" class="ov-sair" data-act="logout">Sair</button></div>
+    <div class="ov-top-bar">
+      ${section?`<div class="ov-top-location"><span>${section}</span><span aria-hidden="true">/</span><strong>${pages[active]}</strong></div>`:''}
+      <div class="ov-user">
+        ${initials?`<span class="ov-user-avatar" aria-hidden="true">${esc(initials)}</span>`:''}
+        <div class="ov-user-name">${esc(user)}<small>${esc(topCl().marca)}</small></div>
+        <div class="ov-top-icons"><button type="button" class="ov-sair" data-act="logout">Sair</button></div>
+      </div>
     </div>
   </header>`;
 }
