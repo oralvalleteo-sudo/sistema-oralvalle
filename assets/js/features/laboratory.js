@@ -162,7 +162,7 @@ function card(o){
  ${obs?`<p class="nxlab-note"><b>Em observação:</b> ${safe(o.observation_reason||'Motivo não informado')}</p>`:''}
  ${o.instructions?`<p><b>Instruções:</b> ${safe(o.instructions)}</p>`:''}
  ${window.NexoOrthoPhotos&&db.p?.find(p=>String(p.id)===String(o.patient_id))?NexoOrthoPhotos.gallery(db.p.find(p=>String(p.id)===String(o.patient_id)),'lab:'+o.id):''}
- <div class="nxlab-actions"><button class="ghost sm" data-lab="details" data-id="${safe(o.id)}">Histórico e comentários (${events.length+comments.length})</button>${canEdit()?`<button class="ghost sm" data-lab="edit" data-id="${safe(o.id)}">Editar</button><button class="sm" data-lab="advance" data-id="${safe(o.id)}">Avançar etapa →</button><button class="danger sm" data-lab="delete" data-id="${safe(o.id)}">Excluir trabalho</button>`:''}</div>
+ <div class="nxlab-actions"><button class="ghost sm" data-lab="details" data-id="${safe(o.id)}">Histórico e comentários (${events.length+comments.length})</button>${canEdit()?`${o.status!=='Entregue'?`<button class="sm" data-lab="delivered" data-id="${safe(o.id)}">Marcar como entregue</button>`:''}<button class="ghost sm" data-lab="edit" data-id="${safe(o.id)}">Editar</button><button class="sm" data-lab="advance" data-id="${safe(o.id)}">Avançar etapa →</button><button class="danger sm" data-lab="delete" data-id="${safe(o.id)}">Excluir trabalho</button>`:''}</div>
  ${view.labDetails===o.id?`<div class="nxlab-timeline">${events.slice().reverse().map(h=>`<div><small>${safe(new Date(h.at).toLocaleString('pt-BR'))}</small> · ${safe(h.text)}</div>`).join('')}${comments.map(c=>`<div><small>${safe(new Date(c.at).toLocaleString('pt-BR'))}</small> · 💬 ${safe(c.text)}</div>`).join('')||'<p>Sem comentários.</p>'}${canEdit()?`<label class="nxlab-field"><span>Novo comentário</span><textarea id="nxlab-comment-${safe(o.id)}" maxlength="2000" rows="2" placeholder="Registre orientações, ajustes, ocorrências..."></textarea></label><button class="sm" data-lab="comment" data-id="${safe(o.id)}">Adicionar comentário</button>`:''}</div>`:''}
  `):''}
  </article>`;
@@ -271,6 +271,14 @@ async function execute(action,id){
  if(action==='new'){careDraft=null;editing='new';renderLab();revealForm();return;}
  if(action==='cancel'){careDraft=null;editing=null;renderLab();return;}
  if(action==='edit'){editing=id;view.labExpanded=id;renderLab();revealForm();return;}
+ if(action==='delivered'){
+  const target=orders.find(o=>String(o.id)===String(id));if(!target||target.status==='Entregue')return;
+  if(!confirm('Confirmar a entrega do trabalho de '+patientName(target.patient_id)+'? Após confirmar, ele sairá da lista Em aberto e ficará disponível no filtro Todos.'))return;
+  const delivered={...target,stage:'Entregue ao paciente',status:'Entregue',history:[...(target.history||[]),{at:stamp(),text:`Trabalho marcado como entregue. Etapa: ${target.stage||'—'} → Entregue ao paciente.`}],updated_at:stamp()};
+  busy=true;try{await persist(delivered);view.labExpanded=null;publishOrders();renderLab();if(typeof toast==='function')toast('Trabalho marcado como entregue e removido da lista Em aberto.');}
+  catch(e){alert('Não foi possível registrar a entrega: '+(e.message||'Erro de conexão'));}
+  finally{busy=false;}return;
+ }
  if(action==='delete'){
   const target=orders.find(o=>String(o.id)===String(id));if(!target)return;
   if(!confirm('Excluir definitivamente o trabalho de laboratório de '+patientName(target.patient_id)+'? Esta ação não pode ser desfeita.'))return;
