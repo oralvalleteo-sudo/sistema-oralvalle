@@ -101,6 +101,15 @@
     return error?.code === '40001' || /CLOUD_CONFLICT|clinic revision changed/i.test(details);
   }
 
+  function isFinalizedEvolutionConflict(error) {
+    return [error?.code, error?.message, error?.details, error?.hint]
+      .some(value => typeof value === 'string' && value.includes('NEXODENT_FINALIZED_EVOLUTION_IMMUTABLE'));
+  }
+
+  function requiresReload(error) {
+    return Boolean(error?.needsReload || isRevisionConflict(error) || isFinalizedEvolutionConflict(error));
+  }
+
   function status(message, error = false) {
     let panel = $('cloudStatus');
     if (!panel) {
@@ -121,9 +130,9 @@
       backup.onclick = () => downloadBackup();
       const retry = document.createElement('button');
       retry.className = 'sm';
-      retry.textContent = isRevisionConflict(failure) || failure?.needsReload ? 'Recarregar dados' : 'Tentar novamente';
+      retry.textContent = requiresReload(failure) ? 'Recarregar dados' : 'Tentar novamente';
       retry.onclick = async () => {
-        if (isRevisionConflict(failure) || failure?.needsReload) {
+        if (requiresReload(failure)) {
           if (!confirm('Há alterações locais NÃO gravadas. Vamos baixar uma cópia antes de recarregar. A recarga descarta as alterações locais atuais; será necessário reaplicá-las manualmente. Deseja continuar?')) return;
           downloadBackup();
           pending = null;
@@ -172,7 +181,9 @@
         } catch (error) {
           if (!pending) pending = snapshot;
           failure = error;
-          status(isRevisionConflict(error)
+          status(isFinalizedEvolutionConflict(error)
+            ? 'O Supabase protegeu uma evolução finalizada e recusou a gravação. Baixe as alterações pendentes antes de recarregar os dados.'
+            : isRevisionConflict(error)
             ? 'Outro usuário alterou a clínica. Suas alterações não foram sobrescritas: baixe o backup e recarregue.'
             : 'Não foi possível gravar no Supabase: ' + error.message, true);
           throw error;
