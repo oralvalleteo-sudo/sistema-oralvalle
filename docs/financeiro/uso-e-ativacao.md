@@ -1,10 +1,10 @@
-# Financeiro — versão 332
+# Financeiro
 
 Resumo gerencial mensal de entradas, despesas pagas e contas a pagar. A permissão é compartilhada com Vendas e Pagamentos recebidos: Oculto / Só ver / Ver e alterar. O plano da clínica precisa liberar Financeiro. Recebimentos individuais permanecem nas áreas de pacientes; esta aba e o CSV trazem totais de entradas e detalhamento de gastos.
 
 ## Ativação
 
-Executar inteiro `supabase/migrations/202611170020_expense_duplicates_and_schedule.sql` depois da migração `202611170019_general_expenses.sql`, já usada pelo cadastro de despesas. Após a 202611170020, executar `supabase/migrations/202611170021_allow_future_expense_payments.sql` para permitir datas futuras no pagamento. O ambiente desta revisão não tem credencial administrativa do banco real: não aplicou SQL nem alterou os registros da clínica.
+Executar inteiro `supabase/migrations/202611170020_expense_duplicates_and_schedule.sql` depois da migração `202611170019_general_expenses.sql`, já usada pelo cadastro de despesas. Após a 202611170020, executar `supabase/migrations/202611170021_allow_future_expense_payments.sql` para permitir datas futuras no pagamento. Depois, executar `supabase/migrations/202611180022_allow_repeat_expenses.sql` para liberar compras iguais no cadastro manual.
 
 A migração acrescenta mês de referência, data prevista, revisão concorrente, cancelamento lógico e auditoria privada. O vencimento deixa de ser obrigatório. Registros antigos recebem mês de referência a partir da data de criação, no fuso de São Paulo. Não muda valores, quitações ou vencimentos existentes automaticamente e não exclui contas fisicamente. As permissões de DELETE são revogadas; a ação Excluir utiliza uma RPC que preserva o original na auditoria.
 
@@ -24,7 +24,7 @@ Após ativar os SQLs e atualizar o aplicativo, consultar ou editar as contas no 
 
 Se ainda houver cópias idênticas, Manter uma conta e corrigir cópias deixa somente uma ativa e preserva as outras na auditoria. A interface não propõe esse procedimento sobre pagamentos registrados, com data passada ou futura, nem sobre contas vinculadas: eles exigem revisão individual. Registros apagados antes desta versão não são recriados nem presumidos recuperáveis.
 
-Uma mesma conta ativa (descrição normalizada, categoria, fornecedor histórico, valor, vencimento e mês) não pode ser inserida de novo. A interface confere antes de enviar; o servidor serializa a verificação por clínica. Contas realmente diferentes devem ser identificadas pela descrição/documento adequado. A correção da versão 330 também mantém o identificador de uma tentativa e verifica o registro se a resposta de gravação ficar incerta.
+Para cada compra, abrir uma nova despesa. Compras com os mesmos dados são lançadas separadamente, com identificadores próprios. Se a confirmação do envio falhar, o aplicativo confere o identificador do formulário antes de tentar gravar de novo. A prévia da importação de planilhas continua conferindo possíveis repetições.
 
 ## Fontes automáticas e limites
 
