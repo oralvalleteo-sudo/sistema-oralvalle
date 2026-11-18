@@ -567,3 +567,138 @@ document.addEventListener('click',async e=>{
 window.NexoOrthoPhotos={gallery};
 
 })();
+
+/* ===== Zoom de fotos (ortodontia, implantodontia, prótese, documentos do paciente) =====
+   Rodar do zoom: botões + / − / Ajustar / 100%, roda do mouse, duplo clique, arrastar para mover,
+   pinça no celular, teclas + − 0 e Esc. */
+(function(){
+ 'use strict';
+ let open=null;
+
+ function openZoom(src,title){
+  if(!src||open)return;
+  const ov=document.createElement('div');
+  ov.className='nz-overlay';
+  ov.innerHTML='<div class="nz-bar" role="toolbar" aria-label="Zoom da foto">'
+   +'<span class="nz-title"></span>'
+   +'<button type="button" data-z="out" aria-label="Diminuir zoom">−</button>'
+   +'<span class="nz-pct">100%</span>'
+   +'<button type="button" data-z="in" aria-label="Aumentar zoom">+</button>'
+   +'<button type="button" data-z="fit">Ajustar</button>'
+   +'<button type="button" data-z="one">Tamanho real</button>'
+   +'<button type="button" data-z="close" class="nz-close">Fechar ✕</button></div>'
+   +'<div class="nz-stage" role="dialog" aria-modal="true" aria-label="Foto ampliada"><img alt="" draggable="false"></div>';
+  ov.querySelector('.nz-title').textContent=title||'Foto';
+  const stage=ov.querySelector('.nz-stage'),img=stage.querySelector('img'),pct=ov.querySelector('.nz-pct');
+  img.alt=title||'Foto ampliada';
+  let fit=1,s=1,x=0,y=0;
+  const MAX=8;
+
+  function clampPos(){
+   const w=img.naturalWidth*s,h=img.naturalHeight*s,sw=stage.clientWidth,sh=stage.clientHeight;
+   x=w<=sw?(sw-w)/2:Math.min(0,Math.max(sw-w,x));
+   y=h<=sh?(sh-h)/2:Math.min(0,Math.max(sh-h,y));
+  }
+  function apply(){
+   clampPos();
+   img.style.transform='translate('+x+'px,'+y+'px) scale('+s+')';
+   pct.textContent=Math.round(s/fit*100)+'%';
+   stage.classList.toggle('nz-zoomed',s>fit*1.01);
+  }
+  function zoomAt(ns,cx,cy){
+   ns=Math.min(fit*MAX,Math.max(fit,ns));
+   const k=ns/s;
+   x=cx-(cx-x)*k;y=cy-(cy-y)*k;s=ns;apply();
+  }
+  function fitView(){
+   const sw=stage.clientWidth,sh=stage.clientHeight;
+   fit=Math.min(sw/img.naturalWidth,sh/img.naturalHeight,1)||1;
+   s=fit;x=0;y=0;apply();
+  }
+  function center(){const r=stage.getBoundingClientRect();return[r.width/2,r.height/2]}
+  function step(f){const[c1,c2]=center();zoomAt(s*f,c1,c2)}
+  function close(){
+   document.removeEventListener('keydown',onKey,true);
+   window.removeEventListener('resize',fitView);
+   ov.remove();open=null;
+  }
+  function onKey(e){
+   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}
+   else if(e.key==='+'||e.key==='='){e.preventDefault();step(1.25)}
+   else if(e.key==='-'){e.preventDefault();step(0.8)}
+   else if(e.key==='0'){e.preventDefault();fitView()}
+  }
+
+  ov.addEventListener('click',e=>{
+   const b=e.target.closest('[data-z]');
+   if(b){
+    const z=b.dataset.z;
+    if(z==='close')close();
+    else if(z==='in')step(1.25);
+    else if(z==='out')step(0.8);
+    else if(z==='fit')fitView();
+    else if(z==='one'){const[c1,c2]=center();zoomAt(1,c1,c2)}
+    return;
+   }
+   if(e.target===ov)close();
+  });
+  stage.addEventListener('wheel',e=>{
+   e.preventDefault();
+   const r=stage.getBoundingClientRect();
+   zoomAt(s*(e.deltaY<0?1.15:1/1.15),e.clientX-r.left,e.clientY-r.top);
+  },{passive:false});
+  stage.addEventListener('dblclick',e=>{
+   const r=stage.getBoundingClientRect();
+   if(s>fit*1.01)fitView();else zoomAt(Math.max(1,fit*2.5),e.clientX-r.left,e.clientY-r.top);
+  });
+
+  // arrastar (mouse/toque) e pinça (dois dedos)
+  const ptr=new Map();let lastDist=0;
+  stage.addEventListener('pointerdown',e=>{
+   stage.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   if(ptr.size===2){const[a,b]=[...ptr.values()];lastDist=Math.hypot(a.x-b.x,a.y-b.y)}
+  });
+  stage.addEventListener('pointermove',e=>{
+   const p=ptr.get(e.pointerId);if(!p)return;
+   if(ptr.size===2){
+    ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const[a,b]=[...ptr.values()],d=Math.hypot(a.x-b.x,a.y-b.y),r=stage.getBoundingClientRect();
+    if(lastDist)zoomAt(s*d/lastDist,(a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top);
+    lastDist=d;return;
+   }
+   x+=e.clientX-p.x;y+=e.clientY-p.y;ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});apply();
+  });
+  const up=e=>{ptr.delete(e.pointerId);lastDist=0};
+  stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+
+  img.addEventListener('load',fitView);
+  img.src=src;
+  document.body.append(ov);
+  document.addEventListener('keydown',onKey,true);
+  window.addEventListener('resize',fitView);
+  ov.querySelector('[data-z="in"]').focus();
+  open=ov;
+  if(img.complete&&img.naturalWidth)fitView();
+ }
+
+ // Fotos do prontuário (Documentos): abrir no zoom em vez de nova aba
+ document.addEventListener('click',e=>{
+  const im=e.target.closest&&e.target.closest('.ov-file-preview img, img[data-zoom]');
+  if(!im||!im.src)return;
+  e.preventDefault();e.stopPropagation();
+  openZoom(im.src,im.alt);
+ },true);
+
+ // Galerias de Ortodontia/Implantodontia/Prótese: troca o visualizador simples pelo com zoom
+ new MutationObserver(list=>{
+  for(const m of list)for(const n of m.addedNodes){
+   if(!(n instanceof HTMLElement)||!n.classList.contains('ortho-photo-overlay'))continue;
+   const im=n.querySelector('img'),t=n.querySelector('small');
+   const src=im&&im.src,title=t&&t.textContent;
+   n.remove();
+   openZoom(src,title);
+  }
+ }).observe(document.body,{childList:true});
+
+ window.NexoPhotoZoom={open:openZoom};
+})();
