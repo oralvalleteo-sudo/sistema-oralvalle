@@ -146,7 +146,7 @@ html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"]:focus-visib
     --ov-bg:#ffffff; --bg:#ffffff; --bg2:#ffffff;
     --ov-card:#ffffff; --sf:#ffffff; --card:#ffffff;
   }
-  html[data-ov-mode="light"] :is(body,#app,.ov-shell,.ov-main,.ov-content,.ov-content-inner,.ov-sidebar,.ov-mobile-nav) {
+  html[data-ov-mode="light"] :is(body,#app,.ov-shell,.ov-main,.ov-content,.ov-content-inner) {
     background-color:#ffffff !important;
   }
   html[data-ov-mode="light"] :is(.ov-page,.ov-modern-page,.ov-patients-page,.nexo-agenda-page,.ov-proposal,.ov-proposal-footer,.ov-modern-head,.ov-modern-list,.ov-modern-summary,.nexo-page-hero,.nexo-page-head,.nexo-page-stats,.ov-content .card,.ov-content .ov-panel,.pf-card,.ag-date-panel,.ag-new-form,.ag-rental-panel,.nxlab-card,.nxlab-top) {

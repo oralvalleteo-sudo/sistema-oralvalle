@@ -2134,7 +2134,7 @@ html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"]:focus-visib
     --ov-bg:#ffffff; --bg:#ffffff; --bg2:#ffffff;
     --ov-card:#ffffff; --sf:#ffffff; --card:#ffffff;
   }
-  html[data-ov-mode="light"] :is(body,#app,.ov-shell,.ov-main,.ov-content,.ov-content-inner,.ov-sidebar,.ov-mobile-nav) {
+  html[data-ov-mode="light"] :is(body,#app,.ov-shell,.ov-main,.ov-content,.ov-content-inner) {
     background-color:#ffffff !important;
   }
   html[data-ov-mode="light"] :is(.ov-page,.ov-modern-page,.ov-patients-page,.nexo-agenda-page,.ov-proposal,.ov-proposal-footer,.ov-modern-head,.ov-modern-list,.ov-modern-summary,.nexo-page-hero,.nexo-page-head,.nexo-page-stats,.ov-content .card,.ov-content .ov-panel,.pf-card,.ag-date-panel,.ag-new-form,.ag-rental-panel,.nxlab-card,.nxlab-top) {
@@ -2619,3 +2619,85 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
 .ov-reminder-grid .ov-reminder-actions button { min-height:30px; padding:5px 12px; border-radius:7px; }
 .ov-reminder-grid .ov-reminder-item.done { opacity:.72; }
 @media(max-width:600px) { .ov-reminder-grid {gap:14px !important;} .ov-reminder-grid .ov-reminder-list {grid-template-columns:minmax(0,1fr);} .ov-reminder-grid .ov-reminder-item {padding:14px !important;} }
+/* sidebar-petroleum.css */
+/* Menu lateral: azul-petróleo e seleção pêssego, no desktop e no celular.
+   Escopo restrito à navegação; não modifica ações, permissões ou conteúdo. */
+html[data-ov-mode] .ov-sidebar,
+html[data-ov-mode] .ov-mobile-nav {
+  background: #263f49 !important;
+  color: #edf4f6;
+  border-color: #35535e;
+}
+html[data-ov-mode] .ov-sidebar {
+  padding: 0 14px 28px;
+  scrollbar-width: thin;
+  scrollbar-color: #64818b #263f49;
+}
+html[data-ov-mode] .ov-sidebar .ov-side-title {
+  height: auto;
+  min-height: 54px;
+  padding: 14px 4px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #d0dfe4;
+  border-bottom: 1px solid #42606a;
+}
+html[data-ov-mode] .ov-sidebar .ov-section {
+  padding: 20px 12px 9px;
+  color: #b7ccd4;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+}
+html[data-ov-mode] .ov-sidebar .ov-nav { gap: 7px; }
+html[data-ov-mode] .ov-sidebar .ov-nav-btn {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 14px;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #304f5b;
+  color: #edf4f6;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: none;
+  transition: background-color .15s ease, color .15s ease;
+}
+html[data-ov-mode] .ov-sidebar .ov-nav-btn .ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  width: 24px;
+  color: inherit;
+}
+html[data-ov-mode] .ov-sidebar .ov-nav-btn > span:not(.ico):not(.nav-dot) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html[data-ov-mode] .ov-sidebar .ov-nav-btn:hover {
+  background: #3c606d;
+  color: #fff;
+}
+html[data-ov-mode] .ov-sidebar .ov-nav-btn.on {
+  background: #ffe3ce;
+  color: #a3430a;
+  border-color: #ffd1af;
+  font-weight: 600;
+}
+html[data-ov-mode] .ov-sidebar .ov-nav-btn.on:hover {
+  background: #ffdac0;
+  color: #923b08;
+}
+html[data-ov-mode] .ov-sidebar .ov-nav-btn:focus-visible {
+  outline: 2px solid #ffb984;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-ov-mode] .ov-sidebar .ov-nav-btn { transition: none; }
+}
