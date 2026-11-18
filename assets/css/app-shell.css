@@ -3033,3 +3033,23 @@ html[data-ov-mode] .ov-sidebar .ov-nav-btn:focus-visible {
   .ov-specialty-page .ov-modern-date { flex: 1 1 55% !important; min-width: 0 !important; }
   .ov-specialty-page .ov-modern-status { max-width: 42% !important; margin-left: auto !important; }
 }
+
+/* Correção localizada: garantir que a etapa do tratamento apareça na linha de paciente. */
+.ov-specialty-page .ov-modern-summary {
+  display: grid !important;
+  grid-template-columns: minmax(150px, 1.15fr) minmax(160px, 1.15fr) minmax(105px, auto) 28px !important;
+  align-items: center !important; gap: 12px !important; position: relative !important; min-width: 0 !important; padding-right: 32px !important;
+}
+.ov-specialty-page .ov-modern-status-stage {
+  display: inline-flex !important; visibility: visible !important; opacity: 1 !important; justify-self: end !important; align-items: center !important;
+  width: max-content !important; max-width: 100% !important; min-width: 0 !important; padding: 7px 12px !important;
+  border: 1px solid #ffd7b8 !important; border-radius: 999px !important; background: #fff3e5 !important; color: #a64c00 !important;
+  font-size: 12px !important; font-weight: 700 !important; line-height: 1.35 !important; white-space: normal !important; overflow-wrap: anywhere !important; z-index: 2 !important;
+}
+.ov-specialty-page .ov-care-arrow { position: absolute !important; right: 0 !important; top: 50% !important; transform: translateY(-50%) !important; }
+@media (max-width: 760px) {
+  .ov-specialty-page .ov-modern-summary { grid-template-columns: minmax(0, 1fr) auto !important; grid-template-rows: auto auto !important; gap: 8px 12px !important; padding-right: 30px !important; }
+  .ov-specialty-page .ov-modern-name { grid-column: 1 / -1 !important; min-width: 0 !important; }
+  .ov-specialty-page .ov-modern-date { grid-column: 1 !important; min-width: 0 !important; }
+  .ov-specialty-page .ov-modern-status-stage { grid-column: 2 !important; grid-row: 2 !important; justify-self: end !important; }
+}
