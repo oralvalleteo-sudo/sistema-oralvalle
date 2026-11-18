@@ -76,10 +76,13 @@
     const del=event.target.closest?.('[data-act="rmevol"]');
     if(!del||!ready())return;
     event.preventDefault();event.stopImmediatePropagation();
+    if(del.disabled||!pmAllowed('rmevol',del.dataset))return;
+    const clinic=OralCloud.clinicId;
     const patient=typeof cur==='function'?cur():null;
     if(!patient?.id)return;
     try{
       const state=await status(patient.id,del.dataset.id,true);
+      if(!ready()||OralCloud.clinicId!==clinic||cur()?.id!==patient.id||!del.isConnected)return;
       if(state.is_finalized){alert('Esta evolução está finalizada e não pode ser excluída.');return;}
       // A ação original é disparada somente após a consulta positiva ao servidor.
       if(typeof A!=='undefined'&&typeof A.rmevol==='function')A.rmevol(del,{id:del.dataset.id},patient);

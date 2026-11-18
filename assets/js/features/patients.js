@@ -105,6 +105,9 @@ function ologHtml(p){
   return '<h2 style="margin-top:20px;font-size:16px">Últimas alterações</h2>'+l.map(e=>`<div class="pg"><span>${esc(e.d)} · dente ${e.n}</span><span>${ODO[e.de][0]} → ${ODO[e.pa][0]}</span></div>`).join('');
 }
 function dentesTodos(){return [].concat(...Object.values(ARC).map(k=>[].concat(...k.map(q=>q[1]))))}
+function isOrthoMaintenance(e){
+  return !e.auto&&/^\[Ortodontia\] /i.test(e.txt||'')&&!/Tratamento finalizado \/ alta registrada\./i.test(e.txt||'');
+}
 function evolHtml(p,only){
   // Cada lançamento é um registro independente: nunca substituir a evolução anterior.
   const l=(p.evol||[]).filter(e=>!only||String(e.n||'').split(/[,;\s]+/).filter(Boolean).includes(String(only))).slice()
@@ -115,15 +118,15 @@ function evolHtml(p,only){
     if(e.data!==d){d=e.data;h+=`<div class="evd">${fd(d)}</div>`}
     idx++;
     h+=`<div class="ag evi" style="align-items:flex-start;gap:12px;padding:12px;margin:6px 0;border:1px solid var(--line);border-radius:10px;background:var(--card)">
-      <span style="flex:1;min-width:0"><small class="note" style="display:block;margin:0 0 4px">Registro ${idx}${e.n?' · '+(dLab(e.n)==='dentes'?'Dentes ':'Dente ')+esc(e.n):' · Geral'}${e.auto?' · Baixa do atendimento':''}${e.entry_origin==='administrative_entry'?' · Inserido pela equipe administrativa':''}${e.entered_at?' · Lançado em '+esc(new Date(e.entered_at).toLocaleString('pt-BR')):''}</small><span style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(e.txt||'')}</span></span>
-      <button class="danger sm" data-act="rmevol" data-id="${esc(e.id)}">${delArm===e.id?'Confirmar':'Excluir'}</button></div>`;
+      <span style="flex:1;min-width:0"><small class="note" style="display:block;margin:0 0 4px">Registro ${idx}${e.n?' · '+(dLab(e.n)==='dentes'?'Dentes ':'Dente ')+esc(e.n):' · Geral'}${e.auto?' · Baixa do atendimento':''}${e.entry_origin==='administrative_entry'?' · Inserido pela equipe administrativa':''}${e.entered_at?' · Lançado em '+esc(new Date(e.entered_at).toLocaleString('pt-BR')):''}</small><span style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(e.txt||'')}</span>${e.maintenanceCancellation?`<small class="note" style="display:block">Manutenção cancelada · ${esc(e.maintenanceCancellation.reason)}</small>`:''}</span>
+      ${e.maintenanceCancellation?'':isOrthoMaintenance(e)?`<button class="danger sm" data-act="rmevol" data-id="${esc(e.id)}"${ME?.admin?'':' disabled'}>Cancelar manutenção</button>`:`<button class="danger sm" data-act="rmevol" data-id="${esc(e.id)}">${delArm===e.id?'Confirmar':'Excluir'}</button>`}</div>`;
   });
   return h;
 }
 function nexoTimeline(p){
   const events=[];
   const stamp=v=>{const t=String(v||'');if(/^\d{4}-\d{2}-\d{2}/.test(t))return t.slice(0,10);const m=t.match(/^(\d{2})\/(\d{2})\/(\d{4})/);return m?`${m[3]}-${m[2]}-${m[1]}`:''};
-  (p.evol||[]).forEach(e=>events.push({date:stamp(e.data),type:'Evolução',title:e.auto||e.performedByDentistId?'Procedimento registrado':'Evolução clínica',detail:e.txt||'',id:e.id}));
+  (p.evol||[]).forEach(e=>events.push({date:stamp(e.data),type:'Evolução',title:e.maintenanceCancellation?'Manutenção cancelada':e.auto||e.performedByDentistId?'Procedimento registrado':'Evolução clínica',detail:e.txt||'',id:e.id}));
   (p.trat||[]).filter(t=>t.vid||t.status==='Concluído').forEach(t=>events.push({date:stamp(t.data||t.concluidoEm||t.updated_at),type:'Tratamento',title:t.proc||'Procedimento',detail:(t.dente?'Dente '+t.dente+' · ':'')+(t.dt?'Profissional: '+dName(t.dt):'Profissional não informado'),id:t.id}));
   (p.arquivos||[]).forEach(f=>events.push({date:stamp(f.dataEnvio||f.assinadoEm),type:'Documento',title:f.nome||'Arquivo',detail:f.categoria||'Documento',id:f.id}));
   events.sort((a,b)=>b.date.localeCompare(a.date)||a.type.localeCompare(b.type));

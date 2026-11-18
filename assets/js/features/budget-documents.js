@@ -19,7 +19,7 @@ function prOdo(sel,dec){
 function printEvolucao(p, dentistSignature){
   const cl=Object.assign({},CL_DEF,db.cl||{});
   const entries=(p.evol||[]).slice().sort((a,b)=>String(a.data||'').localeCompare(String(b.data||''))||String(a.id||'').localeCompare(String(b.id||'')));
-  const rows=entries.length?entries.map(e=>`<article class="entry"><div class="date">${esc(fd(e.data||''))}</div>${e.n?`<div class="tooth">Dente ${esc(e.n)}</div>`:''}<div class="text">${esc(e.txt||'').replace(/\n/g,'<br>')}</div></article>`).join(''):'<p>Não há registros de evolução para este paciente.</p>';
+  const rows=entries.length?entries.map(e=>`<article class="entry"><div class="date">${esc(fd(e.data||''))}${e.maintenanceCancellation?' · Manutenção cancelada':''}</div>${e.n?`<div class="tooth">Dente ${esc(e.n)}</div>`:''}<div class="text">${esc(e.txt||'').replace(/\n/g,'<br>')}</div></article>`).join(''):'<p>Não há registros de evolução para este paciente.</p>';
   const w=window.open('','_blank','width=900,height=700');
   if(!w){toast('Permita a abertura da janela de impressão neste navegador.',4000);return}
   w.document.open();
@@ -36,7 +36,7 @@ function printFicha(p){
   const o=p.odo||{},odl=Object.keys(o).filter(n=>o[n]).sort((x,y)=>x-y);
   const odo=odl.length?`<table class="fp-tb"><thead><tr><th>Dente</th><th>Situação</th></tr></thead><tbody>${odl.map(n=>`<tr><td>${esc(n)}</td><td>${esc((ODO[o[n]]||ODO[0])[0])}</td></tr>`).join('')}</tbody></table>`:'<p class="fp-sm">Nenhum dente com situação registrada.</p>';
   const ev=(p.evol||[]).slice().sort((x,y)=>String(x.data||'').localeCompare(String(y.data||''))||String(x.id||'').localeCompare(String(y.id||'')));
-  const evol=ev.length?ev.map(e=>`<div class="fp-ent"><b>${esc(fd(e.data||''))}</b>${e.n?' · Dente '+esc(e.n):' · Geral'}<div>${br(e.txt)}</div></div>`).join(''):'<p class="fp-sm">Nenhum registro de evolução.</p>';
+  const evol=ev.length?ev.map(e=>`<div class="fp-ent"><b>${esc(fd(e.data||''))}${e.maintenanceCancellation?' · Manutenção cancelada':''}</b>${e.n?' · Dente '+esc(e.n):' · Geral'}<div>${br(e.txt)}</div></div>`).join(''):'<p class="fp-sm">Nenhum registro de evolução.</p>';
   const evsig=p.evolSign?`<img class="fp-sig" alt="Assinatura da evolução" src="${p.evolSign}"><div class="fp-sm">Assinatura da evolução registrada em ${esc(p.evolSignDate||'')}</div>`:'';
   const tr=p.trat||[],sel=new Set();
   tr.filter(x=>x.status!=='Cancelado').forEach(x=>trTeeth(x).forEach(n=>{const v=parseInt(n,10);if(v)sel.add(v)}));

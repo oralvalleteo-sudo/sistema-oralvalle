@@ -334,7 +334,54 @@ const A={
   planok:(b,d,p)=>{const x=(p.dplan||[]).find(y=>y.id===d.id);if(!x)return;x.feito=true;x.fdata=tdy();(p.evol=p.evol||[]).push({id:uid(),data:tdy(),n:x.n,txt:x.txt});save();render();toast('Lançado na evolução de hoje')},
   rmplan:(b,d,p)=>arm(d.id,()=>{p.dplan=p.dplan.filter(x=>x.id!==d.id);save();render()}),
   addevol:(b,d,p)=>{const t=$('evt').value.trim();if(!t){toast('Descreva o que foi feito');return}(p.evol=p.evol||[]).push({id:uid(),data:$('evd').value||tdy(),n:$('evn').value,txt:t});save();window.__nexoEvolSavedPatient=String(p.id);render();toast('Evolução salva')},
-  rmevol:(b,d,p)=>arm(d.id,()=>{p.evol=p.evol.filter(x=>x.id!==d.id);save();render()}),
+  rmevol:async (b,d,p)=>{
+    const evolution=p?.evol?.find(item=>item.id===d.id);
+    if(!evolution||evolution.maintenanceCancellation)return;
+    if(!isOrthoMaintenance(evolution)){
+      arm(d.id,()=>{p.evol=p.evol.filter(x=>x.id!==d.id);save();render()});
+      return;
+    }
+    if(!ME?.admin){toast('Somente administradores podem cancelar manutenções.');return;}
+    const cloud=window.OralCloud;
+    const clinic=cloud?.clinicId;
+    const actor=cloud?.enabled?cloud.session?.user?.id:ME.id;
+    if(cloud?.enabled){
+      if(!actor||!clinic)return toast('Entre na clínica para cancelar a manutenção.');
+      b.disabled=true;
+      try{
+        const allowed=await cloud.request('/rest/v1/rpc/nexodent_can_cancel_maintenance',{method:'POST',body:{p_clinic:clinic}});
+        if(!allowed)return toast('Somente administradores podem cancelar manutenções.');
+        if(cloud.clinicId!==clinic||cur()!==p||!b.isConnected)return;
+      }catch(error){
+        toast('Cancelamento administrativo indisponível. Confira a atualização do Supabase e tente novamente.',5000);
+        return;
+      }finally{b.disabled=false;}
+    }
+    const sales=db.vd.filter(sale=>sale.pid===p.id&&sale.orthoEvolutionId===evolution.id);
+    const reason=prompt('Motivo do cancelamento da manutenção:');
+    if(reason===null)return;
+    if(!reason.trim()||reason.trim().length>500){toast('Informe um motivo de até 500 caracteres.');return;}
+    const totalReceived=sales.reduce((total,sale)=>total+recebido(sale),0);
+    const financial=sales.length?' O lançamento vinculado será retirado de Vendas.':'';
+    const payments=totalReceived>0?' Isso removerá '+brl(totalReceived)+' em recebimentos registrados. Nenhum valor será devolvido automaticamente.':'';
+    if(!confirm('Cancelar esta manutenção e manter o original no histórico?'+financial+payments))return;
+
+    evolution.maintenanceCancellation={reason:reason.trim(),at:new Date().toISOString(),by:actor};
+    const remaining=p.evol.filter(item=>isOrthoMaintenance(item)&&!item.maintenanceCancellation);
+    const month=String(evolution.data||'').slice(0,7);
+    if(!remaining.some(item=>item.data?.slice(0,7)===month)){
+      p.orthoBaixas=(p.orthoBaixas||[]).filter(value=>value!==month);
+    }
+    if(p.orthoUltimaData===evolution.data){
+      p.orthoUltimaData=remaining.map(item=>item.data||'').sort().at(-1)||'';
+    }
+    if(sales.length){
+      const linked=new Set(sales);
+      db.vd=db.vd.filter(sale=>!linked.has(sale));
+    }
+    save();render();
+    toast('Cancelamento registrado. Confira a confirmação de salvamento.');
+  },
   sigclr:(b,d,p)=>{p.sign='';p.signDate='';p.signTermo='';save();render()},
   addo:(b,d,p)=>{const nid=uid();(view.orcOpen=view.orcOpen||{})[nid]=true;p.orcs.unshift({id:nid,data:new Date().toLocaleDateString('pt-BR'),status:'Pendente',itens:[{id:uid(),proc:'',dente:'',valor:'',dt:defDt()}],desc:'',val:plusDays(15),cond:''});save();render()},
   addi:(b,d,p)=>{getO(p,d.o).itens.push({id:uid(),proc:'',dente:'',valor:'',dt:defDt()});save();render()},
