@@ -19,18 +19,18 @@ html:has(iframe.crm-visible-dialog) :is(#nexodent-chat-launcher, #nexodent-chat-
 }
 
 @media screen and (min-width: 761px) {
-  .ov-content:has(> .ov-content-inner > .nexo-crm-page) {
+  .ov-content:has(> .ov-content-inner > :is(.nexo-crm-page, .nexo-chat-page)) {
     display: flex;
     flex-direction: column;
     padding-bottom: 0;
   }
-  .ov-content-inner:has(> .nexo-crm-page) {
+  .ov-content-inner:has(> :is(.nexo-crm-page, .nexo-chat-page)) {
     display: flex;
     flex: 1 1 0;
     width: 100%;
     min-height: 0;
   }
-  .nexo-crm-page > iframe:not(.crm-visible-dialog) {
+  :is(.nexo-crm-page, .nexo-chat-page) > iframe:not(.crm-visible-dialog) {
     height: 100%;
     min-height: 0;
   }
