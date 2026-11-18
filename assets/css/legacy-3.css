@@ -647,6 +647,26 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   background: #fff;
 }
 .cfg-page .cfg-panels-acesso .up-user { background: #f3f6f8; border-color: var(--fin-border); }
+.cfg-page .cfg-panels-acesso .up-user > summary {
+  color: var(--fin-text);
+  overflow-wrap: anywhere;
+}
+.cfg-page .cfg-panels-acesso .up-user > summary::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 3px 3px auto;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.cfg-page .cfg-panels-acesso .up-user[open] > summary::after { transform: rotate(225deg); }
+.cfg-page .cfg-panels-acesso .up-user > summary:focus-visible {
+  outline: 2px solid #375c6b;
+  outline-offset: -3px;
+  border-radius: 10px;
+}
 @media (max-width: 760px) {
   :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); }
   .cfg-page .cfg-panels > .cfg-card { padding: 16px; }
