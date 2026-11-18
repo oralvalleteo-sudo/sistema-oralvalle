@@ -123,11 +123,27 @@ function applyTheme(){
 }
 function cfgHtml(){
   const cl=Object.assign({},CL_DEF,db.cl||{});
-  const CT=[['empresa','Empresa'],['financeiro','Financeiro'],['docs','Documentos'],['visual','Aparência'],['acesso','Acessos'],['privacy','Privacidade e dados']],T=CT.some(x=>x[0]===view.cfgTab)?view.cfgTab:'empresa';
-  const cfgTabs='<div class="tabs" role="tablist">'+CT.map(x=>`<button type="button" role="tab" aria-selected="${T===x[0]}" data-act="cfgtab" data-t="${x[0]}" class="${T===x[0]?'on':''}">${x[1]}</button>`).join('')+'</div>';
-  const f=(k,l,ex,hint)=>`<label for="cl_${k}">${l}</label><input id="cl_${k}" data-cl="${k}" ${ex||''} value="${esc(cl[k])}">${hint?`<p class="note" style="margin:4px 0 0">${hint}</p>`:''}`;
-  return `<div class="cfg-page"><div class="ov-page-head"><div><h1>Configurações</h1><p class="sub">${T==='financeiro'?'Preferências financeiras da clínica.':'Logo e dados da empresa usados no sistema, orçamentos, receituários, atestados e fichas impressas.'}</p></div></div>
-  ${cfgTabs}${T==='privacy'?'<section aria-label="Privacidade e dados" class="nexo-crm-embed"><iframe title="Privacidade e dados" src="./legal/direitos.html?embedded=1" loading="eager"></iframe></section>':''}${T==='financeiro'?ovFinanceSettings():''}${T==='acesso'?pmCardHtml():''}${T==='visual'?`<section class="card cfg-card"><h2>Modo de aparência</h2><p class="note">O NexoDent utiliza sempre o modo claro, independentemente da aparência do Windows ou navegador.</p></section><section class="card cfg-card"><h2>Cor do sistema</h2><label for="cfgColor">Escolha a cor principal</label><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><input id="cfgColor" type="color" value="${esc(window.oralValleLocalAccent ? window.oralValleLocalAccent() : '#ff7a00')}" style="width:70px;height:48px;padding:3px;min-height:48px"><span class="note" style="margin:0">A cor será aplicada aos botões, destaques e cabeçalho do sistema.</span></div><button class="ghost sm" data-act="cfgcolorreset" style="margin-top:10px">Restaurar cor laranja padrão</button></section>
+  const tabs=[
+    ['empresa','Empresa','Dados da clínica e retorno de pacientes'],
+    ['financeiro','Financeiro','Taxas, prazos e conciliação'],
+    ['docs','Documentos','Modelos de receitas e atestados'],
+    ['visual','Aparência','Cor, ícone e logo da clínica'],
+    ['acesso','Acessos','Usuários e permissões'],
+    ['privacy','Privacidade e dados','Solicitações sobre seus dados']
+  ];
+  const T=tabs.some(([key])=>key===view.cfgTab)?view.cfgTab:'empresa';
+  const cfgTabs=`<nav class="cfg-navigation" aria-label="Seções de Configurações">${tabs.map(([key,label,description])=>`<button type="button"${T===key?' aria-current="page"':''} data-act="cfgtab" data-t="${key}"><strong>${label}</strong><small>${description}</small></button>`).join('')}</nav>`;
+  const f=(k,l,ex,hint)=>`<div class="cfg-field"><label for="cl_${k}">${l}</label><input id="cl_${k}" data-cl="${k}" ${ex||''} value="${esc(cl[k])}">${hint?`<p class="note">${hint}</p>`:''}</div>`;
+  const summaries={
+    empresa:'Atualize os dados usados nos documentos e defina quando lembrar do retorno dos pacientes.',
+    docs:'Defina o que já vem preenchido ao emitir um receituário ou atestado.',
+    visual:'Personalize a cor do sistema e as imagens da clínica.',
+    acesso:'Gerencie quem pode entrar no sistema e o que cada pessoa pode consultar ou editar.',
+    privacy:'Consulte seus direitos de privacidade e acompanhe solicitações sobre seus dados.'
+  };
+  const intro=T==='financeiro'?'':`<header class="cfg-intro"><h2>${tabs.find(([key])=>key===T)[1]}</h2><p>${summaries[T]}</p></header>`;
+  return `<div class="cfg-page"><div class="ov-page-head"><h1>Configurações</h1></div>
+  ${cfgTabs}${intro}<div class="cfg-panels cfg-panels-${T}">${T==='privacy'?'<section aria-label="Portal de privacidade" class="nexo-crm-embed"><iframe title="Privacidade e dados" src="./legal/direitos.html?embedded=1" loading="eager"></iframe></section>':''}${T==='financeiro'?ovFinanceSettings():''}${T==='acesso'?pmCardHtml():''}${T==='visual'?`<section class="card cfg-card"><h2>Modo de aparência</h2><p class="note">O NexoDent utiliza sempre o modo claro, independentemente da aparência do Windows ou navegador.</p></section><section class="card cfg-card"><h2>Cor do sistema</h2><label for="cfgColor">Escolha a cor principal</label><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><input id="cfgColor" type="color" value="${esc(window.oralValleLocalAccent ? window.oralValleLocalAccent() : '#ff7a00')}" style="width:70px;height:48px;padding:3px;min-height:48px"><span class="note" style="margin:0">A cor será aplicada aos botões, destaques e cabeçalho do sistema.</span></div><button class="ghost sm" data-act="cfgcolorreset" style="margin-top:10px">Restaurar cor laranja padrão</button></section>
   <section class="card cfg-card"><h2>Ícone no topo do sistema</h2>
     <div class="cfg-logo"><div class="cfg-logo-prev"><img src="${cl.icone||''}" alt="Ícone atual" ${cl.icone?'':'style="display:none"'}></div>
     <div style="flex:1;min-width:200px"><label for="cfgIcon" style="margin-top:0">Enviar ícone (PNG ou WebP com transparência; JPG não mantém fundo transparente)</label><input id="cfgIcon" type="file" accept="image/png,image/jpeg,image/webp">
@@ -140,9 +156,9 @@ function cfgHtml(){
     <p class="note" style="margin:6px 0 0">Ela aparece no topo do sistema e nos documentos em PDF e impressos. Prefira uma imagem com fundo transparente ou branco.</p>
     ${cl.logo?'<button class="ghost sm" data-act="cfglogorm" style="margin-top:8px">Voltar à logo padrão</button>':(cl.semLogo?'<p class="note" style="margin:6px 0 0">Nenhuma logo está sendo exibida.</p>':'<p class="note" style="margin:6px 0 0">Usando a logo padrão.</p>')}</div></div>
   </section>
-  <section class="card cfg-card"><h2>Remover todas as logos</h2><p class="note" style="margin-top:0">Remove a logo dos documentos, o ícone do cabeçalho e também a ilustração padrão. O sistema ficará sem nenhuma imagem de logo.</p><button class="danger sm" data-act="cfgnologo">Remover todas as logos</button></section>`:''}${T==='empresa'?`
+  <section class="card cfg-card cfg-danger-panel"><h2>Remover todas as logos</h2><p class="note" style="margin-top:0">Remove a logo dos documentos, o ícone do cabeçalho e também a ilustração padrão. O sistema ficará sem nenhuma imagem de logo.</p><button class="danger sm" data-act="cfgnologo">Remover todas as logos</button></section>`:''}${T==='empresa'?`
   <section class="card cfg-card"><h2>Dados da empresa</h2><p class="note" style="margin:0 0 4px">Alterações são salvas automaticamente.</p>
-    ${f('nome','Nome da clínica (nos documentos)')}${f('marca','Nome da empresa no topo do sistema')}${f('sub','Subtítulo no topo do sistema (opcional)')}${f('end','Endereço')}${f('email','E-mail','type="email"')}${f('tel','Telefone','inputmode="tel"')}${f('cnpj','CNPJ')}
+    <div class="cfg-fields">${f('nome','Nome da clínica (nos documentos)')}${f('marca','Nome da empresa no topo do sistema')}${f('sub','Subtítulo no topo do sistema (opcional)')}${f('end','Endereço')}${f('email','E-mail','type="email"')}${f('tel','Telefone','inputmode="tel"')}${f('cnpj','CNPJ')}</div>
   </section>
   <section class="cfg-card card"><h2>Retorno de pacientes</h2><p class="note" style="margin:0 0 4px">Lista de pacientes que não voltam à clínica, em Lembretes, com aviso na Agenda.</p>
     <label for="cl_retMeses">Avisar quando passar de</label><select id="cl_retMeses" data-cl="retMeses">${[3,4,6,9,12].map(n=>`<option value="${n}"${String(cl.retMeses)===String(n)?' selected':''}>${n} meses sem consulta</option>`).join('')}</select>
@@ -150,21 +166,23 @@ function cfgHtml(){
     <p class="note" style="margin:4px 0 0">Campos automáticos: {nome} (primeiro nome), {clinica} e {ultima} (mês/ano da última visita).</p>
     <button class="ghost sm" data-act="cfgretmsg" style="margin-top:8px">Restaurar mensagem padrão</button>
   </section>`:''}${T==='docs'?`
-  <section class="cfg-card card"><h2>Receituário e atestado: informações padrão</h2><p class="note" style="margin:0 0 4px">Valem para todos os pacientes e já vêm preenchidos nos documentos. Alterações são salvas automaticamente.</p>
-    <label for="cl_docDent">Dentista padrão</label><select id="cl_docDent" data-cl="docDent">${dentOpts(cl.docDent,'Escolher na hora de emitir')}</select>
-    <p class="note" style="margin:4px 0 0">Vem selecionado no receituário e no atestado; o CRO sai junto, conforme o cadastro do dentista.</p>
-    ${f('rxCidade','Cidade da data e assinatura','placeholder="Ex.: Teófilo Otoni/MG"','Se ficar em branco, usa a cidade do endereço da clínica.')}
-    <h3 style="margin:18px 0 0">Receituário</h3>
+  <section class="cfg-card card"><h2>Dados de emissão</h2><p class="note" style="margin:0 0 4px">Valem para todos os pacientes e já vêm preenchidos nos documentos. Alterações são salvas automaticamente.</p>
+    <div class="cfg-fields"><div class="cfg-field"><label for="cl_docDent">Dentista padrão</label><select id="cl_docDent" data-cl="docDent">${dentOpts(cl.docDent,'Escolher na hora de emitir')}</select>
+    <p class="note" style="margin:4px 0 0">Vem selecionado no receituário e no atestado; o CRO sai junto, conforme o cadastro do dentista.</p></div>
+    ${f('rxCidade','Cidade da data e assinatura','placeholder="Ex.: Teófilo Otoni/MG"','Se ficar em branco, usa a cidade do endereço da clínica.')}</div>
+  </section>
+  <section class="cfg-card card"><h2>Receituário</h2>
     ${f('rxTitulo','Título do documento')}
     <label for="cl_rxRodape">Texto fixo no final (opcional)</label><textarea id="cl_rxRodape" data-cl="rxRodape" rows="3" placeholder="Ex.: Receita válida por 30 dias. Em caso de dúvida, ligue para a clínica.">${esc(cl.rxRodape)}</textarea>
-    <h3 style="margin:18px 0 0">Atestado</h3>
+  </section>
+  <section class="cfg-card card"><h2>Atestado</h2><div class="cfg-fields">
     ${f('atTitulo','Título do documento')}
-    ${f('atDias','Dias de afastamento padrão','inputmode="numeric"','Deixe em branco para o atestado sair sem informar afastamento.')}
+    ${f('atDias','Dias de afastamento padrão','inputmode="numeric"','Deixe em branco para o atestado sair sem informar afastamento.')}</div>
     <label for="cl_atTexto">Texto padrão do atestado</label><textarea id="cl_atTexto" data-cl="atTexto" rows="5">${esc(cl.atTexto)}</textarea>
     <p class="note" style="margin:4px 0 0">Campos automáticos: {paciente}, {cpf}, {data}, {dias} e {afastamento} (vira "necessitando de afastamento de suas atividades por N dias" quando houver dias informados).</p>
     <button class="ghost sm" data-act="cfgattxt" style="margin-top:8px">Restaurar texto padrão</button>
     <label for="cl_atRodape">Texto fixo no final (opcional)</label><textarea id="cl_atRodape" data-cl="atRodape" rows="3" placeholder="Ex.: Este atestado não possui validade sem assinatura e carimbo do profissional.">${esc(cl.atRodape)}</textarea>
-  </section>`:''}</div>`;
+  </section>`:''}</div></div>`;
 }
 document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='cfgColor'){window.oralValleSetLocalAccent(t.value);applyTheme();cfgRefreshTop();toast('Cor do sistema atualizada',2200);return}

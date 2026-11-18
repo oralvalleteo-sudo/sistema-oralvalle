@@ -544,13 +544,69 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   text-transform:none !important;
 }
 
-/* Configurações financeiras */
-.cfg-financeiro {
+/* Configurações */
+.cfg-page, .cfg-financeiro {
   --fin-border: #d6e0e5;
   --fin-text: #233b47;
   --fin-muted: #506673;
   color: var(--fin-text);
 }
+.cfg-page .cfg-navigation {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
+  gap: 8px;
+}
+.cfg-page .cfg-navigation button {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 1px solid var(--fin-border);
+  border-radius: 9px;
+  background: #f3f6f8;
+  color: var(--fin-text);
+  font: inherit;
+  text-align: left;
+}
+.cfg-page .cfg-navigation button:hover { border-color: #aabfc8; }
+.cfg-page .cfg-navigation button[aria-current] { border-color: #eba775; background: #fff0e4; color: #863c12; }
+.cfg-page .cfg-navigation small { color: var(--fin-muted); line-height: 1.35; }
+.cfg-page .cfg-navigation button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+.cfg-page .cfg-panels:not(.cfg-panels-financeiro) { display: grid; gap: 14px; }
+.cfg-page .cfg-panels > .cfg-card {
+  min-width: 0;
+  margin: 0;
+  padding: 20px 22px;
+  border: 1px solid var(--fin-border);
+  border-radius: 14px;
+  background: #fff;
+}
+.cfg-page .cfg-panels > .cfg-card h2 { margin: 0 0 10px; color: var(--fin-text); font-size: 19px; }
+.cfg-page .cfg-panels > .cfg-card .note { color: var(--fin-muted); }
+.cfg-page .cfg-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: start;
+  gap: 8px 15px;
+}
+.cfg-page .cfg-field { min-width: 0; }
+.cfg-page .cfg-field .note { margin: 5px 0 0; }
+.cfg-page .cfg-card.cfg-danger-panel { border-color: #edc1b9; background: #fff8f6; }
+.cfg-page .cfg-panels-privacy > section {
+  min-width: 0;
+  border: 1px solid var(--fin-border);
+  border-radius: 14px;
+  background: #fff;
+}
+.cfg-page .cfg-panels-acesso .up-user { background: #f3f6f8; border-color: var(--fin-border); }
+@media (max-width: 760px) {
+  .cfg-page .cfg-navigation { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); }
+  .cfg-page .cfg-panels > .cfg-card { padding: 16px; }
+  .cfg-page .cfg-logo { flex-wrap: wrap; }
+  .cfg-page .cfg-logo input { max-width: 100%; }
+}
+.cfg-page .cfg-intro,
 .cfg-financeiro .ov-fin-intro {
   margin: 18px 0;
   padding: 19px 22px;
@@ -558,8 +614,10 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   border-radius: 14px;
   background: #edf6f6;
 }
+.cfg-page .cfg-intro h2,
 .cfg-financeiro .ov-fin-intro h2,
 .cfg-financeiro .ov-fin-panel h2 { margin: 0; font-size: 21px; color: var(--fin-text); }
+.cfg-page .cfg-intro p,
 .cfg-financeiro .ov-fin-intro p { margin: 5px 0 0; color: var(--fin-muted); }
 .cfg-financeiro .ov-fin-layout {
   display: grid;
