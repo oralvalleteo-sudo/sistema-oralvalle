@@ -33,3 +33,16 @@
 /* 277: respeitar o atributo hidden definido pelo controlador de abas.
    O display:flex!important anterior mantinha o funil visivel em todas as abas. */
 #crm-view-panel > #board.board[hidden] { display: none !important; }
+
+/* No computador, as etapas dividem a largura disponível do painel. */
+@media (min-width: 761px) {
+  #board.board { overflow-x: hidden !important; scroll-snap-type: none; }
+  #board.board > .column {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    overflow-wrap: anywhere;
+  }
+  .crm-funil-nav-266 { display: none !important; }
+}
