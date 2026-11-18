@@ -1,6 +1,6 @@
 /* As permissões locais controlam a interface, não substituem autorização de servidor. */
 const PM_MODS=[
- ['Clínica',[['ag','Agenda'],['pac','Pacientes'],['crm','CRM'],['ortho','Ortodontia'],['impl','Implantodontia'],['prot','Prótese'],['lab','Laboratório'],['lem','Lembretes'],['wa','WhatsApp'],['sigdoc','Documentos e assinaturas'],['dt','Dentistas'],['cm','Comissões'],['vd','Despesas, vendas e pagamentos recebidos']]],
+ ['Clínica',[['ag','Agenda'],['pac','Pacientes'],['crm','CRM'],['ortho','Ortodontia'],['impl','Implantodontia'],['prot','Prótese'],['lab','Laboratório'],['lem','Lembretes'],['wa','WhatsApp'],['sigdoc','Documentos e assinaturas'],['dt','Dentistas'],['cm','Comissões'],['vd','Controle, vendas e pagamentos recebidos']]],
  ['Negociação',[['pf','Proposta financeira']]],
  ['Precificação',[['hc','Custo hora clínica'],['pr','Procedimentos'],['mt','Tabela de materiais']]],
  ['Controle',[['chat','Comunicação da equipe'],['bk','Backup e importação de dados'],['reports','Relatórios']]],
@@ -95,7 +95,7 @@ function pmCardHtml(){
     </div></details>`).join(''):`<p class="note" style="margin:10px 0">Ainda não há usuários além do administrador. Crie um abaixo e depois escolha o que ele pode ver e alterar.</p>`;
   return `<section class="card cfg-card"><h2>Acesso dos usuários</h2>
     <p class="note" style="margin:0 0 4px">Escolha o que cada pessoa que entra com login pode ver e alterar. Administradores têm acesso completo. É possível promover ou rebaixar outros usuários. As alterações são enviadas ao Supabase; aguarde a confirmação de gravação.</p>
-    <p class="note" style="margin:0 0 8px"><strong>Oculto</strong>: a função some do menu. <strong>Só ver</strong>: consulta e imprime, sem alterar nada. <strong>Ver e alterar</strong>: edição na função, respeitando os dados e módulos contratados.</p><p class="note">Laboratório e especialidades também precisam de Pacientes e Dados cadastrais. Documentos dependem de Pacientes e Radiografias e documentos. Relatórios respeitam as permissões das suas fontes de dados. Despesas, vendas e pagamentos recebidos compartilham o mesmo módulo.</p><p class="note">Configurações e gestão de acessos são exclusivas de administradores. Minha conta e o portal de Privacidade e dados permanecem disponíveis a cada usuário.</p>
+    <p class="note" style="margin:0 0 8px"><strong>Oculto</strong>: a função some do menu. <strong>Só ver</strong>: consulta e imprime, sem alterar nada. <strong>Ver e alterar</strong>: edição na função, respeitando os dados e módulos contratados.</p><p class="note">Laboratório e especialidades também precisam de Pacientes e Dados cadastrais. Documentos dependem de Pacientes e Radiografias e documentos. Relatórios respeitam as permissões das suas fontes de dados. Controle, vendas e pagamentos recebidos compartilham o mesmo módulo.</p><p class="note">Configurações e gestão de acessos são exclusivas de administradores. Minha conta e o portal de Privacidade e dados permanecem disponíveis a cada usuário.</p>
     ${list}
     <h3 class="up-h" style="margin-top:20px">Novo usuário</h3>
     <label for="acn" style="margin-top:0">Nome</label><input id="acn">
