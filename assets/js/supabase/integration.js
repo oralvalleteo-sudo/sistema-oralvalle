@@ -106,8 +106,12 @@
       .some(value => typeof value === 'string' && value.includes('NEXODENT_FINALIZED_EVOLUTION_IMMUTABLE'));
   }
 
+  function isEvolutionDentistReference(error) {
+    return /nexodent_evolution_dentists_evolution_fkey/.test(error?.message||'');
+  }
+
   function requiresReload(error) {
-    return Boolean(error?.needsReload || isRevisionConflict(error) || isFinalizedEvolutionConflict(error));
+    return Boolean(error?.needsReload || isRevisionConflict(error) || isFinalizedEvolutionConflict(error) || isEvolutionDentistReference(error));
   }
 
   function status(message, error = false) {
@@ -185,6 +189,8 @@
             ? 'O Supabase protegeu uma evolução finalizada e recusou a gravação. Baixe as alterações pendentes antes de recarregar os dados.'
             : isRevisionConflict(error)
             ? 'Outro usuário alterou a clínica. Suas alterações não foram sobrescritas: baixe o backup e recarregue.'
+            : isEvolutionDentistReference(error)
+            ? 'O vínculo com o dentista impediu a exclusão. Baixe as alterações pendentes, recarregue e use Cancelar manutenção no prontuário.'
             : 'Não foi possível gravar no Supabase: ' + error.message, true);
           throw error;
         }
