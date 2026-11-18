@@ -573,6 +573,7 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 .cfg-page .cfg-navigation button[aria-current] { border-color: #eba775; background: #fff0e4; color: #863c12; }
 .cfg-page .cfg-navigation small { color: var(--fin-muted); line-height: 1.35; }
 .cfg-page .cfg-navigation button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+.cfg-page .cfg-panels { margin-top: 18px; }
 .cfg-page .cfg-panels:not(.cfg-panels-financeiro) { display: grid; gap: 14px; }
 .cfg-page .cfg-panels > .cfg-card {
   min-width: 0;
@@ -606,19 +607,7 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   .cfg-page .cfg-logo { flex-wrap: wrap; }
   .cfg-page .cfg-logo input { max-width: 100%; }
 }
-.cfg-page .cfg-intro,
-.cfg-financeiro .ov-fin-intro {
-  margin: 18px 0;
-  padding: 19px 22px;
-  border: 1px solid #d4e6e7;
-  border-radius: 14px;
-  background: #edf6f6;
-}
-.cfg-page .cfg-intro h2,
-.cfg-financeiro .ov-fin-intro h2,
 .cfg-financeiro .ov-fin-panel h2 { margin: 0; font-size: 21px; color: var(--fin-text); }
-.cfg-page .cfg-intro p,
-.cfg-financeiro .ov-fin-intro p { margin: 5px 0 0; color: var(--fin-muted); }
 .cfg-financeiro .ov-fin-layout {
   display: grid;
   grid-template-columns: minmax(220px, 27%) minmax(0, 1fr);

@@ -65,8 +65,7 @@ function ovFinanceSettings(){
   grid(field('credito_parcelas','Número máximo de parcelas','12')+days('credito_primeira','Prazo da primeira parcela (dias)')+field('credito_antecipacao','Taxa de antecipação (%)')+mode('credito_parcelado'))+
   `<fieldset class="ov-fin-installments"><legend>Taxas por quantidade de parcelas</legend>${grid(installmentRates)}</fieldset>`);
  panels+=card('Conciliacao','Conciliação',grid(field('tolerancia','Diferença máxima aceita (R$)')));
- return `<section class="cfg-financeiro" aria-labelledby="ov-fin-heading">
-   <header class="ov-fin-intro"><h2 id="ov-fin-heading">Recebimentos</h2><p>Defina taxas e prazos por forma de pagamento. As taxas salvas são aplicadas às novas vendas.</p></header>
+ return `<section class="cfg-financeiro" aria-label="Configurações financeiras">
    <div class="ov-fin-layout">
      <div class="ov-fin-methods"><h3 id="ov-fin-methods-heading">Formas de pagamento e conciliação</h3><div class="ov-fin-tabs" role="group" aria-labelledby="ov-fin-methods-heading">${methods}</div></div>
      <div class="ov-fin-editor">${panels}<footer class="ov-fin-footer"><button type="button" class="primary" data-act="ovFinanceSave">Salvar configurações financeiras</button></footer></div>
