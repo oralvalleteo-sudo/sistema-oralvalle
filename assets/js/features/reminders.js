@@ -126,7 +126,7 @@ function lembretesHtml(){
   return `<div class="ov-reminders-page"><div class="ov-page-head"><h1>Lembretes</h1><span class="ov-reminder-count">${pend} pendente${pend===1?'':'s'}</span></div>
   ${tabsHtml}<div class="ov-reminders-content">${T==='aniversarios'?ovBirthdayHtml():T==='ret'?retHtml():T==='ortho'?orthoHtml(false):`
   <div class="ov-reminder-grid">
-    <section class="ov-reminder-form">
+    <section class="ov-reminder-form ov-reminder-toolbar">
       <details class="nd-lem-create">
         <summary><span aria-hidden="true">+</span> Adicionar lembrete</summary>
         <div>
@@ -146,8 +146,8 @@ function lembretesHtml(){
       </div>
         </div>
       </details>
+      ${alerts}
     </section>
-    ${alerts}
     <section aria-label="Lista de lembretes">
       ${shown.length?`<div class="ov-reminder-list">${shown.map(x=>{
         const when=x.data?(fd(x.data)+(x.hora?' · '+x.hora:'')): 'Sem data';

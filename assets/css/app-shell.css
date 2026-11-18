@@ -1411,6 +1411,8 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
 .ov-reminders-page .lem-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
 .ov-reminders-page .lem-tabs button {
+  flex: 1 0 auto;
+  justify-content: center;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1443,9 +1445,12 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 }
 .ov-reminders-page .nd-lem-create > summary::-webkit-details-marker { display: none; }
 .ov-reminders-page .nd-lem-create > summary span { font-size: 19px; line-height: 1; }
-.ov-reminders-page .ov-reminder-alerts { display: flex; flex-wrap: wrap; gap: 8px; }
+.ov-reminders-page .ov-reminder-toolbar,
+.ov-reminders-page .ov-reminder-alerts { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ov-reminders-page .ov-reminder-toolbar .nd-lem-create { min-width: 0; }
+.ov-reminders-page .ov-reminder-toolbar .nd-lem-create[open] { flex-basis: 100%; }
 .ov-reminders-page .ov-reminder-alerts button {
-  min-height: 34px;
+  min-height: 42px;
   padding: 5px 10px;
   text-align: left;
   white-space: normal;
