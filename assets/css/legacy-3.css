@@ -545,18 +545,18 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 }
 
 /* Configurações */
-.cfg-page, .cfg-financeiro {
+.cfg-page, .cfg-financeiro, .ov-reminders-page {
   --fin-border: #d6e0e5;
   --fin-text: #233b47;
   --fin-muted: #506673;
   color: var(--fin-text);
 }
-.cfg-page .cfg-navigation {
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
   gap: 8px;
 }
-.cfg-page .cfg-navigation button {
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button {
   display: grid;
   align-content: start;
   gap: 4px;
@@ -569,10 +569,34 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   font: inherit;
   text-align: left;
 }
-.cfg-page .cfg-navigation button:hover { border-color: #aabfc8; }
-.cfg-page .cfg-navigation button[aria-current] { border-color: #eba775; background: #fff0e4; color: #863c12; }
-.cfg-page .cfg-navigation small { color: var(--fin-muted); line-height: 1.35; }
-.cfg-page .cfg-navigation button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button:hover { border-color: #aabfc8; }
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button[aria-current] { border-color: #eba775; background: #fff0e4; color: #863c12; }
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) small { color: var(--fin-muted); line-height: 1.35; }
+:is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) button:focus-visible { outline: 2px solid #375c6b; outline-offset: 2px; }
+.ov-reminders-page .lem-tabs button {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: center;
+  min-height: 46px;
+}
+.ov-reminders-page .lem-n {
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--fin-text);
+  font-size: 12px;
+}
+.ov-reminders-page .ov-reminders-content { margin-top: 18px; }
+.ov-reminders-page .nd-lem-create > summary {
+  width: fit-content;
+  padding: 10px 16px;
+  border: 1px solid #eba775;
+  border-radius: 9px;
+  background: #fff0e4;
+  color: #863c12;
+  cursor: pointer;
+  font-weight: 700;
+}
 .cfg-page .cfg-panels { margin-top: 18px; }
 .cfg-page .cfg-panels:not(.cfg-panels-financeiro) { display: grid; gap: 14px; }
 .cfg-page .cfg-panels > .cfg-card {
@@ -602,7 +626,7 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 }
 .cfg-page .cfg-panels-acesso .up-user { background: #f3f6f8; border-color: var(--fin-border); }
 @media (max-width: 760px) {
-  .cfg-page .cfg-navigation { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); }
+  :is(.cfg-page .cfg-navigation, .ov-reminders-page .lem-tabs) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); }
   .cfg-page .cfg-panels > .cfg-card { padding: 16px; }
   .cfg-page .cfg-logo { flex-wrap: wrap; }
   .cfg-page .cfg-logo input { max-width: 100%; }

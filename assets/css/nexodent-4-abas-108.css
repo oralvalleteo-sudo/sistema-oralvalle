@@ -134,7 +134,7 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
 .ov-reminder-grid .nd-lem-create { display:block; margin:0; }
 .ov-reminder-grid .nd-lem-create > summary { min-height:42px; box-sizing:border-box; }
 .ov-reminder-grid .nd-lem-create[open] > div { margin-top:12px; padding:20px !important; border:1px solid #e3e7ec; border-radius:12px; background:#fff; }
-.ov-reminder-grid .ov-reminder-list { display:grid !important; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:14px !important; margin:0 !important; padding:0 !important; }
+.ov-reminder-grid .ov-reminder-list { display:grid !important; grid-template-columns:minmax(0,1fr); gap:14px !important; margin:0 !important; padding:0 !important; }
 .ov-reminder-grid .ov-reminder-item { display:flex !important; flex-direction:column; gap:10px; min-width:0; padding:18px !important; border:1px solid #dce2e9 !important; border-radius:12px !important; background:#fff !important; box-shadow:0 2px 8px rgba(23,35,54,.045); box-sizing:border-box; }
 .ov-reminder-grid .ov-reminder-top { display:flex; align-items:flex-start; gap:12px; min-width:0; }
 .ov-reminder-grid .ov-reminder-check { flex:0 0 auto; width:17px; height:17px; margin:3px 0 0; accent-color:#e97700; }

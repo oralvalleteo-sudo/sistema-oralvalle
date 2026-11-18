@@ -57,11 +57,6 @@ button.sm{min-height:36px;padding:6px 12px;font-size:14px}
 .ret-it .ret-i{flex:1;min-width:180px}
 .ret-it small{display:block;color:var(--mut);font-size:13px}
 .ret-act{display:flex;gap:6px;flex-wrap:wrap}
-.lem-tabs{display:flex;gap:6px;overflow-x:auto;border-bottom:1.5px solid var(--ln);margin:12px 0 16px;padding-bottom:0;-webkit-overflow-scrolling:touch}
-.lem-tabs button{flex:none;white-space:nowrap;background:transparent;color:var(--mut);border-radius:0;border:0;border-bottom:3px solid transparent;margin-bottom:-1.5px;padding:11px 12px;font-size:14px}
-.lem-tabs button.on{color:var(--ac);border-bottom-color:var(--ac);font-weight:700}
-.lem-n{display:inline-block;min-width:20px;padding:1px 6px;margin-left:4px;border-radius:10px;background:var(--ln);color:var(--ink);font-size:12px;font-weight:700;text-align:center}
-.lem-tabs button.on .lem-n{background:var(--ac);color:var(--acf)}
 .orc-card{padding:8px 14px}
 .orc-h{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;color:inherit;border:0;padding:8px 0;min-height:52px;border-radius:10px}
 .orc-chev{flex:none;width:20px;color:var(--ac);font-size:18px}
