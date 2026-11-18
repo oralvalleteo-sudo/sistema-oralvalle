@@ -156,3 +156,65 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
 }
 .ov-reminder-grid .ov-reminder-item.done { opacity:.72; }
 @media(max-width:600px) { .ov-reminder-grid {gap:14px !important;} .ov-reminder-grid .ov-reminder-list {grid-template-columns:minmax(0,1fr);} .ov-reminder-grid .ov-reminder-item {padding:14px !important;} }
+
+/* Laboratório e acompanhamento clínico */
+.nxlab-navigation { margin: 0 0 16px; }
+.nxlab-navigation [aria-pressed="true"] {
+  background: #fff0e4 !important;
+  border-color: #eba775 !important;
+  color: #863c12 !important;
+}
+.nxlab-workspace .nxlab-top,
+.ov-specialty-page > .ov-modern-head {
+  background: #fff !important;
+  border-color: #dce5eb !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+.ov-specialty-page > .ov-modern-head { padding: 18px !important; }
+.nxlab-workspace .nxlab-metrics > div,
+.ov-specialty-page .ov-modern-stats > div { box-shadow: none !important; border-radius: 12px !important; }
+.nxlab-workspace .nxlab-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  align-items: end;
+}
+.nxlab-workspace .nxlab-filters label { display: grid; gap: 5px; margin: 0; min-width: 0; }
+.nxlab-workspace .nxlab-filters :is(input, select) { width: 100%; min-width: 0; margin: 0; }
+.nxlab-workspace .nxlab-care > summary::after { content: "⌄"; margin-left: auto; }
+.nxlab-workspace .nxlab-care[open] > summary::after { transform: rotate(180deg); }
+.ov-work-columns { display: none; }
+.nxlab-workspace .nxlab-card,
+.ov-specialty-page .ov-modern-row { box-shadow: none !important; border-radius: 12px !important; }
+@media (min-width: 761px) {
+  :is(.nxlab-workspace, .ov-specialty-page) {
+    --ov-work-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .ov-work-columns {
+    display: grid;
+    grid-template-columns: var(--ov-work-columns);
+    gap: 16px;
+    padding: 10px 20px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background: #eef3f5;
+    color: #304d5b;
+    font-weight: 700;
+  }
+  .nxlab-workspace .nxlab-summary,
+  .ov-specialty-page .ov-modern-summary {
+    display: grid !important;
+    grid-template-columns: var(--ov-work-columns);
+    gap: 16px !important;
+  }
+  .nxlab-workspace .nxlab-summary-right { width: 100%; min-width: 0; gap: 8px; justify-content: space-between; }
+  .nxlab-workspace .nxlab-summary-right .nxlab-pill { max-width: calc(100% - 24px); flex-shrink: 1; }
+  .nxlab-workspace .nxlab-summary-stage { overflow-wrap: anywhere; }
+  .ov-specialty-page .ov-modern-summary { position: relative; }
+  .ov-specialty-page .ov-modern-status { max-width: calc(100% - 24px) !important; justify-self: start; }
+  .ov-specialty-page .ov-care-arrow { position: absolute; right: 0; }
+}
+@media (max-width: 760px) {
+  .nxlab-workspace .nxlab-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nxlab-workspace .nxlab-filters label:last-child { grid-column: 1 / -1; }
+}
