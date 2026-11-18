@@ -15,6 +15,73 @@ function ovAgDialog(title, content, onSubmit) {
   return backdrop;
 }
 
+async function ovOrthoMaintenance(button, patient){
+  const canEdit=()=>pmLvl('ortho')>=2&&pmTabLvl('odo')>=2;
+  const canCharge=()=>pmLvl('vd')>=2&&window.NexoModules?.isAllowed('finance')!==false;
+  if(!canEdit()){toast('Para registrar a manutenção, é necessário acesso de edição em Ortodontia e Evolução.');return;}
+  const clinic=window.OralCloud?.clinicId;
+  const screen=view.h;
+  const current=()=>view.h===screen&&window.OralCloud?.clinicId===clinic&&db.p.includes(patient)&&patient.orthoMensal&&!patient.arq;
+  if(window.OralCloud?.enabled&&window.OralCloudData?.loadPatient&&!OralCloudData.patientLoaded(patient.id)){
+    button.disabled=true;
+    try{
+      const details=await OralCloudData.loadPatient(patient.id);
+      if(!current()||!button.isConnected)return;
+      if(!details)throw Error('Prontuário indisponível');
+      Object.assign(patient,details);
+      OralCloudData.prepareDefaults(db);
+    }catch(error){
+      if(current())toast('Não foi possível carregar a evolução. Atualize e tente novamente.',5000);
+      return;
+    }finally{button.disabled=false;}
+  }
+  const today=tdy();
+  const next=patient.orthoProximo>today?patient.orthoProximo:orthoPrazo(today);
+  const lastDentist=db.dt.find(d=>d.id===patient.orthoDentista&&d.ativo!==false);
+  const financial=canCharge()? `<label>Valor da manutenção (R$)<input type="number" name="amount" min="0.01" max="999999999.99" step="0.01" inputmode="decimal"></label>
+    <label>Recebido hoje (R$)<input type="number" name="received" min="0" max="999999999.99" step="0.01" inputmode="decimal"></label>
+    <label>Forma de pagamento<select name="method">${ovFeeOptions('Pix')}</select></label>
+    <p class="note">Informe o valor para lançar em Vendas. Se houver saldo, ele ficará disponível em Pagamentos do paciente.</p>`:'';
+  ovAgDialog('Registrar manutenção ortodôntica',`<p class="ov-ag-modal-note">${esc(patient.nome)} · ${esc(fd(today))}</p>
+    <label>Procedimento realizado<input name="procedure" required maxlength="160" value="Manutenção ortodôntica"></label>
+    <label>Dentista que realizou<select name="dentist" required>${dentOpts(lastDentist?.id||defDt(),'Selecione o dentista')}</select></label>
+    <label>Próximo retorno<input type="date" name="next" min="${today}" value="${esc(next)}"></label>
+    ${financial}`, form=>{
+    if(!current()||!canEdit()||tdy()!==today){toast('O contexto mudou. Abra a manutenção novamente.');return false;}
+    const procedure=String(form.get('procedure')||'').trim();
+    const dentist=db.dt.find(d=>d.id===form.get('dentist')&&d.ativo!==false);
+    const returnDate=String(form.get('next')||'');
+    const total=Number(form.get('amount')||0),receivedNow=Number(form.get('received')||0);
+    const method=form.get('method');
+    if(!procedure||procedure.length>160||!dentist){toast('Informe o procedimento e selecione um dentista ativo.');return false;}
+    if(returnDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(returnDate)||returnDate<today)){toast('Informe uma data válida para o próximo retorno.');return false;}
+    if(!Number.isFinite(total)||!Number.isFinite(receivedNow)||total<0||total>999999999.99||receivedNow<0||receivedNow>total||r2(total)!==total||r2(receivedNow)!==receivedNow){
+      toast('Confira o valor da manutenção e o valor recebido.');return false;
+    }
+    if(total>0&&(!canCharge()||(receivedNow>0&&!OV_FEE_FORMS.includes(method)))){
+      toast('Confira o acesso financeiro e a forma de pagamento.');return false;
+    }
+    if(patient.orthoUltimaData===today&&!confirm('Já existe manutenção registrada hoje. Confirmar um novo atendimento?'))return false;
+
+    const evolution={id:uid(),data:today,n:'',txt:'[Ortodontia] '+procedure+' — realizado por '+dentist.nome+'.',
+      performedByDentistId:dentist.id,performedByDentistName:dentist.nome};
+    if(total>0){
+      const amount=r2(total),commission=comCalc(dentist.id,procedure,amount,1);
+      const payments=receivedNow>0?[ovFeeMake(receivedNow,method,today)]:[];
+      db.vd.push({id:uid(),pid:patient.id,dt:dentist.id,proc:procedure,valor:amount,mat:commission.mat,
+        lab:commission.lab,rep:commission.rep,data:today,pg:payments,orthoEvolutionId:evolution.id});
+    }
+    (patient.evol=patient.evol||[]).push(evolution);
+    patient.orthoBaixas=patient.orthoBaixas||[];
+    if(!patient.orthoBaixas.includes(today.slice(0,7)))patient.orthoBaixas.push(today.slice(0,7));
+    patient.orthoUltimaData=today;
+    patient.orthoProximo=returnDate;
+    patient.orthoDentista=dentist.id;
+    save();render();
+    toast(total>0?'Manutenção registrada na evolução e em Vendas.':'Manutenção registrada na evolução.');
+  });
+}
+
 // Sincroniza somente vendas comprovadamente vinculadas ao orçamento.
 // A entrada do planejamento NÃO é recebimento: pagamentos são registrados apenas no caixa.
 function ovSyncBudgetFinancial(p,o){
@@ -183,25 +250,16 @@ const A={
   protnav:()=>{view.h='prot';view.id=null;render();topo()},
   carebaixa:(b,d)=>{
     const p=db.p.find(x=>String(x.id)===String(d.id)),kind=d.kind;if(!p||!['ortho','impl','prot'].includes(kind))return;
-    if(!(kind==='ortho'?p.orthoMensal:kind==='impl'?p.implAtivo:p.protAtivo))return;
+    if(kind==='ortho')return ovOrthoMaintenance(b,p);
+    if(!(kind==='impl'?p.implAtivo:p.protAtivo))return;
     const today=tdy(),stages=kind==='impl'?IMPL_ETAPAS:PROT_ETAPAS,key=kind==='impl'?'implEtapa':'protEtapa';
-    const current=kind==='ortho'?'Manutenção ortodôntica':(p[key]||stages[0]);
+    const current=p[key]||stages[0];
     const detail=prompt('Descreva o procedimento realizado para registrar na evolução:',current);
     if(detail===null)return;if(!detail.trim()){toast('Informe o procedimento realizado');return}
-    let next='';
-    if(kind==='ortho'){
-      const proposed=p.orthoProximo||orthoPrazo(today);
-      const date=prompt('Data do próximo retorno (AAAA-MM-DD):',proposed);
-      if(date===null)return;if(date&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){toast('Data inválida. Use AAAA-MM-DD');return}
-      next=date;
-    }else{
-      const i=stages.indexOf(current),candidate=stages[Math.min(i+1,stages.length-1)];
-      if(!confirm('Registrar a etapa "'+current+'" e avançar para "'+candidate+'"?'))return;
-      next=candidate;
-    }
-    (p.evol=p.evol||[]).push({id:uid(),data:today,n:'',txt:'['+(kind==='ortho'?'Ortodontia':kind==='impl'?'Implantodontia':'Prótese')+'] '+detail.trim()+(kind==='prot'&&p.protCor?' | Cor: '+p.protCor:'')});
-    if(kind==='ortho'){p.orthoBaixas=p.orthoBaixas||[];if(!p.orthoBaixas.includes(today.slice(0,7)))p.orthoBaixas.push(today.slice(0,7));p.orthoUltimaData=today;p.orthoProximo=next}
-    else{p[key]=next;p[kind==='impl'?'implUltimaData':'protUltimaData']=today}
+    const next=stages[Math.min(stages.indexOf(current)+1,stages.length-1)];
+    if(!confirm('Registrar a etapa "'+current+'" e avançar para "'+next+'"?'))return;
+    (p.evol=p.evol||[]).push({id:uid(),data:today,n:'',txt:'['+(kind==='impl'?'Implantodontia':'Prótese')+'] '+detail.trim()+(kind==='prot'&&p.protCor?' | Cor: '+p.protCor:'')});
+    p[key]=next;p[kind==='impl'?'implUltimaData':'protUltimaData']=today;
     save();view.id=p.id;view.tab='odo';render();topo();toast('Baixa registrada na evolução. Paciente permanece em acompanhamento.');
   },
   carealta:(b,d)=>{const p=db.p.find(x=>String(x.id)===String(d.id)),kind=d.kind;if(!p||!['ortho','impl','prot'].includes(kind))return;
