@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta name="nexodent-build" content="339" />
+    <meta name="nexodent-build" content="342" />
 
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -114,7 +114,7 @@
     <script>
     /* Atualização segura do PWA: sem apagar dados locais nem forçar recarga durante edição. */
     (() => {
-      const build = '339';
+      const build = Number(document.querySelector('meta[name="nexodent-build"]')?.content);
       let pending = false;
       let busy = false;
       const btn = document.createElement('button');
@@ -176,7 +176,7 @@
           if (!response.ok) throw Error('Versão indisponível');
           const data=await response.json();
           const published = Number(data.build);
-          pending = Number.isFinite(published) && published > Number(build);
+          pending = Number.isFinite(published) && published > build;
           banner.style.display=pending?'block':'none';
           if (manual && !pending) {
             // Recarregar também permite buscar conteúdo atualizado quando o JSON não foi publicado.

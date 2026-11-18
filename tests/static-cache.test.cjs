@@ -11,3 +11,11 @@ test('cache reaproveita somente assets públicos versionados e exclui API, HTML 
  assert.equal(await request('/sistema-oralvalle/assets/js/app.js?build=276',{method:'POST'}),null);
  assert.equal(fetched,1);
 });
+
+test('a versão carregada coincide com a versão anunciada na publicação', () => {
+  const html = fs.readFileSync('index.html', 'utf8');
+  const loaded = html.match(/<meta name="nexodent-build" content="(\d+)"/)?.[1];
+  const { build: published } = JSON.parse(fs.readFileSync('nexodent-version.json', 'utf8'));
+  assert.ok(loaded, 'O HTML precisa declarar a versão carregada.');
+  assert.equal(loaded, published);
+});
