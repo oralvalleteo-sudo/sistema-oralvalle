@@ -89,38 +89,65 @@
 @media(max-width:1100px){#apptBanner{left:16px;right:16px;top:calc(112px + env(safe-area-inset-top,0px));max-width:760px}}
 @media(max-width:760px){.ov-top::after{width:80px;height:14px}#apptBanner{top:calc(90px + env(safe-area-inset-top,0px));left:8px;right:8px}#apptBanner .appt-item{padding:10px;gap:9px;border-radius:16px;flex-wrap:wrap}#apptBanner .appt-ic{width:38px;height:42px;border-radius:10px}#apptBanner .appt-ic svg{width:30px;height:30px}#apptBanner .appt-tx{padding-left:10px;flex:1;min-width:150px}#apptBanner .appt-tx b{font-size:17px}#apptBanner .appt-tx>span{font-size:14px}#apptBanner .appt-bt{margin-left:auto}#apptBanner .appt-go{min-height:40px;font-size:13px;border-radius:10px;padding:0 12px}#apptBanner .appt-ok{width:38px;min-height:38px}}
 
-/* Barra superior no desktop: mesmo azul-petróleo do menu lateral (continua a cor do menu) */
+/* A faixa de navegação usa o cinza dos controles do sistema. */
+:root {
+  --nexo-header-gray: #f3f6f8;
+}
+
 @media (min-width: 761px) {
-  .ov-shell > .ov-top,
-  .ov-shell > .ov-top .ov-top-bar {
+  .ov-shell > .ov-top {
     background: var(--ov-sidebar-bg, #263f49) !important;
-    background-image: none !important;
+    border-bottom: 1px solid #e4e9ee;
   }
-  .ov-shell > .ov-top { border-bottom: 1px solid #35535e; }
-  .ov-shell > .ov-top .ov-top-bar { border-bottom: 0; }
-  .ov-shell > .ov-top .ov-top-bar .ov-top-location { color: #b7ccd4; }
-  .ov-shell > .ov-top .ov-top-bar .ov-top-location strong {
+  .ov-shell > .ov-top .ov-top-bar {
+    background: var(--nexo-header-gray);
+    border-bottom: 0;
+  }
+  .ov-shell > .ov-top .nexo-header-name strong {
     color: #edf4f6 !important;
     -webkit-text-fill-color: currentColor !important;
   }
-  .ov-shell > .ov-top .ov-top-bar .ov-user,
-  .ov-shell > .ov-top .ov-top-bar .ov-user-name {
-    color: #edf4f6 !important;
-    -webkit-text-fill-color: currentColor !important;
+}
+
+/* O navegador desenha os botões nativos sobre a faixa nos apps compatíveis. */
+@media (display-mode: window-controls-overlay) {
+  :root {
+    --nexo-titlebar-height: env(titlebar-area-height, 0px);
   }
-  .ov-shell > .ov-top .ov-top-bar .ov-user-name small {
-    color: #b7ccd4 !important;
-    -webkit-text-fill-color: currentColor !important;
+  #app {
+    padding-top: var(--nexo-titlebar-height);
   }
-  .ov-shell > .ov-top .ov-top-bar .ov-sair,
-  .ov-shell > .ov-top .ov-top-bar .ov-icon-btn {
-    background: #304f5b !important;
-    color: #edf4f6 !important;
-    -webkit-text-fill-color: currentColor !important;
-    border: 1px solid #4a6a75 !important;
-    box-shadow: none;
+  #app::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--nexo-titlebar-height);
+    background: var(--nexo-header-gray);
+    -webkit-app-region: drag;
   }
-  .ov-shell > .ov-top .ov-top-bar .ov-sair:hover,
-  .ov-shell > .ov-top .ov-top-bar .ov-icon-btn:hover { background: #3a5d6a !important; }
-  .ov-shell > .ov-top button:focus-visible { outline-color: #ffc9a1 !important; }
+}
+
+@media (display-mode: window-controls-overlay) and (min-width: 761px) {
+  #app .ov-shell {
+    height: calc(100dvh - var(--nexo-titlebar-height));
+    min-height: 0;
+  }
+  .ov-shell > .ov-top .ov-brand {
+    position: relative;
+  }
+  .ov-shell > .ov-top .ov-brand::before {
+    content: '';
+    position: absolute;
+    inset: auto 0 100%;
+    height: var(--nexo-titlebar-height);
+    background: var(--ov-sidebar-bg, #263f49);
+    -webkit-app-region: drag;
+  }
+}
+
+@media (display-mode: window-controls-overlay) and (min-width: 900px) and (pointer: fine) {
+  :root { --nexo-titlebar-height: calc(env(titlebar-area-height, 0px) / .75); }
+  #app .ov-shell { height: calc(133.333333dvh - var(--nexo-titlebar-height)); }
 }
