@@ -11,18 +11,26 @@ const previewPending=new Set();
 let previewActive=0;
 const observedPreviews=new WeakSet(),previewObservers=new Set();
 const sharedPreviews=new Map(),photoReads=new Map();
-let photoContext='';
+let photoContext='', lastViewed=null;
 function ensurePhotoContext(){
  const current=String(window.OralCloud?.clinicId||'local')+':'+String(window.OralCloud?.session?.user?.id||'local');
  if(current===photoContext)return;
- photoContext=current;cache.clear();previews.clear();uploadedThumbs.clear();sharedPreviews.clear();photoReads.clear();previewQueue.length=0;previewPending.clear();
+ photoContext=current;cache.clear();previews.clear();uploadedThumbs.clear();sharedPreviews.clear();photoReads.clear();lastViewed=null;previewQueue.length=0;previewPending.clear();
  for(const observer of previewObservers)observer.disconnect();
  previewObservers.clear();
 }
-function readPhoto(patientId,rowId){
+function readPhoto(patientId,rowId,viewing=false){
  ensurePhotoContext();
  const token=JSON.stringify([patientId,rowId]);
- if(photoReads.has(token))return photoReads.get(token);
+ if(lastViewed?.token===token)return lastViewed.task;
+ const promise=photoReads.get(token)||fetchPhoto(patientId,rowId,token);
+ if(!viewing)return promise;
+ const viewed={token,task:promise};
+ lastViewed=viewed;
+ promise.catch(()=>{if(lastViewed===viewed)lastViewed=null});
+ return promise;
+}
+function fetchPhoto(patientId,rowId,token){
  const task=OralCloudData.file(patientId,rowId).then(row=>{
   if(photoReads.get(token)===task){
    photoReads.delete(token);
@@ -484,7 +492,9 @@ function managePhotos(id,scope='ortho'){
       await OralCloudSync.fileOperation(p.id,'delete',{
        row_id:f._rowId
       });
-      photoReads.delete(JSON.stringify([p.id,f._rowId]));
+      const token=JSON.stringify([p.id,f._rowId]);
+      photoReads.delete(token);
+      if(lastViewed?.token===token)lastViewed=null;
 
       previews.delete(k+':'+f._rowId);
 
@@ -547,7 +557,7 @@ document.addEventListener('click',async e=>{
  const context=key(p,scope);
  const preview=f.thumb||previews.get(context+':'+(f._rowId||f.id));
  window.NexoPhotoZoom.open(f.data||preview,f.nome||'Foto do paciente',f.data?null:async()=>{
-  const full=f._rowId&&await readPhoto(p.id,f._rowId);
+  const full=f._rowId&&await readPhoto(p.id,f._rowId,true);
   if(key(p,scope)!==context||(typeof LOCKED!=='undefined'&&LOCKED))return null;
   const src=full?.dados?.data;
   if(!String(src||'').startsWith('data:image/'))throw Error('Imagem indisponível');
