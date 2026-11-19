@@ -119,8 +119,16 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
       return;
     }
     if(t.dataset.i!==undefined){
-      const it=o.itens[+t.dataset.i];it[f]=f==='valor'?t.value.replace(',','.'):t.value;const hadQ=qOf(it)>1;trGrp(it,f);if(hadQ&&f==='dente'){const vf=t.parentNode.querySelector('[data-f="valor"]');if(vf){vf.value=it.valor;fmtMoney(t.parentNode)}}if(it.tid)syncItemToTrat(p,it);
-      if(f==='proc'){const m=procBy(t.value);if(m&&m.preco&&!it.valor){it.valor=m.preco;const vf=t.parentNode.querySelector('[data-f="valor"]');if(vf)vf.value=m.preco}}
+      const it=o.itens[+t.dataset.i];it[f]=f==='valor'?t.value.replace(',','.'):t.value;const hadQ=qOf(it)>1;trGrp(it,f);if(hadQ&&f==='dente'){const vf=t.parentNode.querySelector('[data-f="valor"]');if(vf){vf.value=it.valor;fmtMoney(t.parentNode)}}if(f==='proc'){
+        const m=procBy(t.value);
+        if(m&&m.preco!==undefined&&(!it.valor||e.detail?.selectedProcedure)){
+          it.valor=String(r2(num(m.preco)*qOf(it)));
+          trGrp(it,'valor');
+          const row=t.closest('.it'), field=row?.querySelector('[data-f="valor"]');
+          if(field){field.value=it.valor;fmtMoney(row)}
+        }
+      }
+      if(it.tid)syncItemToTrat(p,it);
     }else{o[f]=f==='desc'?t.value.replace(',','.'):t.value}
     refreshOrc(t.closest('[data-oid]'),o);
     // Após editar desconto/valor, atualizar os atendimentos já vinculados.
@@ -134,6 +142,10 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
 });
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.id==='sales-month'){
+    if(!t.validity.valid||!t.value){t.value=view.salesMonth||tdy().slice(0,7);return}
+    view.salesMonth=t.value;view.sv='mes';view.vPage=0;render();return;
+  }
   if(t.dataset&&t.dataset.dup==='1'&&cur()){t.value=cur()[t.dataset.k]||'';t.dataset.dup='';t.style.borderColor='';toast('Valor duplicado desfeito. Mantido o dado original.',3000);return}
   if(t.dataset&&(t.dataset.k||t.dataset.a||t.dataset.c||t.dataset.tr)&&cur()){save();toastSaved('✓ Alterações salvas')}
   if(t.dataset&&t.dataset.orthoRetorno){const p=db.p.find(x=>String(x.id)===String(t.dataset.orthoRetorno));if(p&&p.orthoMensal){p.orthoProximo=t.value;save();toast('Próximo retorno salvo (sem criar agendamento)')}return}

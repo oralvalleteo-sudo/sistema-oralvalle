@@ -12,5 +12,17 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),fs=require
  await page.waitForTimeout(200);const initial=await page.evaluate(()=>photoReads.length);assert.ok(initial>0&&initial<15,`initial reads ${initial}`);
  await page.locator('[data-ortho-index="55"]').scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('[data-ortho-index="55"] img')?.src.startsWith('data:image/jpeg'));
  const total=await page.evaluate(()=>photoReads.length);assert.ok(total>initial&&total<30,`total reads ${total}`);assert.deepEqual(errors,[]);
+ const photo=page.locator('[data-ortho-index="55"]');
+ const fullImage=page.locator('.nz-stage img');
+ await photo.click();
+ await page.getByRole('dialog',{name:'Foto ampliada'}).waitFor();
+ await page.waitForFunction(()=>document.querySelector('.nz-stage img')?.src.startsWith('data:image/png'));
+ await page.keyboard.press('Escape');
+ const readsAfterFirstOpen=await page.evaluate(()=>photoReads.filter(id=>id==='photo-55').length);
+ await photo.click();
+ await fullImage.waitFor();
+ await page.waitForFunction(()=>document.querySelector('.nz-stage img')?.src.startsWith('data:image/png'));
+ assert.equal(await page.evaluate(()=>photoReads.filter(id=>id==='photo-55').length),readsAfterFirstOpen);
+ assert.deepEqual(errors,[]);
  console.log(`Galeria com 60 fotos antigas: ${initial} originais solicitados na abertura, ${total} após rolar até a foto 56; demais fotos aguardam a aproximação da tela.`);
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

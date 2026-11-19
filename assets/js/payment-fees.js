@@ -15,7 +15,11 @@ function ovFeeMake(valor,forma,data,id,override){
   const taxaValor=r2(bruto*taxaPct/100);
   return {id:id||uid(),data,valor:bruto,forma,taxaPct,taxaValor,liquido:r2(bruto-taxaValor)};
 }
-function ovFeeTax(p){return Number.isFinite(Number(p.taxaValor))?Number(p.taxaValor):0}
+function ovFeeTax(p){
+  const amount=p.taxaValor, pct=Number(p.taxaPct);
+  if(amount!=null&&amount!==''&&Number.isFinite(Number(amount)))return Number(amount);
+  return Number.isFinite(pct)&&pct>=0&&pct<=100?r2(num(p.valor)*pct/100):0;
+}
 function ovFeeNet(p){return r2(num(p.valor)-ovFeeTax(p))}
 function ovFeeSummary(p){return `<small class="note" style="display:block;margin:3px 0">Taxa ${brl(ovFeeTax(p))} (${Number(p.taxaPct)||0}%) · <b>Líquido ${brl(ovFeeNet(p))}</b></small>`}
 function ovFeeOptions(sel){return OV_FEE_FORMS.map(f=>`<option${f===sel?' selected':''}>${f}</option>`).join('')}
@@ -23,9 +27,9 @@ function ovFeeSettings(){
  const rows=OV_FEE_FORMS.filter(f=>f!=='Crédito'&&f!=='Outro').map(f=>`<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0"><span>${esc(f)}</span><span style="display:flex;align-items:center;gap:5px"><input type="number" min="0" max="100" step="0.01" inputmode="decimal" data-fee-rate="${esc(f)}" value="${ovFeePct(f)}" style="max-width:100px">%</span></label>`).join('');
  return `<details class="card" style="margin-bottom:12px"><summary style="cursor:pointer;font-weight:700">⚙️ Configurar taxas das formas de pagamento</summary><p class="note">Taxas padrão em %. Edite e salve. Cada recebimento mantém a taxa aplicada na data, mesmo após alterações.</p><div style="max-width:500px">${rows}</div><button class="sm" data-act="ovFeeSave" type="button" style="margin-top:10px">Salvar taxas</button></details>`;
 }
-function ovFeeSalePreview(){return `<div class="row" style="align-items:flex-end;margin-top:7px"><div><label for="ovFeeOverride">Taxa desta venda (%) — editável</label><input id="ovFeeOverride" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="0"></div><div id="ovFeePreview" role="status" class="note" style="margin:0">Taxa: R$ 0,00 · Líquido: R$ 0,00</div></div>`}
+function ovFeeSalePreview(valor){const pct=ovFeePct(OV_FEE_FORMS[0]), fee=r2(num(valor)*pct/100);return `<div class="row" style="align-items:flex-end;margin-top:7px"><div><label for="ovFeeOverride">Taxa desta venda (%) — editável</label><input id="ovFeeOverride" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${pct}"></div><div id="ovFeePreview" role="status" class="note" style="margin:0">Taxa: ${brl(fee)} · Líquido da clínica: ${brl(num(valor)-fee)}</div></div>`}
 function ovFeeUpdatePreview(reset){const f=document.getElementById('vfm'),a=document.getElementById('vrc'),t=document.getElementById('ovFeeOverride'),box=document.getElementById('ovFeePreview');if(!f||!a||!t||!box)return;
- if(reset)t.value=String(ovFeePct(f.value));const n=Number(t.value);const val=num(a.value);if(!Number.isFinite(n)||n<0||n>100){box.textContent='Taxa inválida (0 a 100%)';return}const fee=r2(val*n/100);box.textContent='Taxa: '+brl(fee)+' · Líquido da clínica: '+brl(val-fee);
+ if(reset)t.value=String(ovFeePct(f.value));const n=t.value===''?ovFeePct(f.value):Number(t.value);const val=num(a.value);if(!Number.isFinite(n)||n<0||n>100){box.textContent='Taxa inválida (0 a 100%)';return}const fee=r2(val*n/100);box.textContent='Taxa: '+brl(fee)+' · Líquido da clínica: '+brl(val-fee);
 }
 document.addEventListener('input',e=>{if(e.target.matches('#vrc,#ovFeeOverride'))ovFeeUpdatePreview(false)});
 document.addEventListener('change',e=>{if(e.target.matches('#vfm'))ovFeeUpdatePreview(true)});

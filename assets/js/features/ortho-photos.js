@@ -10,19 +10,37 @@ const previewQueue=[];
 const previewPending=new Set();
 let previewActive=0;
 const observedPreviews=new WeakSet(),previewObservers=new Set();
-const sharedPreviews=new Map();
+const sharedPreviews=new Map(),photoReads=new Map();
 let photoContext='';
 function ensurePhotoContext(){
  const current=String(window.OralCloud?.clinicId||'local')+':'+String(window.OralCloud?.session?.user?.id||'local');
  if(current===photoContext)return;
- photoContext=current;cache.clear();previews.clear();uploadedThumbs.clear();sharedPreviews.clear();previewQueue.length=0;previewPending.clear();
+ photoContext=current;cache.clear();previews.clear();uploadedThumbs.clear();sharedPreviews.clear();photoReads.clear();previewQueue.length=0;previewPending.clear();
  for(const observer of previewObservers)observer.disconnect();
  previewObservers.clear();
+}
+function readPhoto(patientId,rowId){
+ ensurePhotoContext();
+ const token=JSON.stringify([patientId,rowId]);
+ if(photoReads.has(token))return photoReads.get(token);
+ const task=OralCloudData.file(patientId,rowId).then(row=>{
+  if(photoReads.get(token)===task){
+   photoReads.delete(token);
+   photoReads.set(token,task);
+   while(photoReads.size>3)photoReads.delete(photoReads.keys().next().value);
+  }
+  return row;
+ }).catch(error=>{
+  if(photoReads.get(token)===task)photoReads.delete(token);
+  throw error;
+ });
+ photoReads.set(token,task);
+ return task;
 }
 async function sharedPreview(job){
  const token=job.context.replace(/:[^:]+$/,'')+':'+job.rowId;
  if(sharedPreviews.has(token))return sharedPreviews.get(token);
- const task=(async()=>{const full=await OralCloudData.file(job.id,job.rowId);return mini(full?.dados?.data);})();
+ const task=(async()=>{const full=await readPhoto(job.id,job.rowId);return mini(full?.dados?.data);})();
  sharedPreviews.set(token,task);
  try{const thumb=await task;if(sharedPreviews.get(token)===task){sharedPreviews.set(token,Promise.resolve(thumb));while(sharedPreviews.size>200)sharedPreviews.delete(sharedPreviews.keys().next().value);}return thumb;}
  catch(error){if(sharedPreviews.get(token)===task)sharedPreviews.delete(token);throw error;}
@@ -466,6 +484,7 @@ function managePhotos(id,scope='ortho'){
       await OralCloudSync.fileOperation(p.id,'delete',{
        row_id:f._rowId
       });
+      photoReads.delete(JSON.stringify([p.id,f._rowId]));
 
       previews.delete(k+':'+f._rowId);
 
@@ -523,45 +542,17 @@ document.addEventListener('click',async e=>{
  const scope=scopeOf(b);
  const photos=getPhotos(p,scope);
 
- let f=photos[Number(b.dataset.orthoIndex)];
+ const f=photos[Number(b.dataset.orthoIndex)];
  if(!f)return;
-
- if(!f.data&&f._rowId){
-  try{
-   const full=await OralCloudData.file(p.id,f._rowId);
-   if(!full?.dados?.data)
-    throw Error('Imagem indisponível');
-
-   f={...full.dados,_rowId:f._rowId};
-  }catch(err){
-   toast('Não foi possível abrir a fotografia.',5000);
-   return;
-  }
- }
-
- if(!String(f.data||'').startsWith('data:image/')){
-  toast('Imagem indisponível.',5000);
-  return;
- }
-
- const overlay=document.createElement('div');
- overlay.className='ortho-photo-overlay';
-
- overlay.innerHTML=`<div class="ortho-photo-modal"
- role="dialog" aria-modal="true"
- aria-label="Foto do paciente">
- <button type="button" class="ortho-close">Fechar ✕</button>
- <img decoding="async" alt="Foto do paciente ampliada" src="${safe(f.data)}">
- <small>${safe(f.nome||'Foto do paciente')}</small>
- </div>`;
-
- overlay.addEventListener('click',ev=>{
-  if(ev.target===overlay||ev.target.closest('.ortho-close'))
-   overlay.remove();
+ const context=key(p,scope);
+ const preview=f.thumb||previews.get(context+':'+(f._rowId||f.id));
+ window.NexoPhotoZoom.open(f.data||preview,f.nome||'Foto do paciente',f.data?null:async()=>{
+  const full=f._rowId&&await readPhoto(p.id,f._rowId);
+  if(key(p,scope)!==context||(typeof LOCKED!=='undefined'&&LOCKED))return null;
+  const src=full?.dados?.data;
+  if(!String(src||'').startsWith('data:image/'))throw Error('Imagem indisponível');
+  return src;
  });
-
- document.body.append(overlay);
- overlay.querySelector('button').focus();
 });
 
 window.NexoOrthoPhotos={gallery};
@@ -575,13 +566,14 @@ window.NexoOrthoPhotos={gallery};
  'use strict';
  let open=null;
 
- function openZoom(src,title){
-  if(!src||(open&&open.isConnected))return;
+ function openZoom(src,title,loadOriginal){
+  if((!src&&!loadOriginal)||(open&&open.isConnected))return;
+  const trigger=document.activeElement;
   open=null;
   const ov=document.createElement('div');
   ov.className='nz-overlay';
   ov.innerHTML='<div class="nz-bar" role="toolbar" aria-label="Zoom da foto">'
-   +'<span class="nz-title"></span>'
+   +'<span class="nz-title"></span><span role="status" hidden></span>'
    +'<button type="button" data-z="out" aria-label="Diminuir zoom">−</button>'
    +'<span class="nz-pct">100%</span>'
    +'<button type="button" data-z="in" aria-label="Aumentar zoom">+</button>'
@@ -622,6 +614,7 @@ window.NexoOrthoPhotos={gallery};
    document.removeEventListener('keydown',onKey,true);
    window.removeEventListener('resize',fitView);
    ov.remove();open=null;
+   if(trigger?.isConnected)trigger.focus();
   }
   function onKey(e){
    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}
@@ -673,13 +666,24 @@ window.NexoOrthoPhotos={gallery};
   stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
 
   img.addEventListener('load',fitView);
-  img.src=src;
+  if(src)img.src=src;
   document.body.append(ov);
   document.addEventListener('keydown',onKey,true);
   window.addEventListener('resize',fitView);
-  ov.querySelector('[data-z="in"]').focus();
+  ov.querySelector('[data-z="close"]').focus();
   open=ov;
   if(img.complete&&img.naturalWidth)fitView();
+  if(loadOriginal){
+   const status=ov.querySelector('[role="status"]');
+   status.hidden=false;
+   status.textContent='Carregando a foto em tamanho original…';
+   loadOriginal().then(original=>{
+    if(!ov.isConnected)return;
+    if(!original){close();return}
+    img.src=original;
+    status.hidden=true;
+   }).catch(()=>{status.textContent='Não foi possível carregar a fotografia original.'});
+  }
  }
 
  // Fotos do prontuário (Documentos): abrir no zoom em vez de nova aba
@@ -689,17 +693,6 @@ window.NexoOrthoPhotos={gallery};
   e.preventDefault();e.stopPropagation();
   openZoom(im.src,im.alt);
  },true);
-
- // Galerias de Ortodontia/Implantodontia/Prótese: troca o visualizador simples pelo com zoom
- new MutationObserver(list=>{
-  for(const m of list)for(const n of m.addedNodes){
-   if(!(n instanceof HTMLElement)||!n.classList.contains('ortho-photo-overlay'))continue;
-   const im=n.querySelector('img'),t=n.querySelector('small');
-   const src=im&&im.src,title=t&&t.textContent;
-   n.remove();
-   openZoom(src,title);
-  }
- }).observe(document.body,{childList:true});
 
  window.NexoPhotoZoom={open:openZoom};
 })();

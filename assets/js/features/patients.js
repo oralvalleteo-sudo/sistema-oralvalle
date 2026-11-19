@@ -178,6 +178,46 @@ function evPendHtml(p,readOnly=false){
   const rows=l.map(({item:x,treatment,budget},ix)=>`<div class="pr-card pr-compact" data-pending-procedure="${esc(x.id||'')}"><div class="pr-head"><span class="pr-av" aria-hidden="true">${ix+1}</span><div class="pr-nm">${esc(x.proc||'Procedimento')}${x.dente?' · dente '+esc(x.dente):''}<small>${esc(dName(x.dt))}${budget?' · Orçamento '+esc(budget.data||'sem data'):''}</small></div><span class="badge">A realizar</span>${!readOnly?`<button type="button" class="ghost sm" data-act="trbaixa" ${treatment?`data-id="${esc(x.id)}"`:`data-o="${esc(budget.id)}" data-item="${esc(x.id)}"`}>Concluir procedimento</button>`:''}</div>${x.obs?`<small class="note" style="display:block;margin:8px 0 0">${esc(x.obs)}</small>`:''}</div>`).join('');
   return `<details class="card nexo-pending-procedures"><summary style="cursor:pointer;font-weight:600;color:#273444;font-size:14px;opacity:1">Procedimentos a realizar (${l.length})</summary><div style="margin-top:12px"><p class="note" style="margin:0 0 10px">Esta lista acompanha a execução clínica. O procedimento continua aqui mesmo com pagamento parcial ou total, até ser concluído. Concluídos e cancelados ficam fora da lista.</p>${rows||'<p class="note" style="margin:6px 0">Nenhum procedimento pendente nos registros disponíveis deste paciente.</p>'}</div></details>`;
 }
+function editOdontogramCompletion(patient,action){
+  const item=action.id?(patient.trat||[]).find(t=>String(t.id)===action.id):
+    getO(patient,action.o)?.itens.find(t=>String(t.id)===action.item);
+  const evolution=(patient.evol||[]).find(e=>e.auto&&e.vid===action.vid&&(!action.id||!e.tid||String(e.tid)===action.id));
+  if(!item||!evolution){toast('A evolução vinculada à baixa não foi encontrada.');return}
+  if($('odo-completion-edit'))return;
+  const dialog=document.createElement('dialog');
+  dialog.id='odo-completion-edit';
+  dialog.setAttribute('aria-labelledby','odo-completion-title');
+  dialog.innerHTML=`<form><h2 id="odo-completion-title">Editar baixa</h2>
+    <p>${esc(item.proc)}</p><label>Data da execução<input name="date" type="date" required value="${esc(evolution.data)}" max="${tdy()}"></label>
+    <label>Descrição da evolução<textarea name="description" required maxlength="3000">${esc(evolution.txt)}</textarea></label>
+    <p class="note" role="status"></p><button type="submit">Salvar baixa</button>
+    <button type="button" class="ghost">Cancelar</button></form>`;
+  const form=dialog.querySelector('form'),button=form.querySelector('[type="submit"]'),feedback=form.querySelector('[role="status"]');
+  form.querySelector('.ghost').onclick=()=>dialog.close();
+  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const data=form.elements.date.value,txt=form.elements.description.value.trim(),clinic=window.OralCloud?.clinicId;
+    if(!txt){feedback.textContent='Informe a descrição da evolução.';return}
+    button.disabled=true;
+    try{
+      if(window.OralCloud?.enabled){
+        const status=await window.NexoEvolutionFinalization.status(patient.id,evolution.id,true);
+        if(status.is_finalized){feedback.textContent='Esta evolução está finalizada e protegida contra alterações.';return}
+      }
+      if(!dialog.open||LOCKED||cur()!==patient||pmCur()<2||window.OralCloud?.clinicId!==clinic||
+        !(patient.evol||[]).includes(evolution)||item.vid!==action.vid)return;
+      evolution.data=data;evolution.txt=txt;
+      if(action.id)item.data=data;
+      const sale=db.vd.find(v=>v.id===action.vid&&v.pid===patient.id);
+      if(sale)sale.performedAt=data;
+      save();dialog.close();render();toast('Baixa atualizada.');
+    }catch(error){feedback.textContent='Não foi possível verificar a proteção da evolução. Tente novamente.'}
+    finally{button.disabled=false}
+  });
+  document.body.append(dialog);
+  dialog.showModal();
+}
 // Sincroniza a seleção do odontograma incorporado com o campo de dente da evolução.
 if (!window.__nexoOdoReferenceListener) {
   window.__nexoOdoReferenceListener = true;
@@ -194,10 +234,20 @@ if (!window.__nexoOdoReferenceListener) {
       return;
     }
     if (event.data.type === 'nexodent:odontograma:ready') {
-      frame.contentWindow.postMessage({type:'nexodent:odontograma:load', data: {...((patient.odo || {}).__nexoVisual || {}),linkedRecords:window.NexoOdontogramBudget?.recordsFor(patient)||{}}}, window.location.origin);
+      frame.contentWindow.postMessage({type:'nexodent:odontograma:load', data: {...((patient.odo || {}).__nexoVisual || {}),linkedRecords:window.NexoOdontogramBudget?.recordsFor(patient)||{}, selected:view.tsel, writable:pmCur()>=2}}, window.location.origin);
+      return;
+    }
+    if (event.data.type === 'nexodent:odontograma:completion') {
+      if(LOCKED||cur()!==patient||view.tab!=='odo'||pmCur()<2)return;
+      const records=window.NexoOdontogramBudget?.recordsFor(patient)||{};
+      const record=records[String(event.data.tooth)]?.find(r=>r.id===event.data.id);
+      if(!record?.action)return;
+      if(record.status==='a_realizar')A.trbaixa(null,record.action,patient);
+      else if(record.status==='finalizado'&&record.action.vid)editOdontogramCompletion(patient,record.action);
       return;
     }
     if (event.data.type === 'nexodent:odontograma:save') {
+      if(LOCKED||cur()!==patient||pmCur()<2)return;
       const data = event.data.data;
       if (!data || typeof data !== 'object' || Array.isArray(data)) return;
       const serialized = JSON.stringify(data);
@@ -232,7 +282,7 @@ function tabOdo(p){
   const rows=ARC[k].map(qd=>qd[1]);
   const odoRow=(a,b,up)=>`<div style="display:flex;justify-content:center;gap:0;min-width:610px"><div style="display:flex;justify-content:flex-end;gap:3px;padding-right:8px;border-right:1px solid var(--line)">${a.map(n=>odoTooth(n,up)).join('')}</div><div style="display:flex;justify-content:flex-start;gap:3px;padding-left:8px">${b.map(n=>odoTooth(n,up)).join('')}</div></div>`;
   // HTML original fornecido pelo usuário: interface isolada para evitar conflito de CSS/JS.
-  const arch=`<div style="width:100%;min-width:0"><iframe title="Odontograma anatômico" src="assets/odontograma_nexodent_visual.html?v=316" data-patient-id="${esc(String(p.id))}" loading="eager" style="display:block;width:100%;height:1550px;max-width:100%;overflow:hidden;border:0;border-radius:10px;background:#fff" sandbox="allow-scripts allow-same-origin"></iframe></div>`;
+  const arch=`<div style="width:100%;min-width:0"><iframe title="Odontograma anatômico" src="assets/odontograma_nexodent_visual.html?v=375" data-patient-id="${esc(String(p.id))}" loading="eager" style="display:block;width:100%;height:1550px;max-width:100%;overflow:hidden;border:0;border-radius:10px;background:#fff" sandbox="allow-scripts allow-same-origin"></iframe></div>`;
   const opts='<option value="">Geral (sem dente específico)</option>'+dentesTodos().map(n=>`<option value="${n}"${sel===String(n)?' selected':''}>Dente ${n}</option>`).join('');
   const lan=`<div class="card" style="margin-top:14px"><h2>Lançar evolução do dia</h2>
   <div class="row"><div><label for="evd">Data</label><input id="evd" type="date" value="${tdy()}"></div><div><label for="evn">Dente</label><select id="evn">${opts}</select></div></div>
@@ -252,12 +302,12 @@ function orcSum(o){
   return (d>0?`<div class="tot" style="font-size:15px;font-weight:600;border:0;margin:0;padding:3px 0"><span>Subtotal</span><span>${brl(sub(o))}</span></div><div class="tot" style="font-size:15px;font-weight:600;border:0;margin:0;padding:3px 0"><span>Desconto</span><span>− ${brl(d)}</span></div>`:'')+`<div class="tot"><span>Total</span><span>${brl(total(o))}</span></div>`;
 }
 // Vínculo financeiro separado: pagamento não comprova execução clínica.
-function obLaunch(p,it,vv,rc,forma,data,rep){
+function obLaunch(p,it,vv,rc,forma,data,rep,taxaPct){
   const linked=it.paymentSaleId||it.vid;
   if(linked){const existing=db.vd.find(v=>String(v.id)===String(linked)&&String(v.pid)===String(p.id));if(!existing)throw Error('Vínculo financeiro não encontrado. Confira antes de receber.');return existing}
   const proc=it.proc||'';
   const v={id:uid(),pid:p.id,dt:it.dt,proc,valor:r2(vv),mat:0,lab:0,rep:0,data,pg:[],clinicalPending:true};
-  if(rc>0)v.pg.push(ovFeeMake(rc,forma,data));
+  if(rc>0)v.pg.push(ovFeeMake(rc,forma,data,null,taxaPct));
   it.paymentSaleId=v.id;
   db.vd.push(v);return v;
 }
@@ -326,7 +376,7 @@ function closeBudgetProcedureOptions(input){
 }
 function chooseBudgetProcedure(input,option){
   input.value=option.textContent;
-  input.dispatchEvent(new Event('input',{bubbles:true}));
+  input.dispatchEvent(new CustomEvent('input',{bubbles:true,detail:{selectedProcedure:true}}));
   closeBudgetProcedureOptions(input);
 }
 document.addEventListener('input',event=>{

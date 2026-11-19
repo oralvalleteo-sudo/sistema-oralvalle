@@ -13,6 +13,7 @@
     if(!value||typeof value.is_finalized!=='boolean')throw Error('Resposta inválida ao consultar a finalização.');
     cache.set(k,value);return value;
   }
+  window.NexoEvolutionFinalization={status};
   function mark(container,value){
     const del=container.querySelector('[data-act="rmevol"]');
     const btn=container.querySelector('[data-nexo-finalize]');
