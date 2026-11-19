@@ -49,8 +49,11 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       pages: write
       id-token: write
+    env:
+      PAGES_ARTIFACT: github-pages-${{ github.run_attempt }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -64,6 +67,22 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+          name: ${{ env.PAGES_ARTIFACT }}
+      - name: Aguardar o pacote ficar disponível no GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tentativa in {1..12}; do
+            quantidade=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=$PAGES_ARTIFACT" --jq '.total_count') || quantidade=0
+            if [ "$quantidade" = 1 ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::O pacote $PAGES_ARTIFACT não ficou disponível para publicação."
+          exit 1
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT }}
