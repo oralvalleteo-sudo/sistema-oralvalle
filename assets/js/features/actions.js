@@ -520,10 +520,28 @@ const A={
     const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);if(!pend.length)return;
     const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
     if(pend.some(it=>!it.dt)){toast('Há item sem dentista definido');return}
-    let rest=num($('oab').value);if(!(rest>0)){toast('Informe o valor efetivamente recebido.');return}
-    if(rest>tot+0.005){toast('O valor recebido é maior que o total da baixa ('+brl(tot)+')',3500);return}
-    const forma=$('oaf').value,data=$('oad').value||tdy();
-    pend.forEach(it=>{const vv=val(it),take=Math.min(rest,vv);rest=r2(rest-take);obLaunch(p,it,vv,r2(take),forma,data,0)});
+    const inputs=[['oab','oaf'],['oab2','oaf2']];
+    const amounts=inputs.map(([field])=>r2(num($(field)?.value)));
+    const received=r2(amounts[0]+amounts[1]);
+    if(amounts.some(amount=>amount<0)||!(received>0)){toast('Informe os valores efetivamente recebidos.');return}
+    if(received>tot){toast('O valor recebido é maior que o total da baixa ('+brl(tot)+')',3500);return}
+    const data=$('oad').value||tdy();
+    const receipts=inputs.flatMap(([,method],index)=>amounts[index]>0?
+      [{payment:ovFeeMake(amounts[index],$(method).value,data),allocated:0}]:[]);
+    pend.forEach(it=>{
+      const vv=val(it),sale=obLaunch(p,it,vv,0,'',data,0);
+      let balance=vv;
+      for(const entry of receipts){
+        const {payment,allocated}=entry;
+        const value=r2(Math.min(balance,payment.valor-allocated));
+        if(value<=0)continue;
+        entry.allocated=r2(allocated+value);
+        // A soma das partes conserva a taxa arredondada da operação original.
+        const fee=r2(r2(payment.taxaValor*entry.allocated/payment.valor)-r2(payment.taxaValor*allocated/payment.valor));
+        sale.pg.push({...payment,id:uid(),valor:value,taxaValor:fee,liquido:r2(value-fee)});
+        balance=r2(balance-value);
+      }
+    });
     view.obxAll=null;save();render();toast(pend.length+(pend.length===1?' item financeiro':' itens financeiros')+': financeiro registrado, procedimentos permanecem pendentes',3500)},
   obconf:(b,d,p)=>{
     const o=getO(p,d.o),it=o&&o.itens[+d.i];if(!it)return;
@@ -592,6 +610,7 @@ const A={
     Object.assign(receipt,{taxaPct,taxaValor,taxaOrigem,liquido});
     save();render();ovFinDetail('received');toast('Taxa do recebimento atualizada.');
   },
+  ovPaymentMethodEdit:(b,d)=>ovEditReceiptMethod(d.id,d.pg),
   cfgFinanceRates:()=>{if(!ME?.admin)return;view.h='cfg';view.id=null;view.cfgTab='financeiro';render();topo()},
   rmpg:(b,d)=>arm(d.pg,()=>{const v=db.vd.find(x=>x.id===d.id);v.pg=v.pg.filter(p=>p.id!==d.pg);save();render()}),
   adddt:()=>{const n=$('dn').value.trim();if(!n){toast('Digite o nome do dentista');return}

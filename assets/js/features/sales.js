@@ -39,12 +39,57 @@ function ovFinDetail(type){
   const rows=reportRows.map((row,index)=>{
     const payment=canEditFees?payments[index]:null;
     const action=payment&&ovFeeApplies(payment.p.forma)?`<button type="button" class="ghost sm" data-act="ovFeeEdit" data-id="${esc(payment.v.id)}" data-pg="${esc(payment.p.id)}">Corrigir taxa</button>`:'';
-    return `<tr>${row.map(value=>`<td>${esc(value)}</td>`).join('')}${canEditFees?`<td>${action}</td>`:''}</tr>`;
+    return `<tr>${row.map(value=>`<td>${esc(value)}</td>`).join('')}${canEditFees?`<td>${payment?`<button type="button" class="ghost sm" data-act="ovPaymentMethodEdit" data-id="${esc(payment.v.id)}" data-pg="${esc(payment.p.id)}">Corrigir forma</button> `:''}${action}</td>`:''}</tr>`;
   }).join('');
   window.ovFinCurrentReport={title,headers,rows:reportRows,total:brl(amount),count:items.length,period:type==='today'?tdy():month};
   const dialog=document.getElementById('ov-fin-detail-dialog');if(!dialog)return;
   dialog.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="ov-fin-detail-title" style="margin:0">${esc(title)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="sm" data-act="ovFinPdf">⬇ Gerar PDF</button><form method="dialog"><button type="submit" class="ghost sm">✕ Fechar</button></form></div></div><p class="note" style="margin:12px 0">${items.length} registro(s) · Total: <strong>${brl(amount)}</strong></p><div class="ov-fin-detail-scroll"><table class="ov-fin-detail-table"><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}${canEditFees?'<th scope="col">Ação</th>':''}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length+Number(Boolean(canEditFees))}" style="padding:16px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div><p style="text-align:right"><strong>Total: ${brl(amount)}</strong></p>`;
   if(!dialog.open)dialog.showModal();
+}
+function ovEditReceiptMethod(saleId,receiptId){
+  if(!ME?.admin||view.h!=='vd')return;
+  const sale=db.vd.find(v=>v.id===saleId), receipt=sale?.pg.find(p=>p.id===receiptId);
+  if(!receipt||document.getElementById('ov-payment-method-dialog'))return;
+  const gross=r2(num(receipt.valor)), linked=sale.plano?.some(part=>part.pgid===receipt.id);
+  const dialog=document.createElement('dialog');
+  dialog.id='ov-payment-method-dialog';
+  dialog.setAttribute('aria-labelledby','ov-payment-method-title');
+  dialog.className='ov-fin-detail-dialog';
+  dialog.innerHTML=`<form><h2 id="ov-payment-method-title">Corrigir forma do recebimento</h2>
+    <p>${esc(pName(sale.pid))} · ${esc(fd(receipt.data))} · ${brl(gross)}</p>
+    <label>Primeira forma<select name="first" required><option value="">Selecione</option>${ovFeeOptions(ovFeeMethod(receipt.forma))}</select></label>
+    ${linked?'':`<details><summary>Dividir em duas formas</summary>
+      <label>Valor na segunda forma (R$)<input name="split" inputmode="decimal" placeholder="0,00"></label>
+      <label>Segunda forma<select name="second">${ovFeeOptions('Crédito à vista')}</select></label>
+    </details>`}
+    <p class="note">A correção conserva a data e o total pago. A nova forma usa a taxa configurada, que pode ser conferida em seguida.</p>
+    <p role="alert" class="note"></p><button type="submit">Salvar correção</button> <button type="button" class="ghost" data-cancel>Cancelar</button></form>`;
+  const form=dialog.querySelector('form'), feedback=form.querySelector('[role="alert"]');
+  form.querySelector('[data-cancel]').onclick=()=>dialog.close();
+  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+  form.addEventListener('submit',event=>{
+    event.preventDefault();
+    if(LOCKED||!ME?.admin||!db.vd.includes(sale)||!sale.pg.includes(receipt))return;
+    const secondValue=r2(num(form.elements.split?.value));
+    const first=form.elements.first.value, second=form.elements.second?.value;
+    if(secondValue<0||secondValue>=gross){feedback.textContent='Informe um valor menor que o total na segunda forma.';return}
+    if(secondValue>0&&first===second){feedback.textContent='Selecione duas formas diferentes.';return}
+    if(!secondValue&&first===receipt.forma){dialog.close();return}
+    const firstReceipt=ovFeeMake(r2(gross-secondValue),first,receipt.data,receipt.id);
+    if(first===ovFeeMethod(receipt.forma)&&!ovFeeNeedsReview(receipt)){
+      const fee=r2(ovFeeTax(receipt)*firstReceipt.valor/gross);
+      Object.assign(firstReceipt,{taxaPct:ovFeeReadRate(receipt.taxaPct)??0,taxaValor:fee,
+        taxaOrigem:receipt.taxaOrigem||'manual',liquido:r2(firstReceipt.valor-fee)});
+    }
+    const secondReceipt=secondValue>0?ovFeeMake(secondValue,second,receipt.data):null;
+    const before={forma:receipt.forma,valor:receipt.valor,taxaPct:receipt.taxaPct,taxaValor:receipt.taxaValor,taxaOrigem:receipt.taxaOrigem};
+    (receipt.taxaAjustes??=[]).push({em:new Date().toISOString(),por:ME.id,anterior:before,divididoEm:secondReceipt?.id});
+    Object.assign(receipt,firstReceipt);
+    if(secondReceipt)sale.pg.splice(sale.pg.indexOf(receipt)+1,0,secondReceipt);
+    save();dialog.close();render();ovFinDetail('received');toast('Forma de recebimento corrigida.');
+  });
+  document.body.append(dialog);
+  dialog.showModal();
 }
 async function ovFinPdf(){
   const report=window.ovFinCurrentReport;

@@ -1,5 +1,5 @@
 /* Oral Valle 062: taxas editáveis e histórico imutável por recebimento. */
-const OV_FEE_FORMS=['Pix','Dinheiro','Débito','Crédito à vista',...Array.from({length:11},(_,i)=>`Crédito ${i+2}x`),'Crédito','Boleto','Financiamento','Outro'];
+const OV_FEE_FORMS=['Pix','Dinheiro','Débito','Crédito à vista',...Array.from({length:11},(_,i)=>`Crédito ${i+2}x`),'Crédito','Crédito parcelado','Boleto','Financiamento','Transferência','Outro'];
 function ovFeeRates(){
   // Consultar/calcular uma taxa não deve criar configurações administrativas.
   const rates=db.taxasPagamento;
@@ -12,6 +12,7 @@ function ovFeeMethod(forma){
   if(/credito/.test(key)){
     const parcels=key.match(/\b(\d{1,2})\s*(?:x|parcelas?)\b/);
     if(parcels&&Number(parcels[1])>=2&&Number(parcels[1])<=12)return 'Crédito '+Number(parcels[1])+'x';
+    if(parcels&&Number(parcels[1])===1)return 'Crédito à vista';
     return /parcelad/.test(key)||parcels?'Crédito parcelado':'Crédito à vista';
   }
   return forma;
@@ -40,7 +41,7 @@ function ovFeeMake(valor,forma,data,id,override){
 function ovFeeTax(p){
   const raw=p.taxaValor,amount=Number(String(raw??'').trim().replace(',','.'));
   const pct=ovFeeReadRate(p.taxaPct);
-  if(raw!=null&&String(raw).trim()!==''&&Number.isFinite(amount)&&amount>=0&&(amount>0||!pct))return amount;
+  if(raw!=null&&String(raw).trim()!==''&&Number.isFinite(amount)&&amount>=0&&(amount>0||!pct||p.taxaOrigem))return amount;
   return pct===null?0:r2(num(p.valor)*pct/100);
 }
 function ovFeeNet(p){return r2(num(p.valor)-ovFeeTax(p))}
