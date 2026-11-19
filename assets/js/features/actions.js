@@ -520,9 +520,9 @@ const A={
     const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);if(!pend.length)return;
     const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
     if(pend.some(it=>!it.dt)){toast('Há item sem dentista definido');return}
-    const inputs=[['oab','oaf'],['oab2','oaf2']];
+    const inputs=[['oab','oaf'],['oab2','oaf2'],['oab3','oaf3']];
     const amounts=inputs.map(([field])=>r2(num($(field)?.value)));
-    const received=r2(amounts[0]+amounts[1]);
+    const received=r2(amounts.reduce((sum,amount)=>sum+amount,0));
     if(amounts.some(amount=>amount<0)||!(received>0)){toast('Informe os valores efetivamente recebidos.');return}
     if(received>tot){toast('O valor recebido é maior que o total da baixa ('+brl(tot)+')',3500);return}
     const data=$('oad').value||tdy();

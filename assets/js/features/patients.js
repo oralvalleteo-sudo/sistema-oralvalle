@@ -368,10 +368,11 @@ function obAllHtml(o){
   return `<div class="ob-all"><div class="ob-pay"><h4>Registrar pagamento do orçamento</h4>
   ${pend.map(it=>`<div class="ob-li"><span>${esc(it.proc||'Procedimento')}${it.dente?' · dente '+esc(it.dente):''}<br><span class="note" style="margin:0">${esc(dName(it.dt))}</span></span><strong>${brl(val(it))}</strong></div>`).join('')}
   <div class="tot" style="margin-top:6px"><span>Valor dos itens</span><span>${brl(tot)}</span></div>
-  <div class="row" style="align-items:flex-start"><div><label for="oab">Recebido agora (R$)</label><input id="oab" inputmode="decimal" value="" placeholder="Valor efetivamente recebido"></div><div><label for="oaf">Forma</label><select id="oaf">${ovFeeOptions(first)}</select></div></div>
-  <details${plan.entrada&&num(plan.entrada)>0&&num(plan.entrada)<tot&&first!==second?' open':''}>
+  <div class="row" style="align-items:flex-start"><div><label for="oab">Recebido agora (R$)</label><input id="oab" inputmode="decimal" value="${plan.entrada&&num(plan.entrada)>0&&num(plan.entrada)<=tot?esc(plan.entrada):''}" placeholder="Valor efetivamente recebido"></div><div><label for="oaf">Forma</label><select id="oaf">${ovFeeOptions(first)}</select></div></div>
+  <details${plan.entrada&&num(plan.entrada)>0&&num(plan.entrada)<tot?' open':''}>
     <summary>Recebi em duas formas de pagamento</summary>
-    <div class="row"><div><label for="oab2">Valor recebido na segunda forma (R$)</label><input id="oab2" inputmode="decimal" placeholder="Valor efetivamente recebido"></div><div><label for="oaf2">Segunda forma</label><select id="oaf2">${ovFeeOptions(second)}</select></div></div>
+    <div class="row"><div><label for="oab2">Valor recebido na segunda forma (R$)</label><input id="oab2" inputmode="decimal" value="${plan.entrada&&num(plan.entrada)>0&&num(plan.entrada)<tot?r2(tot-num(plan.entrada)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''}" placeholder="Valor efetivamente recebido"></div><div><label for="oaf2">Segunda forma</label><select id="oaf2">${ovFeeOptions(second)}</select></div></div>
+    <div class="row"><div><label for="oab3">Valor recebido na terceira forma (R$)</label><input id="oab3" inputmode="decimal" placeholder="0,00"></div><div><label for="oaf3">Terceira forma</label><select id="oaf3">${ovFeeOptions('Crédito à vista')}</select></div></div>
   </details>
   <p class="note" style="margin:6px 0 0">Preencha os valores conforme os comprovantes. O valor recebido será distribuído na ordem dos itens. O saldo restante ficará em aberto. Este registro não conclui procedimentos, não cria evolução e não libera comissão por execução.</p>
   <label for="oad">Data</label><input id="oad" type="date" value="${tdy()}">
