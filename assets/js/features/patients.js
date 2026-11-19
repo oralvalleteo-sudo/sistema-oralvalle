@@ -183,12 +183,21 @@ function editOdontogramCompletion(patient,action){
     getO(patient,action.o)?.itens.find(t=>String(t.id)===action.item);
   const evolution=(patient.evol||[]).find(e=>e.auto&&e.vid===action.vid&&(!action.id||!e.tid||String(e.tid)===action.id));
   if(!item||!evolution){toast('A evolução vinculada à baixa não foi encontrada.');return}
+  editClinicalCompletion(patient,evolution,item.proc,data=>{
+    if(item.vid!==action.vid)return false;
+    if(action.id)item.data=data;
+    const sale=db.vd.find(v=>v.id===action.vid&&v.pid===patient.id);
+    if(sale)sale.performedAt=data;
+    return true;
+  });
+}
+function editClinicalCompletion(patient,evolution,label,applyLinkedChanges){
   if($('odo-completion-edit'))return;
   const dialog=document.createElement('dialog');
   dialog.id='odo-completion-edit';
   dialog.setAttribute('aria-labelledby','odo-completion-title');
   dialog.innerHTML=`<form><h2 id="odo-completion-title">Editar baixa</h2>
-    <p>${esc(item.proc)}</p><label>Data da execução<input name="date" type="date" required value="${esc(evolution.data)}" max="${tdy()}"></label>
+    <p>${esc(label)}</p><label>Data da execução<input name="date" type="date" required value="${esc(evolution.data)}" max="${tdy()}"></label>
     <label>Descrição da evolução<textarea name="description" required maxlength="3000">${esc(evolution.txt)}</textarea></label>
     <p class="note" role="status"></p><button type="submit">Salvar baixa</button>
     <button type="button" class="ghost">Cancelar</button></form>`;
@@ -206,17 +215,49 @@ function editOdontogramCompletion(patient,action){
         if(status.is_finalized){feedback.textContent='Esta evolução está finalizada e protegida contra alterações.';return}
       }
       if(!dialog.open||LOCKED||cur()!==patient||pmCur()<2||window.OralCloud?.clinicId!==clinic||
-        !(patient.evol||[]).includes(evolution)||item.vid!==action.vid)return;
+        !(patient.evol||[]).includes(evolution))return;
+      if(applyLinkedChanges&&!applyLinkedChanges(data))return;
       evolution.data=data;evolution.txt=txt;
-      if(action.id)item.data=data;
-      const sale=db.vd.find(v=>v.id===action.vid&&v.pid===patient.id);
-      if(sale)sale.performedAt=data;
       save();dialog.close();render();toast('Baixa atualizada.');
     }catch(error){feedback.textContent='Não foi possível verificar a proteção da evolução. Tente novamente.'}
     finally{button.disabled=false}
   });
   document.body.append(dialog);
   dialog.showModal();
+}
+function selectEvolutionTooth(tooth){
+  const select=$('evn');
+  if(!select||![...select.options].some(option=>option.value===tooth))return false;
+  select.value=tooth;
+  view.tsel=tooth;
+  clearOdontogramCompletion();
+  return true;
+}
+function clearOdontogramCompletion(){
+  const form=$('odo-evolution');
+  if(!form)return;
+  form.odontogramCompletion=null;
+  $('odo-evolution-context').hidden=true;
+  $('nexo-save-evolution').textContent='Salvar evolução';
+}
+function prepareOdontogramCompletion(patient,{tooth,index,label}){
+  const n=String(tooth);
+  if(!selectEvolutionTooth(n))return;
+  const records=patient.odo?.__nexoVisual?.records?.[n];
+  const record=Number.isInteger(index)&&index>=0&&Array.isArray(records)?records[index]:null;
+  if(index!=null&&!record)return;
+  const procedure=typeof label==='string'?label.trim().slice(0,120):'';
+  if(record){
+    const evolution=patient.evol?.find(e=>e.id===record.evolutionId&&String(e.n)===n);
+    if(evolution){editClinicalCompletion(patient,evolution,procedure);return}
+    $('odo-evolution').odontogramCompletion={patientId:patient.id,tooth:n,index,procedure,snapshot:JSON.stringify(record)};
+    const context=$('odo-evolution-context');
+    context.textContent=procedure+' · Dente '+n;
+    context.hidden=false;
+    $('nexo-save-evolution').textContent='Confirmar baixa';
+  }
+  $('odo-evolution').scrollIntoView({block:'nearest'});
+  $('evt').focus({preventScroll:true});
 }
 // Sincroniza a seleção do odontograma incorporado com o campo de dente da evolução.
 if (!window.__nexoOdoReferenceListener) {
@@ -234,7 +275,7 @@ if (!window.__nexoOdoReferenceListener) {
       return;
     }
     if (event.data.type === 'nexodent:odontograma:ready') {
-      frame.contentWindow.postMessage({type:'nexodent:odontograma:load', data: {...((patient.odo || {}).__nexoVisual || {}),linkedRecords:window.NexoOdontogramBudget?.recordsFor(patient)||{}, selected:view.tsel, writable:pmCur()>=2}}, window.location.origin);
+      frame.contentWindow.postMessage({type:'nexodent:odontograma:load', data: {...((patient.odo || {}).__nexoVisual || {}),linkedRecords:window.NexoOdontogramBudget?.recordsFor(patient)||{}, selected:view.tsel, evolutionIds:(patient.evol||[]).map(e=>e.id), writable:pmCur()>=2}}, window.location.origin);
       return;
     }
     if (event.data.type === 'nexodent:odontograma:completion') {
@@ -244,6 +285,10 @@ if (!window.__nexoOdoReferenceListener) {
       if(!record?.action)return;
       if(record.status==='a_realizar')A.trbaixa(null,record.action,patient);
       else if(record.status==='finalizado'&&record.action.vid)editOdontogramCompletion(patient,record.action);
+      return;
+    }
+    if(event.data.type==='nexodent:odontograma:evolution'){
+      if(!LOCKED&&cur()===patient&&view.tab==='odo'&&pmCur()>=2)prepareOdontogramCompletion(patient,event.data);
       return;
     }
     if (event.data.type === 'nexodent:odontograma:save') {
@@ -258,12 +303,7 @@ if (!window.__nexoOdoReferenceListener) {
       return;
     }
     if (event.data.type !== 'nexodent:odontograma:select') return;
-    const n = String(event.data.tooth || '');
-    const select = document.getElementById('evn');
-    if (select && [...select.options].some(o => o.value === n)) {
-      select.value = n;
-      view.tsel = n;
-    }
+    selectEvolutionTooth(String(event.data.tooth || ''));
   });
 }
 function tabOdo(p){
@@ -282,12 +322,12 @@ function tabOdo(p){
   const rows=ARC[k].map(qd=>qd[1]);
   const odoRow=(a,b,up)=>`<div style="display:flex;justify-content:center;gap:0;min-width:610px"><div style="display:flex;justify-content:flex-end;gap:3px;padding-right:8px;border-right:1px solid var(--line)">${a.map(n=>odoTooth(n,up)).join('')}</div><div style="display:flex;justify-content:flex-start;gap:3px;padding-left:8px">${b.map(n=>odoTooth(n,up)).join('')}</div></div>`;
   // HTML original fornecido pelo usuário: interface isolada para evitar conflito de CSS/JS.
-  const arch=`<div style="width:100%;min-width:0"><iframe title="Odontograma anatômico" src="assets/odontograma_nexodent_visual.html?v=375" data-patient-id="${esc(String(p.id))}" loading="eager" style="display:block;width:100%;height:1550px;max-width:100%;overflow:hidden;border:0;border-radius:10px;background:#fff" sandbox="allow-scripts allow-same-origin"></iframe></div>`;
+  const arch=`<div style="width:100%;min-width:0"><iframe title="Odontograma anatômico" src="assets/odontograma_nexodent_visual.html?v=376" data-patient-id="${esc(String(p.id))}" loading="eager" style="display:block;width:100%;height:1550px;max-width:100%;overflow:hidden;border:0;border-radius:10px;background:#fff" sandbox="allow-scripts allow-same-origin"></iframe></div>`;
   const opts='<option value="">Geral (sem dente específico)</option>'+dentesTodos().map(n=>`<option value="${n}"${sel===String(n)?' selected':''}>Dente ${n}</option>`).join('');
-  const lan=`<div class="card" style="margin-top:14px"><h2>Lançar evolução do dia</h2>
+  const lan=`<div class="card" id="odo-evolution" style="margin-top:4px"><h2>Lançar evolução do dia</h2><p id="odo-evolution-context" class="note" role="status" hidden></p>
   <div class="row"><div><label for="evd">Data</label><input id="evd" type="date" value="${tdy()}"></div><div><label for="evn">Dente</label><select id="evn">${opts}</select></div></div>
-  <label for="evt">Procedimento realizado e descrição</label><textarea id="evt" placeholder="Descreva este procedimento, materiais, conduta e observações. Cada salvamento será arquivado como um registro separado."></textarea>
-  <button data-act="addevol" id="nexo-save-evolution" ${window.__nexoEvolSavedPatient===String(p.id)?'disabled aria-disabled="true"':''} style="width:100%;margin-top:10px;${window.__nexoEvolSavedPatient===String(p.id)?'background:#777;color:#fff;opacity:.65;cursor:default;':''}">${window.__nexoEvolSavedPatient===String(p.id)?'✓ Evolução salva':'Salvar evolução'}</button></div>`;
+  <label for="evt">Descrição da evolução</label><textarea id="evt" maxlength="3000" placeholder="Descreva o procedimento ou deixe em branco ao registrar o dente selecionado."></textarea>
+  <button type="button" data-act="addevol" id="nexo-save-evolution" style="width:100%;margin-top:10px">Salvar evolução</button></div>`;
   const hist=`<div class="card"><h2 style="margin:0 0 12px">Evolução do paciente, dia a dia</h2><p class="note">Cada vez que salvar uma evolução, ela ficará registrada separadamente no histórico, junto com a data e o dente informado. Os registros anteriores serão mantidos.</p>${nexoTimeline(p)}${evolHtml(p)}<h3 style="margin-top:20px">Assinatura do paciente</h3><p class="note">Peça ao paciente para assinar no espaço abaixo. A assinatura ficará salva junto ao prontuário e poderá sair na impressão da evolução.</p><canvas id="evsig" width="600" height="180" aria-label="Assinatura do paciente na evolução" style="display:block;width:100%;max-width:600px;height:180px;background:#fff;border:1px solid var(--line);border-radius:8px;touch-action:none"></canvas><div class="row" style="margin-top:8px"><button class="ghost sm" data-act="evsigclr">Limpar assinatura</button><span class="note" id="evsigst">${p.evolSign?"Assinatura salva"+(p.evolSignDate?" em "+esc(p.evolSignDate):""):"Assinatura ainda não registrada"}</span></div><div style="display:flex;justify-content:flex-end;align-items:stretch;gap:14px;max-width:100%;margin:16px 0 0;padding:12px 0 0;border-top:1px solid var(--line);box-sizing:border-box"><button class="sm" data-act="printevol" style="flex:1 1 0;min-width:0;margin:0;box-sizing:border-box;padding:10px 8px;font-size:14px !important;font-weight:600 !important;line-height:1.4 !important;min-height:48px !important">Imprimir evolução completa</button><button class="sm" data-act="evsignprint" style="background:#ea7000;color:white;flex:1 1 0;min-width:0;margin:0;box-sizing:border-box;padding:10px 8px;font-size:14px !important;font-weight:600 !important;line-height:1.4 !important;min-height:48px !important">Assinar evolução (dentista)</button><button class="ghost sm" data-act="evolicp" style="flex:1 1 0;min-width:0;margin:0;box-sizing:border-box;padding:10px 8px;font-size:14px !important;font-weight:600 !important;line-height:1.4 !important;min-height:48px !important">Preparar PDF para ICP-Brasil</button></div></div>`;
   const lg=(p.olog||[]).length?`<details><summary>Histórico de mudanças de situação</summary><div id="olog">${ologHtml(p)}</div></details>`:'';
   return `${evPendHtml(p)}<div class="odo-grid nexo-odo-integrado" style="margin-top:14px;display:block"><div style="width:100%;min-width:0">${arch}${lan}</div><div style="margin-top:16px">${toothPanel(p)}${hist}${lg}</div></div>`;
@@ -471,19 +511,11 @@ function trChips(){
 }
 
 
-// Reativa o botão apenas quando o formulário da evolução é modificado.
-if (!window.__nexoEvolDirtyListener) {
-  window.__nexoEvolDirtyListener = true;
-  document.addEventListener('input', function(e) {
-    if (!e.target || !['evt','evd','evn'].includes(e.target.id)) return;
-    window.__nexoEvolSavedPatient = null;
-    const b = document.getElementById('nexo-save-evolution');
-    if (b) { b.disabled = false; b.removeAttribute('aria-disabled'); b.textContent = 'Salvar evolução'; b.style.background = ''; b.style.color = ''; b.style.opacity = ''; b.style.cursor = ''; }
-  });
-  document.addEventListener('change', function(e) {
-    if (!e.target || !['evd','evn'].includes(e.target.id)) return;
-    window.__nexoEvolSavedPatient = null;
-    const b = document.getElementById('nexo-save-evolution');
-    if (b) { b.disabled = false; b.removeAttribute('aria-disabled'); b.textContent = 'Salvar evolução'; b.style.background = ''; b.style.color = ''; b.style.opacity = ''; b.style.cursor = ''; }
-  });
-}
+document.addEventListener('change',event=>{
+  const select=event.target;
+  if(select.id!=='evn')return;
+  view.tsel=select.value;
+  clearOdontogramCompletion();
+  document.querySelector('iframe[title="Odontograma anatômico"]')?.contentWindow.postMessage(
+    {type:'nexodent:odontograma:tooth',tooth:select.value},location.origin);
+});

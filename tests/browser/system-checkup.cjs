@@ -114,6 +114,37 @@ await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
 assert.equal(Number((await db.query("select count(*) n from patient_evolutions where dados->>'txt'='Descrição da baixa corrigida'")).rows[0].n),1);
 assert.equal(Number((await db.query("select count(*) n from receipts where kind='object'")).rows[0].n),receiptsBeforeDirect+1);
 
+// A marcação manual antiga, inclusive com situação Finalizado, pode gerar uma baixa clínica.
+const salesBeforeManual=Number((await db.query("select count(*) n from sales where kind='object'")).rows[0].n);
+await page.evaluate(()=>{
+ const patient=cur();
+ patient.odo.__nexoVisual.records['11']=[{tool:'restauracao',surface:'',status:'finalizado'}];
+ save();render();
+});
+await chart.locator('[data-tooth="11"]').evaluate(el=>el.click());
+await chart.getByRole('button',{name:'Dar baixa',exact:true}).evaluate(el=>el.click());
+await page.getByRole('button',{name:'Confirmar baixa',exact:true}).click();
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+await chart.getByRole('button',{name:'Editar baixa',exact:true}).waitFor();
+const manualCompletion=await page.evaluate(()=>{
+ const patient=cur();
+ return patient.evol.find(e=>e.id===patient.odo.__nexoVisual.records['11'][0].evolutionId);
+});
+assert.equal(manualCompletion.n,'11');
+assert.equal(manualCompletion.txt,'Restauração');
+await chart.getByRole('button',{name:'Editar baixa',exact:true}).evaluate(el=>el.click());
+await completion.getByLabel('Descrição da evolução').fill('Restauração com resina');
+await completion.getByRole('button',{name:'Salvar baixa'}).click();
+await completion.waitFor({state:'hidden'});
+await chart.locator('[data-tooth="12"]').evaluate(el=>el.click());
+await chart.getByRole('button',{name:'Registrar evolução deste dente'}).evaluate(el=>el.click());
+await page.getByRole('button',{name:'Salvar evolução',exact:true}).click();
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+assert.equal(Number((await db.query("select count(*) n from patient_evolutions where dados->>'txt'='Restauração com resina'")).rows[0].n),1);
+assert.equal(Number((await db.query("select count(*) n from patient_evolutions where dados->>'txt'='Evolução registrada para o dente 12.'")).rows[0].n),1);
+assert.equal(Number((await db.query("select count(*) n from sales where kind='object'")).rows[0].n),salesBeforeManual);
+console.log('Odontograma: baixa de marcação manual antiga, edição e evolução apenas com dente, sem movimento financeiro.');
+
 // Escolher receitas não deve recolher o grupo nem abrir documentos de outro paciente.
 await page.locator('[data-act="tab"][data-t="arquivos"]').click();const prescriptionFold=page.locator('.ov-doc-fold[data-doc-fold="Receituários e Atestados"]');await prescriptionFold.locator('summary').first().click();for(const model of ['long','peq','imp','perio','livre']){await page.locator('#rxModelo').selectOption(model);assert.equal(await prescriptionFold.evaluate(el=>el.open),true);assert.equal(await page.locator('#rxTexto').isVisible(),true);assert.equal(await page.locator('#rxModelo').inputValue(),model);if(model!=='livre')assert.ok((await page.locator('#rxTexto').inputValue()).length>0)}await page.locator('#rxDent').selectOption('staff-dentist');assert.equal(await prescriptionFold.evaluate(el=>el.open),true);await prescriptionFold.locator('summary').first().click();await page.evaluate(()=>render());assert.equal(await prescriptionFold.evaluate(el=>el.open),false);await prescriptionFold.locator('summary').first().click();await page.evaluate(()=>{view.id=db.p.find(p=>p.nome!=='Novo paciente sintético').id;render()});assert.equal(await prescriptionFold.evaluate(el=>el.open),false);console.log('Receituário: todos os modelos permanecem abertos e visíveis; recolhimento manual e troca de paciente respeitados.');
 // Painel de precificação: dados reais do cadastro, atualização e leitura sem alteração de preços.
