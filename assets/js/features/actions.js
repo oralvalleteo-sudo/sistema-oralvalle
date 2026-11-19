@@ -520,14 +520,16 @@ const A={
     const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);if(!pend.length)return;
     const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
     if(pend.some(it=>!it.dt)){toast('Há item sem dentista definido');return}
-    const inputs=[['oab','oaf'],['oab2','oaf2'],['oab3','oaf3']];
-    const amounts=inputs.map(([field])=>r2(num($(field)?.value)));
+    const pm=String(o.cond||'').match(/^Entrada: R\$ [\d.,]+ \(([^)]+)\); Restante: R\$ [\d.,]+ \(([^)]+)\)(?: em (\d+)x de R\$ [\d.,]+)?$/);
+    const forms=[ovFeeMethod(pm?.[1]||'PIX'),ovFeeMethod(pm?.[2]?(pm[2]+(pm[3]&&pm[2]==='Cartão de crédito'?' '+pm[3]+'x':'')):'Cartão de crédito')];
+    const inputs=[['oab','oab2']];
+    const amounts=inputs[0].map(field=>r2(num($(field)?.value)));
     const received=r2(amounts.reduce((sum,amount)=>sum+amount,0));
     if(amounts.some(amount=>amount<0)||!(received>0)){toast('Informe os valores efetivamente recebidos.');return}
     if(received>tot){toast('O valor recebido é maior que o total da baixa ('+brl(tot)+')',3500);return}
     const data=$('oad').value||tdy();
-    const receipts=inputs.flatMap(([,method],index)=>amounts[index]>0?
-      [{payment:ovFeeMake(amounts[index],$(method).value,data),allocated:0}]:[]);
+    const receipts=forms.flatMap((method,index)=>amounts[index]>0?
+      [{payment:ovFeeMake(amounts[index],method,data),allocated:0}]:[]);
     pend.forEach(it=>{
       const vv=val(it),sale=obLaunch(p,it,vv,0,'',data,0);
       let balance=vv;
@@ -543,6 +545,40 @@ const A={
       }
     });
     view.obxAll=null;save();render();toast(pend.length+(pend.length===1?' item financeiro':' itens financeiros')+': financeiro registrado, procedimentos permanecem pendentes',3500)},
+  obcollectconf:(b,d,p)=>{
+    const o=getO(p,d.o);if(!o||o.status!=='Aprovado')return;
+    const sales=(o.itens||[]).map(it=>db.vd.find(v=>String(v.id)===String(it.paymentSaleId||it.vid))).filter(Boolean);
+    const outstanding=sales.filter(v=>saldoV(v)>0.005);
+    const totalDue=r2(outstanding.reduce((sum,v)=>sum+saldoV(v),0));
+    if(!outstanding.length){toast('Este orçamento não tem saldo em aberto.');return}
+    const pm=String(o.cond||'').match(/^Entrada: R\$ [\d.,]+ \(([^)]+)\); Restante: R\$ [\d.,]+ \(([^)]+)\)(?: em (\d+)x de R\$ [\d.,]+)?$/);
+    const forms=[ovFeeMethod(pm?.[1]||'PIX'),ovFeeMethod(pm?.[2]?(pm[2]+(pm[3]&&pm[2]==='Cartão de crédito'?' '+pm[3]+'x':'')):'Cartão de crédito')];
+    const fields=['obc1','obc2'];
+    const amounts=fields.map(field=>r2(num($(field)?.value)));
+    if(amounts.some(a=>a<0)||amounts.some(a=>!Number.isFinite(a))){toast('Confira os valores informados.');return}
+    const totalReceived=r2(amounts.reduce((sum,a)=>sum+a,0));
+    if(!(totalReceived>0)){toast('Informe pelo menos um valor recebido.');return}
+    if(totalReceived>totalDue+0.005){toast('O recebimento supera o saldo em aberto ('+brl(totalDue)+').');return}
+    const date=$('obcd')?.value||tdy();
+    const entries=forms.flatMap((method,index)=>amounts[index]>0?[{payment:ovFeeMake(amounts[index],method,date),allocated:0}]:[]);
+    let remaining=totalReceived;
+    for(const sale of outstanding){
+      let balance=r2(saldoV(sale));
+      for(const entry of entries){
+        if(balance<=0.005||remaining<=0.005)break;
+        const payLeft=r2(entry.payment.valor-entry.allocated);
+        if(payLeft<=0.005)continue;
+        const value=r2(Math.min(balance,payLeft,remaining));
+        if(value<=0.005)continue;
+        const prior=entry.allocated;
+        entry.allocated=r2(prior+value);
+        const fee=r2(r2(entry.payment.taxaValor*entry.allocated/entry.payment.valor)-r2(entry.payment.taxaValor*prior/entry.payment.valor));
+        sale.pg.push({...entry.payment,id:uid(),valor:value,taxaValor:fee,liquido:r2(value-fee)});
+        balance=r2(balance-value);remaining=r2(remaining-value);
+      }
+    }
+    save();render();toast('Recebimento registrado no orçamento e distribuído entre os saldos em aberto.');
+  },
   obconf:(b,d,p)=>{
     const o=getO(p,d.o),it=o&&o.itens[+d.i];if(!it)return;
     if(it.vid||it.paymentSaleId){toast('Este item já possui lançamento financeiro. Registre o recebimento no saldo existente.');return}
