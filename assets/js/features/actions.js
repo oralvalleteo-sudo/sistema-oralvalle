@@ -410,7 +410,7 @@ const A={
     const o=d.o&&getO(p,d.o);
     if(d.o&&(!o||o.status!=='Aprovado')){toast('O orçamento precisa estar aprovado.');return}
     let item=o?.itens.find(i=>String(i.id)===String(d.item));
-    let x=d.id?(p.trat||[]).find(t=>t.id===d.id):item&&(p.trat||[]).find(t=>(item.tid&&t.id===item.tid)||(t.oiid===item.id&&t.oid===o.id));
+    let x=d.id?(p.trat||[]).find(t=>String(t.id)===String(d.id)):item&&(p.trat||[]).find(t=>(item.tid&&t.id===item.tid)||(t.oiid===item.id&&t.oid===o.id));
     if(!x&&!item)return;
     const fresh=!x;
     if(fresh)x={proc:item.proc,dente:item.dente||'',obs:item.obs||'',valor:r2(num(item.valor)*fac(o)),dt:item.dt,qtd:item.qtd,unit:item.unit,oid:o.id,oiid:item.id,status:'Pendente',mats:[]};
@@ -520,14 +520,18 @@ const A={
     let rc=$('vrc').value.trim()===''?0:num($('vrc').value);
     if(rc>vv){toast('O valor recebido é maior que o valor da venda');return}
     const proc=$('vpr').value.trim(),mm=comCalc(dtid,proc,vv,(view.pre&&view.pre.qtd)||1),data=$('vdt').value||tdy(),pid=$('vp').value;
+    if(!pid){toast('Selecione o paciente');return}
+    const override=$('ovFeeOverride'), rawPct=override?.value;
+    const pct=rawPct==null||rawPct===''?ovFeePct($('vfm').value):Number(rawPct);
+    if(rc>0&&(override?.validity.badInput||!Number.isFinite(pct)||pct<0||pct>100)){toast('Taxa inválida');return}
     if(view.link?.oid){
       const p=db.p.find(p=>p.id===pid),o=p&&getO(p,view.link.oid),it=o?.itens.find(i=>i.id===view.link.ii);
       if(!it||view.link.pid!==pid){toast('Orçamento não encontrado para este paciente.');return}
       if(it.vid||it.paymentSaleId){toast('O item já possui financeiro. Registre o recebimento no saldo existente.');return}
-      obLaunch(p,it,vv,rc,$('vfm').value,data,0);view.link=null;save();render();toast('Financeiro registrado. Procedimento permanece pendente.');return;
+      obLaunch(p,it,vv,rc,$('vfm').value,data,0,pct);view.link=null;save();render();toast('Financeiro registrado. Procedimento permanece pendente.');return;
     }
     const v={id:uid(),pid,dt:dtid,proc,valor:r2(vv),mat:mm.mat,lab:mm.lab,rep:r2(num($('vr').value)),data,pg:[]};
-    if(rc>0){const override=document.getElementById('ovFeeOverride');const pct=override?Number(override.value):ovFeePct($('vfm').value);if(!Number.isFinite(pct)||pct<0||pct>100){toast('Taxa inválida');return}v.pg.push(ovFeeMake(rc,$('vfm').value,data,null,pct))}
+    if(rc>0)v.pg.push(ovFeeMake(rc,$('vfm').value,data,null,pct));
     const lk=view.link;
     if(lk&&lk.pid===pid){
       if(lk.ag){const a=db.ag.find(x=>x.id===lk.ag);if(a){a.vid=v.id;a.st='Compareceu'}}

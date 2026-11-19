@@ -192,7 +192,7 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
   }
   .ov-work-columns {
     display: grid;
-    grid-template-columns: var(--ov-work-columns);
+    grid-template-columns: minmax(0, 1fr) max-content 28px;
     gap: 16px;
     padding: 10px 20px;
     margin-bottom: 8px;
@@ -204,9 +204,11 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
   .nxlab-workspace .nxlab-summary,
   .ov-specialty-page .ov-modern-summary {
     display: grid !important;
-    grid-template-columns: var(--ov-work-columns);
+    grid-template-columns: minmax(0, 1fr) max-content 28px !important;
     gap: 16px !important;
   }
+  .nxlab-workspace .nxlab-summary-stage { justify-self: end; margin-left: 0 !important; }
+  .nxlab-workspace .nxlab-summary-right { justify-self: end; }
   .nxlab-workspace .nxlab-summary-right { width: 100%; min-width: 0; gap: 8px; justify-content: space-between; }
   .nxlab-workspace .nxlab-summary-right .nxlab-pill { max-width: calc(100% - 24px); flex-shrink: 1; }
   .nxlab-workspace .nxlab-summary-stage { overflow-wrap: anywhere; }

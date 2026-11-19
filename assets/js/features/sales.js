@@ -1,32 +1,42 @@
 /* ===== vendas ===== */
-function stat(l,v,n){return `<div class="card" style="margin:0"><div class="note" style="margin:0">${l}</div><strong style="font-size:20px">${brl(v)}</strong>${n?`<div class="note" style="margin:0">${n}</div>`:''}</div>`}
+function stat(l,v,n){return `<div class="card" style="margin:0"><div class="note" style="margin:0">${l}</div><strong style="font-size:20px">${esc(v)}</strong>${n?`<div class="note" style="margin:0">${n}</div>`:''}</div>`}
 /* Detalhamento financeiro: as seis métricas usam exatamente os dados do painel. */
 function ovFinCard(label,value,sub,type){
   return `<button type="button" data-act="ovFinDetail" data-t="${type}" aria-haspopup="dialog" title="Ver detalhes: ${esc(label)}" class="card" style="margin:0;display:block;text-align:left;width:100%;color:inherit;font:inherit;cursor:pointer"><span class="note" style="display:block;margin:0">${esc(label)} ↗</span><strong style="font-size:20px">${brl(value)}</strong>${sub?`<span class="note" style="display:block;margin:0">${esc(sub)}</span>`:''}</button>`;
 }
-function ovFinDetail(type){
-  const today=tdy(),month=today.slice(0,7);
+function salesPeriod() {
+  const today=tdy(), current=today.slice(0,7), month=view.salesMonth||current;
   const all=db.vd||[];
   const monthly=all.filter(v=>String(v.data||'').slice(0,7)===month);
   const todaySales=all.filter(v=>v.data===today);
   const payments=all.flatMap(v=>(v.pg||[]).filter(p=>String(p.data||'').slice(0,7)===month).map(p=>({v,p})));
-  const pending=all.filter(v=>saldoV(v)>0);
-  const types={today:['Vendas de hoje',todaySales,'sale'],month:['Vendas do mês',monthly,'sale'],received:['Recebido no mês',payments,'payment'],pending:['A receber de pacientes',pending,'pending'],commission:['Comissões do mês',monthly,'commission'],net:['Sobra após comissões (mês)',monthly,'net']};
+  const historical=month<current;
+  const pending=all.flatMap(v=>{
+    if(historical&&(!v.data||v.data.slice(0,7)>month))return [];
+    const paid=historical?(v.pg||[]).filter(p=>p.data&&p.data.slice(0,7)<=month).reduce((sum,p)=>sum+num(p.valor),0):recebido(v);
+    const balance=historical?Math.max(0,r2(num(v.valor)-paid)):saldoV(v);
+    return balance>0?[{v,paid,balance}]:[];
+  });
+  return {today,month,monthly,todaySales,payments,pending,historical};
+}
+function ovFinDetail(type){
+  const {month,monthly,todaySales,payments,pending,historical}=salesPeriod();
+  const types={today:['Vendas de hoje',todaySales,'sale'],month:['Vendas do mês',monthly,'sale'],received:['Recebido no mês',payments,'payment'],pending:[historical?'A receber no fim do mês':'A receber de pacientes',pending,'pending'],commission:['Comissões do mês',monthly,'commission'],net:['Sobra após comissões (mês)',monthly,'net']};
   const selected=types[type];if(!selected)return;
   const [title,items,kind]=selected;
-  const amount=kind==='payment'?payments.reduce((s,x)=>s+num(x.p.valor),0):kind==='pending'?pending.reduce((s,v)=>s+saldoV(v),0):kind==='commission'?sum(monthly,'rep'):kind==='net'?sum(monthly,'valor')-sum(monthly,'rep'):sum(items,'valor');
+  const amount=kind==='payment'?payments.reduce((s,x)=>s+num(x.p.valor),0):kind==='pending'?pending.reduce((s,item)=>s+item.balance,0):kind==='commission'?sum(monthly,'rep'):kind==='net'?sum(monthly,'valor')-sum(monthly,'rep'):sum(items,'valor');
   const headers=kind==='payment'?['Data do recebimento','Paciente','Procedimento','Forma','Recebido']:kind==='pending'?['Data da venda','Paciente','Procedimento','Recebido','Pendente']:kind==='commission'?['Data','Paciente','Dentista','Procedimento','Comissão']:kind==='net'?['Data','Paciente','Venda','Comissão','Sobra']:['Data','Paciente','Procedimento','Valor'];
   // A exportação reutiliza exatamente os dados apresentados na janela.
   const reportRows=items.map(item=>{
-    const v=kind==='payment'?item.v:item;
+    const v=kind==='payment'||kind==='pending'?item.v:item;
     if(kind==='payment')return [fd(item.p.data),pName(v.pid),v.proc||'Atendimento',item.p.forma||'—',brl(item.p.valor)];
-    if(kind==='pending')return [fd(v.data),pName(v.pid),v.proc||'Atendimento',brl(recebido(v)),brl(saldoV(v))];
+    if(kind==='pending')return [fd(v.data),pName(v.pid),v.proc||'Atendimento',brl(item.paid),brl(item.balance)];
     if(kind==='commission')return [fd(v.data),pName(v.pid),dName(v.dt),v.proc||'Atendimento',brl(v.rep)];
     if(kind==='net')return [fd(v.data),pName(v.pid),brl(v.valor),brl(v.rep),brl(num(v.valor)-num(v.rep))];
     return [fd(v.data),pName(v.pid),v.proc||'Atendimento',brl(v.valor)];
   });
   const rows=reportRows.map(row=>`<tr>${row.map(value=>`<td>${esc(value)}</td>`).join('')}</tr>`).join('');
-  window.ovFinCurrentReport={title,headers,rows:reportRows,total:brl(amount),count:items.length,period:month};
+  window.ovFinCurrentReport={title,headers,rows:reportRows,total:brl(amount),count:items.length,period:type==='today'?tdy():month};
   const dialog=document.getElementById('ov-fin-detail-dialog');if(!dialog)return;
   dialog.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="ov-fin-detail-title" style="margin:0">${esc(title)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="sm" data-act="ovFinPdf">⬇ Gerar PDF</button><form method="dialog"><button type="submit" class="ghost sm">✕ Fechar</button></form></div></div><p class="note" style="margin:12px 0">${items.length} registro(s) · Total: <strong>${brl(amount)}</strong></p><div class="ov-fin-detail-scroll"><table class="ov-fin-detail-table"><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length}" style="padding:16px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div><p style="text-align:right"><strong>Total: ${brl(amount)}</strong></p>`;
   if(!dialog.open)dialog.showModal();
@@ -82,42 +92,43 @@ function fillRep(src){
   const rc=$('vrc');if(!rc.dataset.touched)rc.value=vv?vv.toFixed(2):'';
   fmtMoney(document);
 }
-function vdCard(x){
-  const rc=recebido(x),sd=saldoV(x),st=sd<=0?['Pago','stt-ok']:rc>0?['Parcial','']:['A receber','stt-wr'];
+function vdCard(x,snapshot){
+  const rc=snapshot?snapshot.paid:recebido(x),sd=snapshot?snapshot.balance:saldoV(x),st=sd<=0?['Pago','stt-ok']:rc>0?['Parcial','']:['A receber','stt-wr'];
   return `<div class="card"><div class="ag"><span><strong>${fd(x.data)} · ${esc(pName(x.pid))}</strong><br>${esc(x.proc||'Atendimento')} · ${esc(dName(x.dt))}</span><span style="text-align:right"><strong>${brl(x.valor)}</strong><br><span class="note" style="margin:0">Comissão ${brl(x.rep)}</span></span></div>
   <div class="row" style="margin:8px 0 4px;flex-wrap:wrap"><span class="badge ${st[1]}" style="flex:none">${st[0]}</span><span class="note" style="margin:0">Recebido ${brl(rc)} de ${brl(x.valor)}</span></div>
-  ${x.pg.map(p=>`<div class="pg"><span>${fd(p.data)} · ${esc(p.forma)}${ovFeeSummary(p)}</span><span>${brl(p.valor)} <button class="danger sm" data-act="rmpg" data-id="${esc(x.id)}" data-pg="${esc(p.id)}" aria-label="Remover recebimento">${delArm===p.id?'Confirmar':'×'}</button></span></div>`).join('')}
-  ${sd>0?`<div class="row" style="margin-top:8px"><input data-rcv="${esc(x.id)}" inputmode="decimal" value="${sd.toFixed(2)}" aria-label="Valor recebido"><select data-rcvf="${esc(x.id)}" aria-label="Forma de pagamento">${ovFeeOptions()}</select><button class="sm" data-act="rcv" data-id="${esc(x.id)}">Receber</button></div>`:''}
-  <button class="danger sm" data-act="rmvd" data-id="${esc(x.id)}" style="margin-top:8px">${delArm===x.id?'Toque de novo para excluir':'Excluir venda'}</button></div>`;
+  ${snapshot?'':x.pg.map(p=>`<div class="pg"><span>${fd(p.data)} · ${esc(p.forma)}${ovFeeSummary(p)}</span><span>${brl(p.valor)} <button class="danger sm" data-act="rmpg" data-id="${esc(x.id)}" data-pg="${esc(p.id)}" aria-label="Remover recebimento">${delArm===p.id?'Confirmar':'×'}</button></span></div>`).join('')}
+  ${!snapshot&&sd>0?`<div class="row" style="margin-top:8px"><input data-rcv="${esc(x.id)}" inputmode="decimal" value="${sd.toFixed(2)}" aria-label="Valor recebido"><select data-rcvf="${esc(x.id)}" aria-label="Forma de pagamento">${ovFeeOptions()}</select><button class="sm" data-act="rcv" data-id="${esc(x.id)}">Receber</button></div>`:''}
+  ${snapshot?'':`<button class="danger sm" data-act="rmvd" data-id="${esc(x.id)}" style="margin-top:8px">${delArm===x.id?'Toque de novo para excluir':'Excluir venda'}</button>`}</div>`;
 }
 function vdHtml(){
-  const t=tdy(),m=t.slice(0,7),sv=view.sv||'dia';
+  const {today:t,month:m,todaySales:dia,monthly:mes,payments,pending,historical}=salesPeriod(), sv=view.sv||'dia';
   let pre={};
   if(view.pre){pre=view.pre;view.pre=null;view.link=(pre.oid||pre.ag)?{oid:pre.oid,ii:pre.ii,ag:pre.ag,pid:pre.pid}:null}
-  const dia=db.vd.filter(x=>x.data===t),mes=db.vd.filter(x=>x.data.slice(0,7)===m);
-  let recMes=0;db.vd.forEach(v=>v.pg.forEach(p=>{if((p.data||'').slice(0,7)===m)recMes+=num(p.valor)}));
-  const aRec=db.vd.reduce((s,v)=>s+saldoV(v),0);
-  const taxasMes=db.vd.reduce((s,v)=>s+(v.pg||[]).filter(p=>String(p.data||'').slice(0,7)===m).reduce((a,p)=>a+ovFeeTax(p),0),0);
-  let h='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">'+ovFinCard('Vendas de hoje',sum(dia,'valor'),dia.length+' atendimento(s)','today')+ovFinCard('Vendas do mês',sum(mes,'valor'),mes.length+' atendimento(s)','month')+ovFinCard('Recebido no mês',recMes,'','received')+ovFinCard('A receber de pacientes',aRec,'','pending')+ovFinCard('Comissões do mês',sum(mes,'rep'),'','commission')+ovFinCard('Sobra após comissões (mês)',sum(mes,'valor')-sum(mes,'rep'),'','net')+'</div>';
-  h+=`<div class="card" style="margin:10px 0"><b>Taxas da operadora no mês: ${brl(taxasMes)}</b><br><b>Recebimento líquido do mês: ${brl(recMes-taxasMes)}</b><p class="note" style="margin:4px 0 0">Recebido bruto menos taxas registradas. Não representa saldo bancário conciliado.</p></div>`;
+  const recMes=payments.reduce((total,{p})=>total+num(p.valor),0);
+  const aRec=pending.reduce((total,item)=>total+item.balance,0);
+  const taxasMes=payments.reduce((total,{p})=>total+ovFeeTax(p),0);
+  let h=`<div class="card" data-ro-ok style="margin:0 0 12px"><label for="sales-month">Mês de referência</label><input id="sales-month" type="month" max="${t.slice(0,7)}" value="${esc(m)}"></div>`+
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">'+ovFinCard('Vendas de hoje',sum(dia,'valor'),dia.length+' atendimento(s)','today')+ovFinCard('Vendas do mês',sum(mes,'valor'),mes.length+' atendimento(s)','month')+ovFinCard('Recebido no mês',recMes,'','received')+ovFinCard(historical?'A receber no fim do mês':'A receber de pacientes',aRec,'','pending')+ovFinCard('Comissões do mês',sum(mes,'rep'),'','commission')+ovFinCard('Sobra após comissões (mês)',sum(mes,'valor')-sum(mes,'rep'),'','net')+'</div>';
+  h+=`<div class="card" style="margin:10px 0"><b>Taxas da operadora no mês: ${brl(taxasMes)}</b><br><b>Recebimento líquido do mês: ${brl(r2(recMes-taxasMes))}</b><p class="note" style="margin:4px 0 0">Recebido bruto menos taxas registradas. Não representa saldo bancário conciliado.</p></div>`;
   h+='<dialog id="ov-fin-detail-dialog" aria-labelledby="ov-fin-detail-title" class="ov-fin-detail-dialog"></dialog>';
   const pts=db.p.filter(p=>!p.arq||p.id===pre.pid),dts=db.dt.filter(d=>d.ativo!==false||d.id===pre.dt);
   if(!pts.length||!dts.length)h+='<div class="empty">Cadastre ao menos um paciente e um dentista ativo para lançar vendas.</div>';
   else{
     const dsel=pre.dt||'',val=pre.valor?String(pre.valor):'',cr=(dsel&&val)?comCalc(dsel,pre.proc||'',num(val),pre.qtd).rep:0;
-    h+=`<details class="card" style="margin:10px 0" ${pre.ag||pre.oid?'open':''}><summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;font-weight:700;font-size:15px;user-select:none">Dar baixa no atendimento <span style="color:#ea7000;font-size:18px" aria-hidden="true">⌄</span></summary><div style="margin-top:14px">${pre.ag||pre.oid?'<p class="note" style="margin:0 0 4px">Dados preenchidos a partir da '+(pre.ag?'agenda':'aprovação do orçamento')+'. Confira antes de lançar.</p>':''}<label for="vp">Paciente</label><select id="vp" onchange="var b=document.querySelector('[data-act=addvd]');if(b)b.disabled=!this.value"><option value="">Selecione o paciente</option>${pts.map(p=>`<option value="${esc(p.id)}"${p.id===pre.pid?' selected':''}>${esc(p.nome)}</option>`).join('')}</select><label for="vdn">Dentista que executou</label><select id="vdn">${dentOpts(dsel,'Selecione o dentista')}</select><label for="vpr">Procedimento</label><input id="vpr" list="prl" placeholder="Escolha ou digite" value="${esc(pre.proc||'')}" autocomplete="off">${prList()}
+    h+=`<details class="card nexo-data-fold" style="margin:10px 0" ${pre.ag||pre.oid?'open':''}><summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;font-weight:700;font-size:15px;user-select:none">Dar baixa no atendimento</summary><div style="margin-top:14px">${pre.ag||pre.oid?'<p class="note" style="margin:0 0 4px">Dados preenchidos a partir da '+(pre.ag?'agenda':'aprovação do orçamento')+'. Confira antes de lançar.</p>':''}<label for="vp">Paciente</label><select id="vp" onchange="var b=document.querySelector('[data-act=addvd]');if(b)b.disabled=!this.value"><option value="">Selecione o paciente</option>${pts.map(p=>`<option value="${esc(p.id)}"${p.id===pre.pid?' selected':''}>${esc(p.nome)}</option>`).join('')}</select><label for="vdn">Dentista que executou</label><select id="vdn">${dentOpts(dsel,'Selecione o dentista')}</select><label for="vpr">Procedimento</label><input id="vpr" list="prl" placeholder="Escolha ou digite" value="${esc(pre.proc||'')}" autocomplete="off">${prList()}
     <div class="row"><div><label for="vv">Valor (R$)</label><input id="vv" inputmode="decimal" value="${esc(val)}"></div><div><label for="vr">Comissão (R$)</label><input id="vr" inputmode="decimal" value="${cr?cr.toFixed(2):''}"></div></div>
     <p class="note" style="margin:6px 0 0">A comissão percentual é calculada somente após descontar hora clínica, materiais e laboratório. Você pode ajustar o valor.</p>
     <div class="row"><div><label for="vrc">Recebido agora (R$)</label><input id="vrc" inputmode="decimal" value="${val}"></div><div><label for="vfm">Forma</label><select id="vfm">${ovFeeOptions()}</select></div></div>
-    ${ovFeeSalePreview()}
+    ${ovFeeSalePreview(val)}
     <p class="note" style="margin:6px 0 0">O paciente quita o valor bruto pago; a taxa da operadora é descontada apenas do líquido da clínica. Se ainda não pagou, coloque 0.</p>
     <label for="vdt">Data</label><input id="vdt" type="date" value="${t}"><div style="margin-top:12px"><button data-act="addvd" style="width:100%"${pre.pid?'':' disabled'}>Dar baixa e lançar venda</button></div></div></details>`;
   }
+  if(pmSee('cm'))h+=commissionReview(m,mes);
   h+=`<div class="row" style="margin-bottom:10px"><button class="sm${sv==='dia'?'':' ghost'}" data-act="svw" data-t="dia">Hoje</button><button class="sm${sv==='mes'?'':' ghost'}" data-act="svw" data-t="mes">Mês</button><button class="sm${sv==='rec'?'':' ghost'}" data-act="svw" data-t="rec">A receber</button></div>`;
-  const l=(sv==='dia'?dia:sv==='mes'?mes:db.vd.filter(v=>saldoV(v)>0)).slice().reverse();
+  const l=(sv==='dia'?dia:sv==='mes'?mes:pending.map(item=>item.v)).slice().reverse();
   const pageSize=50,pages=Math.max(1,Math.ceil(l.length/pageSize));
   view.vPage=Math.min(Math.max(0,Number(view.vPage)||0),pages-1);
   const visible=l.slice(view.vPage*pageSize,(view.vPage+1)*pageSize);
   const pager=l.length>pageSize?`<div class="row" style="justify-content:space-between;margin-top:12px"><span class="note" style="margin:0">Página ${view.vPage+1} de ${pages} · ${l.length} lançamentos</span><span class="row" style="flex:none;gap:6px"><button class="ghost sm" data-act="vPage" data-p="${view.vPage-1}"${view.vPage===0?' disabled':''}>Anterior</button><button class="ghost sm" data-act="vPage" data-p="${view.vPage+1}"${view.vPage>=pages-1?' disabled':''}>Próxima</button></span></div>`:'';
-  return h+(visible.length?visible.map(vdCard).join(''):'<div class="empty">'+(sv==='rec'?'Nenhum valor a receber.':'Nenhuma venda '+(sv==='dia'?'hoje.':'neste mês.'))+'</div>')+pager;
+  return h+(visible.length?visible.map(v=>vdCard(v,historical&&sv==='rec'?pending.find(item=>item.v===v):null)).join(''):'<div class="empty">'+(sv==='rec'?'Nenhum valor a receber.':'Nenhuma venda '+(sv==='dia'?'hoje.':'neste mês.'))+'</div>')+pager;
 }

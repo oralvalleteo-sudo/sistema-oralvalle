@@ -2464,6 +2464,12 @@ html[data-ov-mode="light"] .ov-ag-status-options label:has(input[type="radio"]:c
 html[data-ov-mode="light"] .ov-ag-status-options label:focus-within{
   outline:2px solid #f47700;outline-offset:2px;
 }
+
+.ov-content .nexo-data-fold > summary {
+  color: var(--text, #273444) !important;
+  -webkit-text-fill-color: currentColor !important;
+  opacity: 1;
+}
 /* nexodent-clean.css */
 /* NexoDent 148 — refinamento visual. Somente apresentação; não altera fluxos. */
 html[data-ov-mode] {

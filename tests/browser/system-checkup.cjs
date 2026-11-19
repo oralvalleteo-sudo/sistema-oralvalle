@@ -93,12 +93,26 @@ assert.equal(Number((await db.query("select count(*) n from sales where kind='ob
 assert.equal(Number((await db.query("select count(*) n from receipts where kind='object'")).rows[0].n),1);
 assert.equal(Number((await db.query("select count(*) n from patient_evolutions where kind='object'")).rows[0].n),clinicalHistoryBefore+1);
 console.log('Pagamento parcial do orçamento mantém dois procedimentos pendentes; conclusão clínica explícita não duplica venda nem recebimento.');
+await db.exec(`create function public.nexodent_evolution_status(p_clinic uuid,p_record_id text)
+ returns jsonb language sql as $$ select '{"is_finalized":false}'::jsonb $$;`);
 // Item direto do orçamento: o botão dispensa cadastro prévio de tratamento.
 const salesBeforeDirect=Number((await db.query("select count(*) n from sales where kind='object'")).rows[0].n),receiptsBeforeDirect=Number((await db.query("select count(*) n from receipts where kind='object'")).rows[0].n);
-await page.evaluate(()=>{const p=db.p.find(p=>p.nome==='Novo paciente sintético'),o=p.orcs.find(o=>o.id==='staff-budget'),it={id:'direct-item',proc:'Item direto sintético',valor:'100',dt:'staff-dentist',dente:'25'};o.itens.push(it);obLaunch(p,it,100,75,'Pix',tdy(),0);save();render()});await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);await page.locator('.nexo-pending-procedures > summary').click();await page.waitForFunction(()=>document.querySelector('iframe[title="Odontograma anatômico"]')?.contentDocument?.querySelector('[data-tooth="25"][data-clinical-status="a_realizar"]'));const direct=page.locator('[data-act="trbaixa"][data-item="direct-item"]');assert.equal(await direct.isVisible(),true);page.once('dialog',dialog=>dialog.dismiss());await direct.click();assert.equal(Number((await db.query("select count(*) n from treatments where dados->>'oiid'='direct-item'")).rows[0].n),0);page.once('dialog',dialog=>dialog.accept());await direct.click();await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+await page.evaluate(()=>{const p=db.p.find(p=>p.nome==='Novo paciente sintético'),o=p.orcs.find(o=>o.id==='staff-budget'),it={id:'direct-item',proc:'Item direto sintético',valor:'100',dt:'staff-dentist',dente:'25'};o.itens.push(it);obLaunch(p,it,100,75,'Pix',tdy(),0);save();render()});await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);await page.locator('.nexo-pending-procedures > summary').click();await page.waitForFunction(()=>document.querySelector('iframe[title="Odontograma anatômico"]')?.contentDocument?.querySelector('[data-tooth="25"][data-clinical-status="a_realizar"]'));const direct=page.locator('[data-act="trbaixa"][data-item="direct-item"]');assert.equal(await direct.isVisible(),true);page.once('dialog',dialog=>dialog.dismiss());await direct.click();assert.equal(Number((await db.query("select count(*) n from treatments where dados->>'oiid'='direct-item'")).rows[0].n),0);const toothChart=page.frameLocator('iframe[title="Odontograma anatômico"]');
+await toothChart.locator('[data-tooth="25"]').evaluate(el=>el.click());
+page.once('dialog',dialog=>dialog.accept());
+await toothChart.getByRole('button',{name:'Dar baixa',exact:true}).evaluate(el=>el.click());await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
 assert.equal(Number((await db.query("select count(*) n from treatments where dados->>'oiid'='direct-item' and dados->>'status'='Concluído'")).rows[0].n),1);assert.equal(Number((await db.query("select count(*) n from sales where kind='object'")).rows[0].n),salesBeforeDirect+1);assert.equal(Number((await db.query("select count(*) n from receipts where kind='object'")).rows[0].n),receiptsBeforeDirect+1);assert.equal((await db.query("select dados->>'status' status from treatments where dados->>'id'='staff-treatment-2'")).rows[0].status,'Pendente');assert.equal(await direct.count(),0);console.log('Conclusão direta no orçamento: apenas item escolhido, cancelamento sem alteração e pagamentos preservados.');
 await page.waitForFunction(()=>document.querySelector('iframe[title="Odontograma anatômico"]')?.contentDocument?.querySelector('[data-tooth="25"][data-clinical-status="finalizado"]'));
-const chart=page.frameLocator('iframe[title="Odontograma anatômico"]');await chart.locator('[data-tooth="25"]').evaluate(el=>el.click());assert.equal(await chart.locator('#entries .entry').count(),1);assert.equal(await chart.locator('#entries .entry button').count(),0);await chart.locator('#notes').fill('Observação manual sintética preservada');await chart.locator('#saveNotes').evaluate(el=>el.click());await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);const manual=await page.evaluate(()=>db.p.find(p=>p.nome==='Novo paciente sintético').odo.__nexoVisual);assert.equal(manual.notes['25'],'Observação manual sintética preservada');assert.equal(manual.linkedRecords,undefined);assert.equal(Object.keys(manual.records).length,0);console.log('Odontograma: orçamento marca dente pendente; conclusão clínica atualiza o estado; projeção não é salva como marcação manual e observações permanecem.');
+const chart=page.frameLocator('iframe[title="Odontograma anatômico"]');await chart.locator('[data-tooth="25"]').evaluate(el=>el.click());assert.equal(await chart.locator('#entries .entry').count(),1);assert.equal(await chart.locator('#entries .entry button').count(),1);assert.equal(await chart.getByRole('button',{name:'Editar baixa'}).count(),1);assert.equal(await chart.locator('#price').count(),0);await chart.locator('#notes').fill('Observação manual sintética preservada');await chart.locator('#saveNotes').evaluate(el=>el.click());await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);const manual=await page.evaluate(()=>db.p.find(p=>p.nome==='Novo paciente sintético').odo.__nexoVisual);assert.equal(manual.notes['25'],'Observação manual sintética preservada');assert.equal(manual.linkedRecords,undefined);assert.equal(Object.keys(manual.records).length,0);console.log('Odontograma: orçamento marca dente pendente; conclusão clínica atualiza o estado; projeção não é salva como marcação manual e observações permanecem.');
+
+await chart.getByRole('button',{name:'Editar baixa'}).evaluate(el=>el.click());
+const completion=page.getByRole('dialog',{name:'Editar baixa'});
+await completion.getByLabel('Descrição da evolução').fill('Descrição da baixa corrigida');
+await completion.getByRole('button',{name:'Salvar baixa'}).click();
+await completion.waitFor({state:'hidden'});
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+assert.equal(Number((await db.query("select count(*) n from patient_evolutions where dados->>'txt'='Descrição da baixa corrigida'")).rows[0].n),1);
+assert.equal(Number((await db.query("select count(*) n from receipts where kind='object'")).rows[0].n),receiptsBeforeDirect+1);
 
 // Escolher receitas não deve recolher o grupo nem abrir documentos de outro paciente.
 await page.locator('[data-act="tab"][data-t="arquivos"]').click();const prescriptionFold=page.locator('.ov-doc-fold[data-doc-fold="Receituários e Atestados"]');await prescriptionFold.locator('summary').first().click();for(const model of ['long','peq','imp','perio','livre']){await page.locator('#rxModelo').selectOption(model);assert.equal(await prescriptionFold.evaluate(el=>el.open),true);assert.equal(await page.locator('#rxTexto').isVisible(),true);assert.equal(await page.locator('#rxModelo').inputValue(),model);if(model!=='livre')assert.ok((await page.locator('#rxTexto').inputValue()).length>0)}await page.locator('#rxDent').selectOption('staff-dentist');assert.equal(await prescriptionFold.evaluate(el=>el.open),true);await prescriptionFold.locator('summary').first().click();await page.evaluate(()=>render());assert.equal(await prescriptionFold.evaluate(el=>el.open),false);await prescriptionFold.locator('summary').first().click();await page.evaluate(()=>{view.id=db.p.find(p=>p.nome!=='Novo paciente sintético').id;render()});assert.equal(await prescriptionFold.evaluate(el=>el.open),false);console.log('Receituário: todos os modelos permanecem abertos e visíveis; recolhimento manual e troca de paciente respeitados.');
@@ -135,8 +149,6 @@ assert.equal(sale.dados.dt,'staff-dentist');
 assert.equal((await db.query("select dados from receipts where parent_id=$1 and kind='object'",[sale.id])).rows[0].dados.valor,100);
 assert.equal(Number((await db.query("select count(*) n from budgets where kind='object'")).rows[0].n),countBeforeOrtho);
 console.log('Ortodontia: manutenção com dentista executor, recebimento parcial e persistência sem orçamento.');
-await db.exec(`create function public.nexodent_evolution_status(p_clinic uuid,p_record_id text)
- returns jsonb language sql as $$ select '{"is_finalized":false}'::jsonb $$;`);
 await db.query('update clinic_members set admin=true where clinic_id=$1 and user_id=$2',[C,U]);
 await page.reload();
 await page.locator('.ov-sidebar [data-act="nav"][data-t="pac"]').first().click();
@@ -154,5 +166,35 @@ assert.equal(cancelled.txt,recorded.txt);
 assert.equal((await db.query('select id from sales where id=$1',[sale.id])).rows.length,0);
 assert.equal((await db.query('select id from receipts where parent_id=$1',[sale.id])).rows.length,0);
 console.log('Ortodontia: cancelamento administrativo preserva a evolução e retira o financeiro vinculado.');
+// A taxa editada no atendimento vinculado aparece no mês do recebimento e nas métricas.
+await page.evaluate(()=>{
+ const p=db.p.find(p=>p.nome==='Novo paciente sintético');
+ const o=p.orcs.find(o=>o.id==='staff-budget');
+ o.itens.push({id:'fee-test-item',proc:'Procedimento histórica',valor:'100',dt:'staff-dentist'});
+ db.pr.push({id:'fee-proc',nome:'Procedimento com preço',preco:'135'});
+ view.h='pac';view.tab='orc';view.id=p.id;view.orcOpen={[o.id]:true};render();
+});
+const procedure=page.locator('input[data-o="staff-budget"][data-f="proc"]').last();
+await procedure.fill('Procedimento com preço');
+await page.getByRole('option',{name:'Procedimento com preço',exact:true}).click();
+assert.match(await page.locator('input[data-o="staff-budget"][data-f="valor"]').last().inputValue(),/135,00/);
+await page.evaluate(()=>{
+ const p=db.p.find(p=>p.nome==='Novo paciente sintético');
+ view.h='vd';view.id=null;
+ view.pre={oid:'staff-budget',ii:'fee-test-item',pid:p.id,dt:'staff-dentist',proc:'Procedimento com preço',valor:135};
+ render();
+});
+await page.locator('#vfm').selectOption('Crédito 2x');
+await page.locator('#ovFeeOverride').fill('4');
+await page.locator('#vdt').fill('2025-09-18');
+await page.getByRole('button',{name:'Dar baixa e lançar venda'}).click();
+await page.locator('#sales-month').fill('2025-09');
+await page.getByText('Taxas da operadora no mês: R$ 5,40').waitFor();
+await page.getByText('Recebimento líquido do mês: R$ 129,60').waitFor();
+await page.getByText('Conferência mensal de comissões',{exact:true}).click();
+assert.ok(await page.getByText('Comissões geradas',{exact:true}).isVisible());
+await page.locator('[data-act="ovFinDetail"][data-t="received"]').click();
+assert.match(await page.locator('#ov-fin-detail-dialog').innerText(),/18\/09\/2025/);
+await page.getByRole('button',{name:'Fechar',exact:false}).click();
 await page.locator('[data-act="logout"]').first().click();await page.locator('#cloudEmail').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>window.OralCloud.session),null);assert.equal(await page.locator('.ov-sidebar').count(),0);assert.deepEqual(errors,[]);console.log('Aplicação real: entrada, cadastro e persistência de paciente, agendamento, navegação de módulos, central interna e saída sem dados clínicos visíveis.');
 }finally{if(browser)await browser.close();await db.close();}})().catch(error=>{console.error(error);process.exit(1)});
