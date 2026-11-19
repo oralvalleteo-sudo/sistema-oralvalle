@@ -5,37 +5,81 @@ function ovFeeRates(){
   const rates=db.taxasPagamento;
   return rates&&typeof rates==='object'&&!Array.isArray(rates)?rates:{};
 }
-function ovFeePct(forma){
-  const rates=ovFeeRates();const key=forma==='Crédito'?'Crédito à vista':forma;
-  const n=Number(rates[key]);return Number.isFinite(n)&&n>=0&&n<=100?n:0;
+function ovFeeMethod(forma){
+  const key=String(forma||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+  if(/pix/.test(key))return 'Pix';
+  if(/debito/.test(key))return 'Débito';
+  if(/credito/.test(key)){
+    const parcels=key.match(/\b(\d{1,2})\s*(?:x|parcelas?)\b/);
+    if(parcels&&Number(parcels[1])>=2&&Number(parcels[1])<=12)return 'Crédito '+Number(parcels[1])+'x';
+    return /parcelad/.test(key)||parcels?'Crédito parcelado':'Crédito à vista';
+  }
+  return forma;
+}
+function ovFeeReadRate(raw){
+  if(raw==null||String(raw).trim()==='')return null;
+  const value=Number(String(raw).trim().replace(',','.'));
+  return Number.isFinite(value)&&value>=0&&value<=100?value:null;
+}
+function ovFeeConfiguredRate(forma){
+  const key=ovFeeMethod(forma),rates=ovFeeRates();
+  return ovFeeReadRate(rates[key]??(key==='Crédito à vista'?rates['Crédito']:null));
+}
+function ovFeePct(forma){return ovFeeConfiguredRate(forma)??0}
+function ovFeeApplies(forma){return /^(Pix|Débito|Crédito)/.test(ovFeeMethod(forma)||'')}
+function ovFeeNeedsReview(p){
+  return ovFeeApplies(p.forma)&&ovFeeTax(p)===0&&(p.taxaOrigem==='sem_configuracao'||!p.taxaOrigem&&!(ovFeeReadRate(p.taxaPct)>0));
 }
 function ovFeeMake(valor,forma,data,id,override){
-  const bruto=r2(Number(valor));const raw=override===undefined||override===null||override===''?ovFeePct(forma):Number(override);
-  const taxaPct=Number.isFinite(raw)&&raw>=0&&raw<=100?raw:0;
+  const bruto=r2(Number(valor)), manual=ovFeeReadRate(override), configured=ovFeeConfiguredRate(forma);
+  const taxaPct=manual??configured??0;
   const taxaValor=r2(bruto*taxaPct/100);
-  return {id:id||uid(),data,valor:bruto,forma,taxaPct,taxaValor,liquido:r2(bruto-taxaValor)};
+  const taxaOrigem=manual!==null?'manual':configured!==null?'configurada':'sem_configuracao';
+  return {id:id||uid(),data,valor:bruto,forma,taxaPct,taxaValor,taxaOrigem,liquido:r2(bruto-taxaValor)};
 }
 function ovFeeTax(p){
-  const amount=p.taxaValor, pct=Number(p.taxaPct);
-  if(amount!=null&&amount!==''&&Number.isFinite(Number(amount)))return Number(amount);
-  return Number.isFinite(pct)&&pct>=0&&pct<=100?r2(num(p.valor)*pct/100):0;
+  const raw=p.taxaValor,amount=Number(String(raw??'').trim().replace(',','.'));
+  const pct=ovFeeReadRate(p.taxaPct);
+  if(raw!=null&&String(raw).trim()!==''&&Number.isFinite(amount)&&amount>=0&&(amount>0||!pct))return amount;
+  return pct===null?0:r2(num(p.valor)*pct/100);
 }
 function ovFeeNet(p){return r2(num(p.valor)-ovFeeTax(p))}
-function ovFeeSummary(p){return `<small class="note" style="display:block;margin:3px 0">Taxa ${brl(ovFeeTax(p))} (${Number(p.taxaPct)||0}%) · <b>Líquido ${brl(ovFeeNet(p))}</b></small>`}
+function ovFeeSummary(p){return `<small class="note" style="display:block;margin:3px 0">Taxa ${brl(ovFeeTax(p))} (${ovFeeReadRate(p.taxaPct)??0}%) · <b>Líquido ${brl(ovFeeNet(p))}</b></small>`}
 function ovFeeOptions(sel){return OV_FEE_FORMS.map(f=>`<option${f===sel?' selected':''}>${f}</option>`).join('')}
 function ovFeeSettings(){
  const rows=OV_FEE_FORMS.filter(f=>f!=='Crédito'&&f!=='Outro').map(f=>`<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0"><span>${esc(f)}</span><span style="display:flex;align-items:center;gap:5px"><input type="number" min="0" max="100" step="0.01" inputmode="decimal" data-fee-rate="${esc(f)}" value="${ovFeePct(f)}" style="max-width:100px">%</span></label>`).join('');
  return `<details class="card" style="margin-bottom:12px"><summary style="cursor:pointer;font-weight:700">⚙️ Configurar taxas das formas de pagamento</summary><p class="note">Taxas padrão em %. Edite e salve. Cada recebimento mantém a taxa aplicada na data, mesmo após alterações.</p><div style="max-width:500px">${rows}</div><button class="sm" data-act="ovFeeSave" type="button" style="margin-top:10px">Salvar taxas</button></details>`;
 }
-function ovFeeSalePreview(valor){const pct=ovFeePct(OV_FEE_FORMS[0]), fee=r2(num(valor)*pct/100);return `<div class="row" style="align-items:flex-end;margin-top:7px"><div><label for="ovFeeOverride">Taxa desta venda (%) — editável</label><input id="ovFeeOverride" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${pct}"></div><div id="ovFeePreview" role="status" class="note" style="margin:0">Taxa: ${brl(fee)} · Líquido da clínica: ${brl(num(valor)-fee)}</div></div>`}
+function ovFeeSalePreview(valor){const pct=ovFeeConfiguredRate('Pix'), fee=r2(num(valor)*(pct??0)/100);return `<div class="row" style="align-items:flex-end;margin-top:7px"><div><label for="ovFeeOverride">Taxa desta venda (%) — editável</label><input id="ovFeeOverride" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="${pct===null?'Sem taxa configurada':pct+'% (padrão)'}"></div><div id="ovFeePreview" role="status" class="note" style="margin:0">${pct===null?'Pix sem taxa configurada. Informe a taxa desta operação.':'Taxa: '+brl(fee)+' · Líquido da clínica: '+brl(num(valor)-fee)}</div></div>`}
 function ovFeeUpdatePreview(reset){const f=document.getElementById('vfm'),a=document.getElementById('vrc'),t=document.getElementById('ovFeeOverride'),box=document.getElementById('ovFeePreview');if(!f||!a||!t||!box)return;
- if(reset)t.value=String(ovFeePct(f.value));const n=t.value===''?ovFeePct(f.value):Number(t.value);const val=num(a.value);if(!Number.isFinite(n)||n<0||n>100){box.textContent='Taxa inválida (0 a 100%)';return}const fee=r2(val*n/100);box.textContent='Taxa: '+brl(fee)+' · Líquido da clínica: '+brl(val-fee);
+ const configured=ovFeeConfiguredRate(f.value);
+ if(reset){t.value='';t.placeholder=configured===null?'Sem taxa configurada':configured+'% (padrão)';}
+ const n=t.value===''?configured:ovFeeReadRate(t.value),val=num(a.value);
+ if(t.validity.badInput||(t.value!==''&&n===null)){box.textContent='Taxa inválida (0 a 100%)';return}
+ if(n===null&&ovFeeApplies(f.value)){box.textContent='Sem taxa configurada. Informe a taxa desta operação.';return}const fee=r2(val*(n??0)/100);box.textContent='Taxa: '+brl(fee)+' · Líquido da clínica: '+brl(val-fee);
 }
-document.addEventListener('input',e=>{if(e.target.matches('#vrc,#ovFeeOverride'))ovFeeUpdatePreview(false)});
-document.addEventListener('change',e=>{if(e.target.matches('#vfm'))ovFeeUpdatePreview(true)});
+function ovFeeReceiptPreview(forma,valor){
+  const rate=ovFeeConfiguredRate(forma);
+  if(rate===null&&ovFeeApplies(forma))return 'Sem taxa configurada para '+forma+'.';
+  const fee=r2(num(valor)*(rate??0)/100);
+  return 'Taxa: '+brl(fee)+' · Líquido da clínica: '+brl(num(valor)-fee);
+}
+function ovFeeUpdateReceiptPreview(field){
+  const row=field.closest('[data-rcv-row]');
+  if(!row)return;
+  row.querySelector('[data-rcv-fee]').textContent=ovFeeReceiptPreview(row.querySelector('[data-rcvf]').value,row.querySelector('[data-rcv]').value);
+}
+document.addEventListener('input',e=>{
+  if(e.target.matches('#vrc,#ovFeeOverride'))ovFeeUpdatePreview(false);
+  if(e.target.matches('[data-rcv]'))ovFeeUpdateReceiptPreview(e.target);
+});
+document.addEventListener('change',e=>{
+  if(e.target.matches('#vfm'))ovFeeUpdatePreview(true);
+  if(e.target.matches('[data-rcvf]'))ovFeeUpdateReceiptPreview(e.target);
+});
 function ovFeeSaveAction(){if(typeof ME!=='undefined'&&ME&&!ME.admin){toast('Somente administradores podem alterar as taxas da clínica.');return}const r={...ovFeeRates()};for(const el of document.querySelectorAll('[data-fee-rate]')){const n=Number(el.value);if(el.value===''||!Number.isFinite(n)||n<0||n>100){toast('Informe taxas entre 0 e 100%');return}r[el.dataset.feeRate]=n}db.taxasPagamento=r;save();toast('Taxas de pagamento salvas');render()}
 
-document.addEventListener('DOMContentLoaded',()=>ovFeeUpdatePreview(true));
+
 
 /* Configuracoes financeiras: parametros armazenados separadamente das taxas por transacao. */
 function ovFinanceSettings(){
@@ -56,7 +100,7 @@ function ovFinanceSettings(){
  const field=(key,label,defaultValue='0')=>`<label>${label}<input type="number" min="0" step="0.01" inputmode="decimal" data-fin-key="${key}" value="${esc(cfg[key]??defaultValue)}"></label>`;
  const mode=key=>`<label>Baixa no Contas a Receber<select data-fin-key="${key}_baixa"><option value="manual" ${cfg[key+'_baixa']!=='auto'?'selected':''}>Manual — confirmar recebimento</option><option value="auto" ${cfg[key+'_baixa']==='auto'?'selected':''}>Automática — na data prevista</option></select><small>A opção automática é salva para integração futura. A baixa ainda precisa ser confirmada manualmente.</small></label>`;
  const days=(key,label='Prazo de recebimento (dias)')=>field(key+'_dias',label);
- const rate=(key,label='Taxa (%)')=>`<label>${label}<input type="number" min="0" max="100" step="0.01" inputmode="decimal" data-fee-rate="${esc(key)}" value="${ovFeePct(key)}"></label>`;
+ const rate=(key,label='Taxa (%)')=>`<label>${label}<input type="number" min="0" max="100" step="0.01" inputmode="decimal" data-fee-rate="${esc(key)}" value="${ovFeeConfiguredRate(key)??''}" placeholder="Sem taxa configurada"></label>`;
  const methods=options.map(([key,label,description])=>`<button type="button" class="ov-fin-tab${key===selectedTab?' is-active':''}" aria-pressed="${key===selectedTab}" data-fin-tab="${key}"><strong>${label}</strong><small>${description}</small></button>`).join('');
  let panels=card('Dinheiro','Dinheiro',grid(mode('dinheiro')));
  panels+=card('Pix','PIX',grid(rate('Pix')+mode('pix')));
@@ -80,7 +124,12 @@ function ovFinanceSaveAction(){
  if(typeof ME!=='undefined'&&ME&&!ME.admin){toast('Somente administradores podem alterar as configurações financeiras.');return}
  const next={...(db.financeiroConfig||{})};const rates={...ovFeeRates()};
  for(const el of document.querySelectorAll('[data-fin-key]')){let value=el.value;if(el.type==='number'){value=Number(value);if(!Number.isFinite(value)||value<0){toast('Confira os valores financeiros');return}}next[el.dataset.finKey]=value}
- for(const el of document.querySelectorAll('.cfg-financeiro [data-fee-rate]')){const n=Number(el.value);if(el.value===''||!Number.isFinite(n)||n<0||n>100){toast('Taxas devem ficar entre 0% e 100%');return}rates[el.dataset.feeRate]=n}
+ for(const el of document.querySelectorAll('.cfg-financeiro [data-fee-rate]')){
+   const n=ovFeeReadRate(el.value);
+   if(el.validity.badInput||el.value!==''&&n===null){toast('Taxas devem ficar entre 0% e 100%');return}
+   if(el.dataset.feeRate==='Crédito à vista')delete rates['Crédito'];
+   if(n===null)delete rates[el.dataset.feeRate];else rates[el.dataset.feeRate]=n;
+ }
  db.financeiroConfig=next;db.taxasPagamento=rates;save();toast('Configurações financeiras salvas');render();
 }
 

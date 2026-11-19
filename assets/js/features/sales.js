@@ -25,20 +25,25 @@ function ovFinDetail(type){
   const selected=types[type];if(!selected)return;
   const [title,items,kind]=selected;
   const amount=kind==='payment'?payments.reduce((s,x)=>s+num(x.p.valor),0):kind==='pending'?pending.reduce((s,item)=>s+item.balance,0):kind==='commission'?sum(monthly,'rep'):kind==='net'?sum(monthly,'valor')-sum(monthly,'rep'):sum(items,'valor');
-  const headers=kind==='payment'?['Data do recebimento','Paciente','Procedimento','Forma','Recebido']:kind==='pending'?['Data da venda','Paciente','Procedimento','Recebido','Pendente']:kind==='commission'?['Data','Paciente','Dentista','Procedimento','Comissão']:kind==='net'?['Data','Paciente','Venda','Comissão','Sobra']:['Data','Paciente','Procedimento','Valor'];
+  const headers=kind==='payment'?['Data do recebimento','Paciente','Procedimento','Forma','Recebido','Taxa','Líquido']:kind==='pending'?['Data da venda','Paciente','Procedimento','Recebido','Pendente']:kind==='commission'?['Data','Paciente','Dentista','Procedimento','Comissão']:kind==='net'?['Data','Paciente','Venda','Comissão','Sobra']:['Data','Paciente','Procedimento','Valor'];
   // A exportação reutiliza exatamente os dados apresentados na janela.
   const reportRows=items.map(item=>{
     const v=kind==='payment'||kind==='pending'?item.v:item;
-    if(kind==='payment')return [fd(item.p.data),pName(v.pid),v.proc||'Atendimento',item.p.forma||'—',brl(item.p.valor)];
+    if(kind==='payment')return [fd(item.p.data),pName(v.pid),v.proc||'Atendimento',item.p.forma||'—',brl(item.p.valor),brl(ovFeeTax(item.p)),brl(ovFeeNet(item.p))];
     if(kind==='pending')return [fd(v.data),pName(v.pid),v.proc||'Atendimento',brl(item.paid),brl(item.balance)];
     if(kind==='commission')return [fd(v.data),pName(v.pid),dName(v.dt),v.proc||'Atendimento',brl(v.rep)];
     if(kind==='net')return [fd(v.data),pName(v.pid),brl(v.valor),brl(v.rep),brl(num(v.valor)-num(v.rep))];
     return [fd(v.data),pName(v.pid),v.proc||'Atendimento',brl(v.valor)];
   });
-  const rows=reportRows.map(row=>`<tr>${row.map(value=>`<td>${esc(value)}</td>`).join('')}</tr>`).join('');
+  const canEditFees=kind==='payment'&&ME?.admin;
+  const rows=reportRows.map((row,index)=>{
+    const payment=canEditFees?payments[index]:null;
+    const action=payment&&ovFeeApplies(payment.p.forma)?`<button type="button" class="ghost sm" data-act="ovFeeEdit" data-id="${esc(payment.v.id)}" data-pg="${esc(payment.p.id)}">Corrigir taxa</button>`:'';
+    return `<tr>${row.map(value=>`<td>${esc(value)}</td>`).join('')}${canEditFees?`<td>${action}</td>`:''}</tr>`;
+  }).join('');
   window.ovFinCurrentReport={title,headers,rows:reportRows,total:brl(amount),count:items.length,period:type==='today'?tdy():month};
   const dialog=document.getElementById('ov-fin-detail-dialog');if(!dialog)return;
-  dialog.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="ov-fin-detail-title" style="margin:0">${esc(title)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="sm" data-act="ovFinPdf">⬇ Gerar PDF</button><form method="dialog"><button type="submit" class="ghost sm">✕ Fechar</button></form></div></div><p class="note" style="margin:12px 0">${items.length} registro(s) · Total: <strong>${brl(amount)}</strong></p><div class="ov-fin-detail-scroll"><table class="ov-fin-detail-table"><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length}" style="padding:16px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div><p style="text-align:right"><strong>Total: ${brl(amount)}</strong></p>`;
+  dialog.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="ov-fin-detail-title" style="margin:0">${esc(title)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="sm" data-act="ovFinPdf">⬇ Gerar PDF</button><form method="dialog"><button type="submit" class="ghost sm">✕ Fechar</button></form></div></div><p class="note" style="margin:12px 0">${items.length} registro(s) · Total: <strong>${brl(amount)}</strong></p><div class="ov-fin-detail-scroll"><table class="ov-fin-detail-table"><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}${canEditFees?'<th scope="col">Ação</th>':''}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length+Number(Boolean(canEditFees))}" style="padding:16px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div><p style="text-align:right"><strong>Total: ${brl(amount)}</strong></p>`;
   if(!dialog.open)dialog.showModal();
 }
 async function ovFinPdf(){
@@ -49,7 +54,7 @@ async function ovFinPdf(){
     const {jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
     const clean=x=>String(x==null?'':x).replace(/[−–—]/g,'-').replace(/[^\u0000-\u00FF]/g,'?');
-    const widths=report.headers.length===4?[31,77,126,39]:[31,65,74,58,39];
+    const widths=report.headers.length===7?[28,49,65,36,32,30,33]:report.headers.length===4?[31,77,126,39]:[31,65,74,58,39];
     const left=12,right=285;
     let y=15,page=1;
     function heading(){
@@ -91,13 +96,14 @@ function fillRep(src){
   $('vr').value=c.rep?c.rep.toFixed(2):'';
   const rc=$('vrc');if(!rc.dataset.touched)rc.value=vv?vv.toFixed(2):'';
   fmtMoney(document);
+  ovFeeUpdatePreview(false);
 }
 function vdCard(x,snapshot){
   const rc=snapshot?snapshot.paid:recebido(x),sd=snapshot?snapshot.balance:saldoV(x),st=sd<=0?['Pago','stt-ok']:rc>0?['Parcial','']:['A receber','stt-wr'];
   return `<div class="card"><div class="ag"><span><strong>${fd(x.data)} · ${esc(pName(x.pid))}</strong><br>${esc(x.proc||'Atendimento')} · ${esc(dName(x.dt))}</span><span style="text-align:right"><strong>${brl(x.valor)}</strong><br><span class="note" style="margin:0">Comissão ${brl(x.rep)}</span></span></div>
   <div class="row" style="margin:8px 0 4px;flex-wrap:wrap"><span class="badge ${st[1]}" style="flex:none">${st[0]}</span><span class="note" style="margin:0">Recebido ${brl(rc)} de ${brl(x.valor)}</span></div>
   ${snapshot?'':x.pg.map(p=>`<div class="pg"><span>${fd(p.data)} · ${esc(p.forma)}${ovFeeSummary(p)}</span><span>${brl(p.valor)} <button class="danger sm" data-act="rmpg" data-id="${esc(x.id)}" data-pg="${esc(p.id)}" aria-label="Remover recebimento">${delArm===p.id?'Confirmar':'×'}</button></span></div>`).join('')}
-  ${!snapshot&&sd>0?`<div class="row" style="margin-top:8px"><input data-rcv="${esc(x.id)}" inputmode="decimal" value="${sd.toFixed(2)}" aria-label="Valor recebido"><select data-rcvf="${esc(x.id)}" aria-label="Forma de pagamento">${ovFeeOptions()}</select><button class="sm" data-act="rcv" data-id="${esc(x.id)}">Receber</button></div>`:''}
+  ${!snapshot&&sd>0?`<div data-rcv-row style="margin-top:8px"><div class="row"><input data-rcv="${esc(x.id)}" inputmode="decimal" value="${sd.toFixed(2)}" aria-label="Valor recebido"><select data-rcvf="${esc(x.id)}" aria-label="Forma de pagamento">${ovFeeOptions()}</select><button class="sm" data-act="rcv" data-id="${esc(x.id)}">Receber</button></div><p class="note" role="status" data-rcv-fee style="margin:4px 0 0">${esc(ovFeeReceiptPreview('Pix',sd))}</p></div>`:''}
   ${snapshot?'':`<button class="danger sm" data-act="rmvd" data-id="${esc(x.id)}" style="margin-top:8px">${delArm===x.id?'Toque de novo para excluir':'Excluir venda'}</button>`}</div>`;
 }
 function vdHtml(){
@@ -107,9 +113,13 @@ function vdHtml(){
   const recMes=payments.reduce((total,{p})=>total+num(p.valor),0);
   const aRec=pending.reduce((total,item)=>total+item.balance,0);
   const taxasMes=payments.reduce((total,{p})=>total+ovFeeTax(p),0);
+  const feesToReview=payments.filter(({p})=>ovFeeNeedsReview(p)).length;
   let h=`<div class="card" data-ro-ok style="margin:0 0 12px"><label for="sales-month">Mês de referência</label><input id="sales-month" type="month" max="${t.slice(0,7)}" value="${esc(m)}"></div>`+
     '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">'+ovFinCard('Vendas de hoje',sum(dia,'valor'),dia.length+' atendimento(s)','today')+ovFinCard('Vendas do mês',sum(mes,'valor'),mes.length+' atendimento(s)','month')+ovFinCard('Recebido no mês',recMes,'','received')+ovFinCard(historical?'A receber no fim do mês':'A receber de pacientes',aRec,'','pending')+ovFinCard('Comissões do mês',sum(mes,'rep'),'','commission')+ovFinCard('Sobra após comissões (mês)',sum(mes,'valor')-sum(mes,'rep'),'','net')+'</div>';
-  h+=`<div class="card" style="margin:10px 0"><b>Taxas da operadora no mês: ${brl(taxasMes)}</b><br><b>Recebimento líquido do mês: ${brl(r2(recMes-taxasMes))}</b><p class="note" style="margin:4px 0 0">Recebido bruto menos taxas registradas. Não representa saldo bancário conciliado.</p></div>`;
+  h+=`<div class="card" style="margin:10px 0"><b>Taxas da operadora no mês: ${brl(taxasMes)}</b><br><b>Recebimento líquido do mês: ${brl(r2(recMes-taxasMes))}</b><p class="note" style="margin:4px 0 0">Recebido bruto menos taxas registradas.</p>
+    ${feesToReview?`<p class="note">${feesToReview} recebimento(s) de Pix ou cartão com taxa zero ou sem taxa confirmada.</p>`:''}
+    ${payments.length?'<button type="button" class="ghost sm" data-act="ovFinDetail" data-t="received">Conferir taxas dos recebimentos</button> ':''}
+    ${ME?.admin?'<button type="button" class="ghost sm" data-act="cfgFinanceRates">Configurar taxas</button>':''}</div>`;
   h+='<dialog id="ov-fin-detail-dialog" aria-labelledby="ov-fin-detail-title" class="ov-fin-detail-dialog"></dialog>';
   const pts=db.p.filter(p=>!p.arq||p.id===pre.pid),dts=db.dt.filter(d=>d.ativo!==false||d.id===pre.dt);
   if(!pts.length||!dts.length)h+='<div class="empty">Cadastre ao menos um paciente e um dentista ativo para lançar vendas.</div>';

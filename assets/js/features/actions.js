@@ -542,8 +542,8 @@ const A={
     const proc=$('vpr').value.trim(),mm=comCalc(dtid,proc,vv,(view.pre&&view.pre.qtd)||1),data=$('vdt').value||tdy(),pid=$('vp').value;
     if(!pid){toast('Selecione o paciente');return}
     const override=$('ovFeeOverride'), rawPct=override?.value;
-    const pct=rawPct==null||rawPct===''?ovFeePct($('vfm').value):Number(rawPct);
-    if(rc>0&&(override?.validity.badInput||!Number.isFinite(pct)||pct<0||pct>100)){toast('Taxa inválida');return}
+    const pct=ovFeeReadRate(rawPct);
+    if(rc>0&&(override?.validity.badInput||rawPct&&pct===null)){toast('Taxa inválida');return}
     if(view.link?.oid){
       const p=db.p.find(p=>p.id===pid),o=p&&getO(p,view.link.oid),it=o?.itens.find(i=>i.id===view.link.ii);
       if(!it||view.link.pid!==pid){toast('Orçamento não encontrado para este paciente.');return}
@@ -577,6 +577,22 @@ const A={
     if(!(val>0)){toast('Informe o valor recebido');return}
     if(val>saldoV(v)+0.005){toast('Valor maior que o saldo ('+brl(saldoV(v))+')',3000);return}
     v.pg.push(ovFeeMake(val,f.value,tdy()));save();render();toast('Recebimento registrado')},
+  ovFeeEdit:(b,d)=>{
+    if(!ME?.admin)return;
+    const receipt=db.vd.find(v=>v.id===d.id)?.pg.find(p=>p.id===d.pg);
+    if(!receipt||!ovFeeApplies(receipt.forma))return;
+    const suggested=ovFeeNeedsReview(receipt)?ovFeeConfiguredRate(receipt.forma):ovFeeReadRate(receipt.taxaPct);
+    const input=prompt('Informe a taxa efetiva (%) do comprovante deste recebimento de '+brl(receipt.valor)+' em '+fd(receipt.data)+'.',suggested??'');
+    if(input===null)return;
+    const pct=ovFeeReadRate(input);
+    if(pct===null){toast('Informe uma taxa entre 0% e 100%.');return}
+    const {taxaPct,taxaValor,taxaOrigem,liquido}=ovFeeMake(num(receipt.valor),receipt.forma,receipt.data,receipt.id,pct);
+    if(!confirm('Registrar taxa de '+brl(taxaValor)+' para este recebimento? O valor pago pelo paciente permanece '+brl(receipt.valor)+'.'))return;
+    (receipt.taxaAjustes??=[]).push({em:new Date().toISOString(),por:ME.id,anterior:{taxaPct:receipt.taxaPct,taxaValor:receipt.taxaValor,taxaOrigem:receipt.taxaOrigem}});
+    Object.assign(receipt,{taxaPct,taxaValor,taxaOrigem,liquido});
+    save();render();ovFinDetail('received');toast('Taxa do recebimento atualizada.');
+  },
+  cfgFinanceRates:()=>{if(!ME?.admin)return;view.h='cfg';view.id=null;view.cfgTab='financeiro';render();topo()},
   rmpg:(b,d)=>arm(d.pg,()=>{const v=db.vd.find(x=>x.id===d.id);v.pg=v.pg.filter(p=>p.id!==d.pg);save();render()}),
   adddt:()=>{const n=$('dn').value.trim();if(!n){toast('Digite o nome do dentista');return}
     db.dt.push({id:uid(),nome:n,modo:$('dm').value,pct:($('dp').value||'0').replace(',','.'),base:$('dbs').value,ativo:true});save();render();toast('Dentista cadastrado')},
