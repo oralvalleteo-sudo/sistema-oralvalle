@@ -86,7 +86,7 @@ test('a failed clinic load keeps the app locked and retries reads without anothe
       },
     },
     $: name => elements.get(name), toast() {}, pmCardHtml() {}, bkHtml() {},
-    clearTimeout() {}, clearInterval() {}, setInterval() { return 1; }, idleT: null, topCl: () => ({ marca: 'Synthetic', sub: '' }),
+    clearTimeout() {}, setTimeout() { return 1; }, idleT: null, topCl: () => ({ marca: 'Synthetic', sub: '' }),
     esc: text => text, URLSearchParams, location: { hash: '', search: '' }, window: { addEventListener() {}, removeEventListener() {}, dispatchEvent() {} },
     CustomEvent: class CustomEvent { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
     A: {}, AUTH: { users: [] }, lastSaved: null, LOCKED: true, db: { initial: true }, migrate: value => value,
@@ -373,4 +373,58 @@ test('clinic loading reads independent tables concurrently with a safe limit', a
   await context.window.OralCloudData.load();
   assert.ok(maxActive > 1, 'table reads should overlap');
   assert.ok(maxActive <= 4, 'the adapter must not exceed four simultaneous table reads');
+});
+
+test('revision checks are spread out, back off on failure, and pause when hidden', async () => {
+  const integration = source('assets/js/supabase/integration.js');
+  const polling = integration.slice(integration.indexOf('  let syncTimer'), integration.indexOf('  const copy ='));
+  let now = 100000, id = 0, calls = 0, failing = false;
+  const timers = new Map();
+  const context = vm.createContext({
+    Math: Object.create(Math, { random: { value: () => 0.5 } }),
+    Date: { now: () => now },
+    setTimeout(callback, delay) { timers.set(++id, { callback, due: now + delay }); return id; },
+    clearTimeout(timer) { timers.delete(timer); },
+    document: { hidden: false, addEventListener() {} },
+    window: { addEventListener() {} },
+    console: { warn() {} },
+    LOCKED: false,
+    disposed: false,
+    OralCloudData: { currentRevision: () => '1' },
+    OralCloud: { clinicId: 'clinic', async request() {
+      calls++;
+      if (failing) throw Error('Offline');
+      return { revision: '1' };
+    } },
+  });
+  vm.runInContext(polling + '\nstartSync("clinic");', context);
+  const next = () => [...timers.entries()][0];
+  const fire = async () => {
+    const [timerId, { callback, due }] = next();
+    now = due;
+    timers.delete(timerId);
+    await callback();
+  };
+  assert.equal(next()[1].due - now, 10000);
+  await fire();
+  assert.equal(calls, 1);
+  vm.runInContext('onSyncVisible(); onSyncVisible();', context);
+  assert.equal(next()[1].due - now, 10000);
+  failing = true;
+  await fire();
+  assert.equal(next()[1].due - now, 18000);
+  vm.runInContext('document.hidden=true; onSyncVisible();', context);
+  assert.equal(timers.size, 0);
+  vm.runInContext('document.hidden=false; onSyncVisible();', context);
+  assert.equal(next()[1].due - now, 18000);
+  failing = false;
+  await fire();
+  assert.equal(next()[1].due - now, 10000);
+  now += 4000;
+  vm.runInContext('onSyncVisible(); onSyncVisible();', context);
+  assert.equal(next()[1].due - now, 750);
+  await fire();
+  assert.equal(calls, 4);
+  vm.runInContext('stopSync();', context);
+  assert.equal(timers.size, 0);
 });

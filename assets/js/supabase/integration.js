@@ -22,22 +22,50 @@
   let syncClinic = null;
   let syncSession = 0;
   let syncNotice = false;
-  const SYNC_INTERVAL_MS = 3000;
+  let syncDueAt = 0;
+  let syncLastCheck = 0;
+  let syncFailures = 0;
+  const SYNC_MIN_MS = 8000;
+  const SYNC_JITTER_MS = 4000;
+  const SYNC_FOCUS_COOLDOWN_MS = 3000;
+  const syncDelay = () => Math.min(60000, SYNC_MIN_MS * 2 ** syncFailures) + Math.random() * SYNC_JITTER_MS;
+  function cancelSyncTimer() {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+    syncDueAt = 0;
+  }
+  function scheduleSync(delay = syncDelay()) {
+    if (!syncClinic || document.hidden) return;
+    const due = Date.now() + delay;
+    if (syncTimer !== null && syncDueAt <= due) return;
+    cancelSyncTimer();
+    const session = syncSession;
+    syncDueAt = due;
+    syncTimer = setTimeout(async () => {
+      syncTimer = null;
+      syncDueAt = 0;
+      await syncTick();
+      if (session === syncSession) scheduleSync();
+    }, delay);
+  }
   const editing = () => {
     const el = document.activeElement;
     return !!(el && (el.matches?.('input, textarea, select, [contenteditable="true"]')));
   };
   function stopSync() {
-    clearInterval(syncTimer);
-    syncTimer = null;
+    cancelSyncTimer();
+    syncLastCheck = 0;
+    syncFailures = 0;
     syncSession++;
     syncRevision = null;
     syncClinic = null;
     syncNotice = false;
   }
   async function syncTick() {
-    if (syncBusy || disposed || LOCKED || !OralCloud.clinicId || document.hidden) return;
+    if (syncBusy || disposed || LOCKED || !syncClinic || syncClinic !== OralCloud.clinicId || document.hidden) return;
     syncBusy = true;
+    syncLastCheck = Date.now();
+    let failed = false;
     const clinicId = OralCloud.clinicId;
     const session = syncSession;
     try {
@@ -74,20 +102,29 @@
       render();
     } catch (error) {
       // A conexão pode oscilar: manter a tela e os dados atuais intactos.
+      failed = true;
       console.warn('[Oral Valle] Sincronização adiada:', error);
-    } finally { syncBusy = false; }
+    } finally {
+      if (session === syncSession) syncFailures = failed ? Math.min(3, syncFailures + 1) : 0;
+      syncBusy = false;
+    }
   }
   function startSync(clinicId) {
     stopSync();
     syncClinic = clinicId;
-    // Primeira leitura curta define a revisão após o carregamento inicial.
+    // Espalha as consultas de revisão para que as estações não consultem em bloco.
     syncRevision = OralCloudData.currentRevision();
-    syncTimer = setInterval(syncTick, SYNC_INTERVAL_MS);
+    scheduleSync();
     document.addEventListener('visibilitychange', onSyncVisible);
     window.addEventListener('online', onSyncVisible);
     window.addEventListener('focus', onSyncVisible);
   }
-  function onSyncVisible() { if (!document.hidden) syncTick(); }
+  function onSyncVisible() {
+    if (document.hidden) { cancelSyncTimer(); return; }
+    if (syncBusy) return;
+    if (syncFailures || Date.now() - syncLastCheck < SYNC_FOCUS_COOLDOWN_MS) { scheduleSync(); return; }
+    scheduleSync(250 + Math.random() * 1000);
+  }
 
   const copy = value => JSON.parse(JSON.stringify(value));
   const localToast = toast;
