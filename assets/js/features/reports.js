@@ -557,6 +557,14 @@
    else await addLabEvent(save.getAttribute('data-nx-lab-add'));
   }catch(err){alert('Laboratório: '+(err.message||err));btn.disabled=false;}
  },true);
+ document.addEventListener('change',e=>{
+  if(e.target?.id!=='nx-r-type')return;
+  const type=e.target.value;
+  if(!clinicReady()||!allowed(type))return;
+  view.reportType=type;
+  if(type==='balanceannual')view.balanceYear=view.balanceYear&&view.balanceYear!=='all'?view.balanceYear:today().slice(0,4);
+  render();
+ },true);
  document.addEventListener('click',e=>{
   const apply=e.target.closest('#nx-r-apply'),pdf=e.target.closest('#nx-r-pdf'),load=e.target.closest('#nx-r-load-lab');if(!apply&&!pdf&&!load)return;
   e.preventDefault();e.stopImmediatePropagation();
