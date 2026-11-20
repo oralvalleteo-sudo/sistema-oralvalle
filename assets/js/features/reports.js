@@ -551,7 +551,8 @@
   view.reportType=type;
   const chosenYear=view.balanceYear&&view.balanceYear!=='all'?view.balanceYear:today().slice(0,4);
   const [a,b]=(type==='balanceannual'||type==='balancemonthly')?[chosenYear+'-01-01',chosenYear+'-12-31']:[view.reportFrom||today().slice(0,7)+'-01',view.reportTo||today()];
-  const yearSet=new Set([Number(today().slice(0,4))]);
+  const currentYear=Number(today().slice(0,4));
+  const yearSet=new Set([currentYear,currentYear-1]);
   if(type==='balanceannual'||type==='balancemonthly'){
    for(const v of salesForAccounting()){yearSet.add(Number(String(v.data||'').slice(0,4)));for(const p of v.pg||[])yearSet.add(Number(String(p.data||'').slice(0,4)));}
    for(const p of db.cp||[])yearSet.add(Number(String(p.data||'').slice(0,4)));
