@@ -573,7 +573,7 @@
   if(load){if(!allowed(type))return;load.disabled=true;Promise.resolve((type==='balanceannual')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents()]):(type==='cashcomplete')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents(),loadLabMatches(),loadLabPosted()]):(type==='labposting'||type==='cashverified'||type==='cashcontrol')?Promise.all([loadLabEvents(),loadLabMatches(),loadLabPosted()]):type==='labmatching'?Promise.all([loadLabEvents(),loadLabMatches()]):(type==='labexpenses'||type==='cashflow')?loadLabExpenses():type==='labcash'?loadLabCash():type==='labhistory'?loadLabEvents():window.NexoLabLoad(true)).then(()=>(type==='labpayments'||type==='labreconcile')?Promise.all([loadLabSettlements(),loadLabEvents()]):null).then(()=>render()).catch(err=>{alert('Falha ao carregar laboratório: '+(err.message||err));load.disabled=false});return;}
   if(!allowed(type))return;
   const year=document.getElementById('nx-r-year')?.value;
-  if(type==='balanceannual'&&year){if(!/^(19|20)\\d{2}$/.test(year))return;view.balanceYear=year;view.reportFrom=year+'-01-01';view.reportTo=year+'-12-31';}
+  if(type==='balanceannual'&&year){if(!/^(19|20)\d{2}$/.test(year))return;view.balanceYear=year;view.reportFrom=year+'-01-01';view.reportTo=year+'-12-31';}
   const [a,b]=type==='balanceannual'?[view.reportFrom,view.reportTo]:dates();if(!validDate(a)||!validDate(b)||a>b){alert('Informe um período válido, com a data inicial anterior ou igual à final.');return}
   view.reportType=type;view.reportFrom=a;view.reportTo=b;
   if(apply){render();return}
