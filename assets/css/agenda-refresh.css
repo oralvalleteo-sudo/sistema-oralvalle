@@ -5,6 +5,26 @@
 }
 .ag-date-panel{padding:20px 22px!important;border-top:3px solid #f28a35!important}
 .ag-date-panel h1{color:#253342;font-size:18px;letter-spacing:-.025em}
+.ag-day-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 940px;
+  margin: 16px 0;
+}
+.ag-day-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 12px;
+}
+.ag-day-summary > div + div { border-inline-start: 1px solid var(--ln); }
+.ag-day-summary dt { color: var(--mut); font-size: 16px; font-weight: 600; }
+.ag-day-summary dd { margin: 0; color: var(--ink); font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (max-width: 620px) {
+  .ag-day-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 8px; }
+  .ag-day-summary > div:nth-child(3) { border-inline-start: 0; }
+}
+
 .ag-date-panel .note{color:#7a8794}
 .ag-date-panel input,.ag-date-panel select,.ag-new-form input,.ag-new-form select,
 .ag-rental-panel input,.ag-rental-panel select{

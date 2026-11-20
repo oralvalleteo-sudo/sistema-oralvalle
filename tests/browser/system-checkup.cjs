@@ -428,6 +428,12 @@ await page.evaluate(()=>{
 });
 await menu.locator('[data-t="ag"]').click();
 assert.match(await page.locator('.nexo-agenda-page > :first-child').innerText(),/^Agenda do dia/);
+const agendaIndicators=page.locator('.ag-date-panel .ag-day-summary');
+assert.deepEqual(await agendaIndicators.locator('dt').allTextContents(),['Consultas no dia','Confirmadas','Aguardando','Encerradas']);
+assert.equal(await agendaIndicators.evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),4);
+await page.setViewportSize({width:390,height:760});
+assert.equal(await agendaIndicators.evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+await page.setViewportSize({width:1366,height:900});
 assert.equal(await page.getByText('Aguardando reagendamento',{exact:true}).count(),0);
 assert.equal(await page.locator('#avsOn').count(),0);
 await menu.locator('[data-t="lem"]').click();
