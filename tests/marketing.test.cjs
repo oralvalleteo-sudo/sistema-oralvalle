@@ -41,3 +41,42 @@ test('missing permissions and malformed values stay unavailable instead of produ
  assert.equal(totals.received,null);
  assert.equal(totals.roas,null);
 });
+test('origin filters include legacy links, independent payment dates and budgets without attribution',()=>{
+ const data=prepare({
+  leads:[
+   {id:'meta',created_at:'2026-10-01',source:'Meta',notes:'[NEXODENT_BUDGET:meta%20budget]'},
+   {id:'google',created_at:'2026-11-01',source:'google_ads',budget_id:'google-budget'},
+   {id:'imported',created_at:'2026-10-02',source:'Outros',budget_id:'meta budget'}
+  ],
+  budgets:[
+   row('meta budget','p1',{status:'Aprovado',data:'02/10/2026'}),
+   row('google-budget','p2',{status:'Aprovado',data:'03/11/2026'}),
+   row('direct','p3',{status:'Aprovado',data:'05/11/2026'})
+  ],
+  budget_items:[
+   row('i1','meta budget',{valor:600,vid:'s1'}),
+   row('i2','google-budget',{valor:500,vid:'s2'}),
+   row('i3','direct',{valor:300,vid:'s3'})
+  ],
+  sales:[row('sale-1',null,{id:'s1'}),row('sale-2',null,{id:'s2'}),row('sale-3',null,{id:'s3'})],
+  receipts:[
+   row('r1','sale-1',{valor:250,data:'04/11/2026'}),
+   row('r2','sale-2',{valor:100,data:'2026-11-04'}),
+   row('r3','sale-3',{valor:300,data:'2026-11-05'})
+  ],
+  expenses:[
+   {category:'Marketing',description:'Campanha Meta Ads',paid_at:'2026-11-01',amount:50},
+   {category:'Publicidade',supplier:'Google',paid_at:'2026-11-01',amount:25}
+  ]
+ });
+ const totals=source=>calculate(data,{year:2026,month:'11',source});
+ assert.equal(totals('meta').received,25000);
+ assert.equal(totals('meta').contracted,0);
+ assert.equal(totals('meta').investment,5000);
+ assert.equal(totals('google').contracted,50000);
+ assert.equal(totals('google').investment,2500);
+ assert.equal(totals('Orçamento').contracted,30000);
+ assert.equal(totals('Orçamento').received,30000);
+ assert.equal(totals('Orçamento').roas,null);
+ assert.equal(totals('').roas,35000/7500);
+});

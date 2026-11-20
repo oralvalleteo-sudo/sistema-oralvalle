@@ -12,7 +12,7 @@
  const times=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2});
  const currentYear=Number(new Intl.DateTimeFormat('pt-BR',{year:'numeric',timeZone:'America/Sao_Paulo'}).format(new Date()));
  const names=new Map([['google ads','Google Ads'],['instagram','Instagram / Meta Ads'],['whatsapp','WhatsApp'],
-  ['indicacao','Indicação'],['outros','Outros'],['sem origem','Sem origem identificada']]);
+  ['indicacao','Indicação'],['orcamento','Orçamento (sem origem de marketing)'],['outros','Outros'],['sem origem','Sem origem identificada']]);
  const year=$('#crm-marketing-year'),month=$('#crm-marketing-month'),source=$('#crm-marketing-origin');
  month.replaceChildren(new Option('Todos os meses',''),...Array.from({length:12},(_,i)=>new Option(months.format(Date.UTC(2020,i,1)),String(i+1).padStart(2,'0'))));
  let state=null;
@@ -28,6 +28,8 @@
    years.add(Number(lead.day.slice(0,4)));
    if(!origins.has(lead.origin))origins.set(lead.origin,lead.source);
   }
+  for(const contract of state?.result?.contracts||[])years.add(Number(contract.day.slice(0,4)));
+  for(const receipts of state?.result?.receiptRows?.values()||[])for(const receipt of receipts)years.add(Number(model.date(receipt.dados?.data).slice(0,4)));
   for(const expense of state?.result?.spending||[]){
    years.add(Number(expense.day.slice(0,4)));
    if(!origins.has(expense.origin))origins.set(expense.origin,expense.origin);
@@ -99,8 +101,8 @@
   const next={clinic,result:state?.clinic===clinic?state.result:null,loading:true,warnings:[],error:''};
   state=next;draw();
   const [leads,expenses,financial]=await Promise.allSettled([
-   list('nexodent_crm_leads',clinic,'id,created_at,source,stage,budget_id'),
-   list('nexodent_general_expenses',clinic,'id,category,amount,paid_at,voided_at','&paid_at=not.is.null'),
+   list('nexodent_crm_leads',clinic,'id,created_at,source,stage,budget_id,notes'),
+   list('nexodent_general_expenses',clinic,'id,category,description,supplier,amount,paid_at,voided_at','&paid_at=not.is.null'),
    ledger(clinic)
   ]);
   if(state!==next||clinicSelect.value!==clinic)return;
