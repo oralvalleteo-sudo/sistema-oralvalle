@@ -360,6 +360,16 @@ function obLinkedSales(p,o){
   const ids=new Set(o.itens.map(it=>it.paymentSaleId||it.vid).filter(Boolean).map(String));
   return db.vd.filter(v=>String(v.pid)===String(p.id)&&ids.has(String(v.id)));
 }
+function obReceiptHistoryHtml(p,o){
+  const receipts=obLinkedSales(p,o).flatMap(v=>(v.pg||[]).map(p=>({v,p})));
+  if(!receipts.length)return '';
+  const groups=ovBudgetReceiptGroups(receipts);
+  const rows=groups.map(({indices,method,gross,fee})=>{
+    const date=receipts[indices[0]].p.data;
+    return `<li><strong>${esc(method)} · ${brl(gross)}</strong> <span class="note"> · ${esc(fd(date))} · Taxa ${brl(fee)} · Líquido ${brl(r2(gross-fee))}</span></li>`;
+  });
+  return `<section class="ob-pay"><h4>Recebimentos registrados</h4><ul>${rows.join('')}</ul></section>`;
+}
 function obFullPaymentHtml(o,amount,dateField){
   const methods=nxPayMethods(nxPayPlan(o));
   const additional=methods.find(method=>!OV_FEE_FORMS.includes(method));
@@ -493,7 +503,7 @@ function orcHtml(o,p){
   const open=!!(view.orcOpen&&view.orcOpen[o.id]),nIt=o.itens.length,stc=o.status==='Aprovado'?'stt-ok':o.status==='Pendente'?'stt-wr':'';
   const head=`<button type="button" class="orc-h" data-act="otoggle" data-o="${esc(o.id)}" aria-expanded="${open}"><span class="orc-chev" aria-hidden="true">${open?'▾':'▸'}</span><span class="orc-t"><strong>${esc(o.data)}</strong><small>${nIt} ${nIt===1?'item':'itens'} · toque para ${open?'recolher':'abrir'}</small></span><span class="badge ${stc}" style="flex:none">${esc(o.status==='Pendente'?'Proposta':o.status==='Recusado'?'Perdida':o.status)}</span><strong class="orc-tot" data-ototal>${brl(total(o))}</strong></button>`;
   return `<div class="card orc-card" data-oid="${esc(o.id)}">${head}${open?`<div class="orc-body"><div class="row" style="margin-bottom:10px"><span style="flex:1"><strong>${esc(o.data)}</strong><br><span class="note" style="margin:0">Criado em</span></span><select data-o="${esc(o.id)}" data-f="status" aria-label="Situação do orçamento">${[['Pendente','Proposta'],['Aprovado','Aprovado'],['Recusado','Perdida']].map(([s,label])=>`<option value="${s}"${o.status===s?' selected':''}>${label}</option>`).join('')}</select></div>
-  ${obUndoHtml(o)}${obAllHtml(p,o)}${o.itens.map((it,i)=>itemHtml(o,it,i)).join('')}${obCollectHtml(p,o)}
+  ${obUndoHtml(o)}${obAllHtml(p,o)}${o.itens.map((it,i)=>itemHtml(o,it,i)).join('')}${obCollectHtml(p,o)}${obReceiptHistoryHtml(p,o)}
   <div class="row" style="margin-top:8px"><button class="ghost sm" data-act="addi" data-o="${esc(o.id)}">Adicionar item</button></div>
   <div class="row" style="align-items:flex-start"><div><label>Desconto (R$)</label><input data-o="${esc(o.id)}" data-f="desc" inputmode="decimal" value="${esc(o.desc)}"></div><div><label>Válido até</label><input type="date" data-o="${esc(o.id)}" data-f="val" value="${esc(o.val)}"></div></div>
   ${nxPayHtml(o)}${budgetBillingHtml(o)}<label>Condições de pagamento (editável)</label><input data-o="${esc(o.id)}" data-f="cond" placeholder="Ex.: entrada + 3x no cartão" value="${esc(o.cond)}">

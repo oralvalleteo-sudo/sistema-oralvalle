@@ -650,7 +650,7 @@ const A={
     Object.assign(receipt,{taxaPct,taxaValor,taxaOrigem,liquido});
     save();render();ovFinDetail('received');toast('Taxa do recebimento atualizada.');
   },
-  ovPaymentMethodEdit:(b,d)=>ovEditReceiptMethod(d.id,d.pg),
+  ovPaymentMethodEdit:(b,d)=>ovEditReceiptMethod(d.id,d.pg,d.group==='1'),
   cfgFinanceRates:()=>{if(!ME?.admin)return;view.h='cfg';view.id=null;view.cfgTab='financeiro';render();topo()},
   rmpg:(b,d)=>arm(d.pg,()=>{const v=db.vd.find(x=>x.id===d.id);v.pg=v.pg.filter(p=>p.id!==d.pg);save();render()}),
   adddt:()=>{const n=$('dn').value.trim();if(!n){toast('Digite o nome do dentista');return}
