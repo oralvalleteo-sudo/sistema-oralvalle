@@ -6,7 +6,7 @@
  const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
  const categories=['Aluguel','Energia','Água','Salários','Internet','Materiais','Impostos','Manutenção','Marketing','Outros'];
  let clinic=null,epoch=0,loading=false,busy=false,loaded=false,expenses=[],lab=[],warnings=[],error='',draft=null,draftId=null,notice='',editOriginal=null;
- let expensesReady=false,pendingOnly=false,expenseListOpen=true;
+ let expensesReady=false,expenseFilter='all',expenseListOpen=true;
  let sourceClinic=window.OralCloud?.clinicId||null;
  const monthEnd=m=>new Date(Date.UTC(Number(m.slice(0,4)),Number(m.slice(5,7)),0)).toISOString().slice(0,10);
  let from=today().slice(0,7)+'-01',to=monthEnd(today().slice(0,7));
@@ -15,7 +15,7 @@
  const writable=()=>allowed()&&pmLvl('vd')>=2;
  const active=()=>typeof view!=='undefined'&&view.h==='cash'&&!view.id;
  const redraw=()=>{if(active()&&typeof render==='function')render()};
- function clear(){epoch++;clinic=null;loading=false;loaded=false;expenses=[];lab=[];warnings=[];error='';draft=null;draftId=null;notice='';editOriginal=null;expensesReady=false;pendingOnly=false;expenseListOpen=true;}
+ function clear(){epoch++;clinic=null;loading=false;loaded=false;expenses=[];lab=[];warnings=[];error='';draft=null;draftId=null;notice='';editOriginal=null;expensesReady=false;expenseFilter='all';expenseListOpen=true;}
  async function pages(table,fields,c){const rows=[];for(let offset=0;offset<20000;offset+=500){if(id()!==c||!allowed())throw Error('Clínica ou acesso alterado.');const page=await OralCloud.request('/rest/v1/'+table+'?select='+fields+'&clinic_id=eq.'+encodeURIComponent(c)+'&order=id.asc&limit=500&offset='+offset);if(!Array.isArray(page))throw Error('Resposta inválida.');rows.push(...page);if(page.length<500)return rows;}throw Error('Limite de consulta atingido. Totais incompletos.');}
  async function load(){
   if(!allowed()||loading)return;
@@ -65,14 +65,14 @@
  function monthExpenses(report,labels){
   const t=today(), matched=new Set([...report.matchedManual.values()].map(e=>e.id));
   const rows=expenses.filter(e=>!matched.has(e.id)&&model.inReference(e,from,to,t)).map(e=>({
-   id:e.id,expense:e,month:model.referenceMonth(e,t),date:rowDate(e),due:e.due_date,
+   id:e.id,expense:e,paid:Boolean(e.paid_at),month:model.referenceMonth(e,t),date:rowDate(e),due:e.due_date,
    description:e.description,category:labels.get(model.categoryKey(e.category)),cents:model.cents(e.amount),
    status:e.paid_at?'Paga em '+dBR(e.paid_at):(e.due_date&&e.due_date<t?'Vencida':'A pagar')+
      (e.planned_paid_at?' · previsto em '+dBR(e.planned_paid_at):'')
   }));
   for(const paid of report.rows){
    if(paid.direction>=0||paid.source==='Despesa manual')continue;
-   rows.push({id:paid.id,expense:report.matchedManual.get(paid.id),month:paid.date.slice(0,7),date:paid.date,
+   rows.push({id:paid.id,expense:report.matchedManual.get(paid.id),paid:true,month:paid.date.slice(0,7),date:paid.date,
     description:paid.description,category:labels.get(model.categoryKey(paid.source))||paid.source,
     cents:paid.cents,status:'Paga em '+dBR(paid.date)});
   }
@@ -90,23 +90,29 @@
 
  function html(){if(!allowed())return '<section class="card">Conecte-se à clínica e confira o acesso à aba Controle.</section>';if(clinic!==id()){clear();clinic=id();setTimeout(load,0);}else if(!loaded&&!loading)setTimeout(load,0);
   const labels=categoryLabels(),r=report(labels),ready=loaded,known=ready?r.partial?' (parcial)':'':'';
-  const entries=ready||expensesReady?monthExpenses(r,labels).filter(row=>!pendingOnly||row.expense&&!row.expense.paid_at):[];
-  const pendingLabel='Contas a pagar do mês';
-  const pendingButton=`<button type="button" class="card nx-cash-pending" data-cash="pending" aria-controls="nx-cash-expenses" aria-pressed="${pendingOnly}"><span>${pendingLabel}</span><strong>${expensesReady?money(r.pending):'—'}</strong><small>Ver contas a pagar →</small></button>`;
+  const pendingOnly=expenseFilter==='pending',paidOnly=expenseFilter==='paid';
+  const entries=(ready||expensesReady?monthExpenses(r,labels):[]).filter(row=>expenseFilter==='all'||row.paid===paidOnly);
+  const pendingLabel='Contas a pagar do mês',paidLabel='Contas pagas do mês';
+  const listTitle=pendingOnly?pendingLabel:paidOnly?paidLabel:'Despesas do mês';
+  const listReady=pendingOnly?expensesReady:ready;
+  const emptyMessage=pendingOnly
+   ? expensesReady?'Nenhuma conta a pagar neste mês.':loaded&&!loading?'Contas a pagar indisponíveis.':'Carregando contas a pagar…'
+   : !ready?'Aguardando carregamento.':paidOnly?'Nenhuma conta paga nos dados disponíveis deste mês.':'Nenhuma despesa cadastrada neste mês.';
+  const filterButton=(action,label,value,available,caption)=>`<button type="button" class="card nx-cash-filter" data-cash="${action}" aria-controls="nx-cash-expenses" aria-pressed="${expenseFilter===action}"><span>${label}</span><strong>${available?money(value):'—'}</strong><small>${caption} →</small></button>`;
   const box=(label,value)=>`<div class="card"><span>${label}</span><strong>${ready?money(value):'—'}</strong></div>`;
-  return `<style>.nx-cash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;align-items:end}.nx-cash-grid label{display:grid;gap:6px}.nx-cash-grid [hidden]{display:none!important}.nx-cash-grid input,.nx-cash-grid select{width:100%;min-width:0}.nx-cash-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}.nx-cash-metrics .card{display:grid;gap:8px;margin:0}.nx-cash-metrics .nx-cash-pending{cursor:pointer;text-align:left;color:inherit;font:inherit}.nx-cash-pending small{color:#334155;text-decoration:underline}.nx-cash-pending[aria-pressed=true]{border-color:var(--ac)}.nx-cash-metrics strong{font-size:24px;font-weight:600;color:#243247}.nx-cash-scroll{overflow:auto}.nx-cash-scroll table{width:100%;border-collapse:collapse}.nx-cash-scroll th,.nx-cash-scroll td{padding:12px;text-align:left;border-bottom:1px solid #e1e5eb}.nx-cash-scroll th{font-weight:600;background:#f5f6f8}.nx-cash-scroll tbody tr:nth-child(even) td{background:rgba(127,127,127,.12)}.nx-cash-scroll tbody tr:hover td{background:rgba(194,65,12,.12)}.nx-cash-warning{padding:12px;background:#fff8e8;border:1px solid #ecd9a9;border-radius:10px;color:#584211;margin:12px 0}</style>
+  return `<style>.nx-cash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;align-items:end}.nx-cash-grid label{display:grid;gap:6px}.nx-cash-grid [hidden]{display:none!important}.nx-cash-grid input,.nx-cash-grid select{width:100%;min-width:0}.nx-cash-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}.nx-cash-metrics .card{display:grid;gap:8px;margin:0}.nx-cash-metrics .nx-cash-filter{cursor:pointer;text-align:left;color:inherit;font:inherit}.nx-cash-filter small{color:#334155;text-decoration:underline}.nx-cash-filter[aria-pressed=true]{border-color:var(--ac)}.nx-cash-metrics strong{font-size:24px;font-weight:600;color:#243247}.nx-cash-scroll{overflow:auto}.nx-cash-scroll table{width:100%;border-collapse:collapse}.nx-cash-scroll th,.nx-cash-scroll td{padding:12px;text-align:left;border-bottom:1px solid #e1e5eb}.nx-cash-scroll th{font-weight:600;background:#f5f6f8}.nx-cash-scroll tbody tr:nth-child(even) td{background:rgba(127,127,127,.12)}.nx-cash-scroll tbody tr:hover td{background:rgba(194,65,12,.12)}.nx-cash-warning{padding:12px;background:#fff8e8;border:1px solid #ecd9a9;border-radius:10px;color:#584211;margin:12px 0}</style>
   <div class="ov-page-head"><div><h1>Controle</h1><p class="sub">Entradas, saídas e despesas da clínica.</p></div><div>${writable()?'<button class="ghost" data-cash="import">Importar despesas</button> <button class="ghost" data-cash="new">Nova despesa</button> ':''}<button class="ghost" data-cash="refresh"${loading||busy?' disabled':''}>${loading?'Carregando…':'Atualizar'}</button></div></div>
   <section class="card nx-cash-grid" data-ro-ok><label>Mês de referência<input id="nx-cash-month" type="month" value="${esc(from.slice(0,7))}"></label><div><button class="ghost" data-cash="csv"${!ready||loading?' disabled':''}>Exportar CSV</button></div></section>
   ${notice?`<p class="note" role="status">${esc(notice)}</p>`:''}${error?`<p class="nx-cash-warning" role="alert">${esc(error)}</p>`:''}${loading?'<p class="note" role="status">Atualizando os totais de Despesas…</p>':''}${(ready||expensesReady)&&r.warnings.length?`<div class="nx-cash-warning" role="status"><strong>Conferência necessária — valores parciais</strong>${r.warnings.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:''}
-  <div class="nx-cash-metrics">${box('Entradas recebidas'+known,r.income)}${box('Saídas pagas'+known,r.outcome)}${box('Saldo após gastos do mês'+known,r.balance)}${pendingButton}</div>
+  <div class="nx-cash-metrics">${box('Entradas recebidas'+known,r.income)}${filterButton('paid','Saídas pagas'+known,r.outcome,ready,'Ver contas pagas')}${box('Saldo após gastos do mês'+known,r.balance)}${filterButton('pending',pendingLabel,r.pending,expensesReady,'Ver contas a pagar')}</div>
   <p class="note">Entradas: recebimentos registrados dos pacientes. Pagamentos de laboratório e dentistas entram automaticamente quando registrados nas respectivas áreas. Despesas manuais são agrupadas pelo mês de referência, independentemente do dia em que foram pagas. Valores previstos, comissões apenas geradas e saldos de abertura não movimentam este fluxo. Recebimentos são brutos; registre taxas bancárias como despesas quando necessário. O saldo é um resumo mensal, não o saldo bancário. Não inclui saldo inicial.</p>
   ${window.NexoCashImport?.html()||''}${reviewHtml()}${form()}
-  <details class="card" id="nx-cash-expenses"${expenseListOpen?' open':''}><summary style="color:#243247;font-weight:600;cursor:pointer">${pendingOnly?pendingLabel:'Despesas do mês'}</summary>
-  ${pendingOnly?'<button type="button" class="ghost sm" data-cash="all">Ver todas as despesas</button>':''}
+  <details class="card" id="nx-cash-expenses"${expenseListOpen?' open':''}><summary style="color:#243247;font-weight:600;cursor:pointer">${listTitle}</summary>
+  ${expenseFilter!=='all'?'<button type="button" class="ghost sm" data-cash="all">Ver todas as despesas</button>':''}
   <div class="nx-cash-scroll"><table><thead><tr><th>Mês ref.</th><th>Data</th><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Situação</th><th>Ação</th></tr></thead>
   <tbody>${entries.map(e=>`<tr><td>${esc(mBR(e.month))}</td><td>${esc(dBR(e.date))}</td><td>${esc(dBR(e.due))}</td><td>${esc(e.description)}</td><td>${esc(e.category)}</td><td>${money(e.cents)}</td><td>${esc(e.status)}</td><td>${expenseActions(e.expense)}</td></tr>`).join('')||
-   '<tr><td colspan="8">'+(pendingOnly?(expensesReady?'Nenhuma conta a pagar neste mês.':loaded&&!loading?'Contas a pagar indisponíveis.':'Carregando contas a pagar…'):ready?'Nenhuma despesa cadastrada neste mês.':'Aguardando carregamento.')+'</td></tr>'}</tbody>
-  <tfoot><tr><th colspan="5">${pendingOnly?'Total a pagar':'Total da lista'}</th><th>${(pendingOnly?expensesReady:ready)?money(entries.reduce((sum,e)=>sum+e.cents,0)):'—'}</th><th colspan="2"></th></tr></tfoot></table></div></details>
+   '<tr><td colspan="8">'+emptyMessage+'</td></tr>'}</tbody>
+  <tfoot><tr><th colspan="5">${pendingOnly?'Total a pagar':paidOnly?'Total pago':'Total da lista'}</th><th>${listReady?money(entries.reduce((sum,e)=>sum+e.cents,0)):'—'}</th><th colspan="2"></th></tr></tfoot></table></div></details>
   ${categoryDashboard(r,ready,labels)}`;
  }
  function reviewHtml(){const groups=model.reviews(expenses,today());if(!loaded||!groups.length)return '';return `<section class="card"><h2>Contas para revisar</h2><p class="note">Compras iguais podem ser legítimas. Use esta revisão somente quando confirmar que os registros são cópias da mesma compra.</p>${groups.map(g=>`<div style="padding:12px 0;border-top:1px solid #e1e5eb"><strong>${esc(g[0].description)}</strong> · ${money(model.cents(g[0].amount))} · ${g.length} registro(s)${g[0].paid_at>today()?' · pagamento previsto em '+esc(g[0].paid_at):''}${writable()?` <button class="ghost sm" data-cash="review" data-id="${esc(g[0].id)}"${busy?' disabled':''}>${g.length>1?'Manter uma conta e corrigir cópias':'Corrigir para a pagar'}</button>`:''}</div>`).join('')}</section>`;}
@@ -152,7 +158,7 @@
   return;
  }const f=e.target.closest?.('#nx-cash-form');if(f&&draft)draft=readExpenseForm(f);});
  document.addEventListener('submit',e=>{if(e.target.id==='nx-cash-merge'){e.preventDefault();mergeCategories(e.target);return;}if(e.target.id==='nx-cash-form'){e.preventDefault();save(e.target)}});
- document.addEventListener('click',e=>{const b=e.target.closest('[data-cash]');if(!b||!active()||!allowed())return;const action=b.dataset.cash;if(window.NexoCashImport?.running&&['new','edit','pay','delete','review','import'].includes(action))return;if(action==='import'&&writable()&&!busy){window.NexoCashImport?.open();return;}if(action==='pending'||action==='all'){pendingOnly=action==='pending';expenseListOpen=true;redraw();const list=document.getElementById('nx-cash-expenses');list?.querySelector('summary')?.focus({preventScroll:true});list?.scrollIntoView({block:'start'});return;}if(action==='refresh'&&!busy)load();if(action==='new'&&writable()&&!busy){if(!draft||editOriginal){draft={category:'Aluguel',due_date:'',reference_month:from.slice(0,7)};draftId=crypto.randomUUID();editOriginal=null;}redraw();document.getElementById('nx-cash-form')?.scrollIntoView({block:'center'});}if(action==='cancel'&&!busy){draft=null;draftId=null;editOriginal=null;redraw();}if(action==='edit'&&writable()&&!busy){const row=expenses.find(e=>String(e.id)===String(b.dataset.id));if(row){editOriginal={...row};draftId=null;draft={...row,reference_month:model.referenceMonth(row,today()),amount:String(row.amount),due_date:row.due_date||'',paid_at:row.paid_at||'',planned_paid_at:row.planned_paid_at||'',payment_method:row.payment_method||''};redraw();document.getElementById('nx-cash-form')?.scrollIntoView({block:'center'});}}if(action==='delete')remove(b.dataset.id);if(action==='review')review(b.dataset.id);if(action==='pay')pay(b.dataset.id);if(action==='csv')csv();});
+ document.addEventListener('click',e=>{const b=e.target.closest('[data-cash]');if(!b||!active()||!allowed())return;const action=b.dataset.cash;if(window.NexoCashImport?.running&&['new','edit','pay','delete','review','import'].includes(action))return;if(action==='import'&&writable()&&!busy){window.NexoCashImport?.open();return;}if(['pending','paid','all'].includes(action)){expenseFilter=action;expenseListOpen=true;redraw();const list=document.getElementById('nx-cash-expenses');list?.querySelector('summary')?.focus({preventScroll:true});list?.scrollIntoView({block:'start'});return;}if(action==='refresh'&&!busy)load();if(action==='new'&&writable()&&!busy){if(!draft||editOriginal){draft={category:'Aluguel',due_date:'',reference_month:from.slice(0,7)};draftId=crypto.randomUUID();editOriginal=null;}redraw();document.getElementById('nx-cash-form')?.scrollIntoView({block:'center'});}if(action==='cancel'&&!busy){draft=null;draftId=null;editOriginal=null;redraw();}if(action==='edit'&&writable()&&!busy){const row=expenses.find(e=>String(e.id)===String(b.dataset.id));if(row){editOriginal={...row};draftId=null;draft={...row,reference_month:model.referenceMonth(row,today()),amount:String(row.amount),due_date:row.due_date||'',paid_at:row.paid_at||'',planned_paid_at:row.planned_paid_at||'',payment_method:row.payment_method||''};redraw();document.getElementById('nx-cash-form')?.scrollIntoView({block:'center'});}}if(action==='delete')remove(b.dataset.id);if(action==='review')review(b.dataset.id);if(action==='pay')pay(b.dataset.id);if(action==='csv')csv();});
  window.addEventListener('nexodent:signed-out',()=>{sourceClinic=null;clear()});
  window.addEventListener('nexodent:clinic-data-loaded',()=>{sourceClinic=id();if(clinic!==id())clear();if(active())redraw()});
  window.addEventListener('nexodent:modules-updated',()=>{if(!allowed())clear();redraw()});
