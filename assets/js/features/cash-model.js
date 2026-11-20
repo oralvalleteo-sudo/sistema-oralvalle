@@ -41,10 +41,11 @@
    month:row.reference_month||row.date.slice(0,7),category:labelForCategory(row.category||row.source)
   }));
   const pendingManual=expenses.filter(e=>!e.paid_at&&inReference(e,from,to,today));
+  let undatedLabAccounts=0;
   for(const account of labAccounts){
    if(account.canceled||!account.balance)continue;
    const date=String(account.reference_date||'').slice(0,10);
-   if(!validDate(date)){warnings.push('Trabalho de laboratório sem data de referência: '+account.id);continue;}
+   if(!validDate(date)){undatedLabAccounts++;continue;}
    if(!inReference({reference_month:date},from,to,today))continue;
    const reference='LAB-'+account.id;
    entries.push({id:reference,paid:false,source:'Laboratório',category:labelForCategory('Laboratório'),
@@ -64,7 +65,7 @@
   }
   const categories=[...groupMap.values()].map(g=>({...g,total:g.paid+g.pending})).sort((a,b)=>b.total-a.total||a.label.localeCompare(b.label,'pt-BR'));
   const pending=categories.reduce((sum,g)=>sum+g.pending,0);
-  return {rows,entries,matchedManual,income,outcome,balance:income-outcome,categories,registered:outcome+pending,pending,warnings:[...new Set(warnings)],openings};
+  return {rows,entries,undatedLabAccounts,matchedManual,income,outcome,balance:income-outcome,categories,registered:outcome+pending,pending,warnings:[...new Set(warnings)],openings};
  }
  function billKey(e){const normal=s=>String(s||'').trim().toLowerCase();return JSON.stringify([normal(e.description).replace(/\s+/g,' '),normal(e.category),normal(e.supplier),cents(e.amount),e.due_date||null,referenceMonth(e)]);}
  function reviews(expenses,today){const groups=new Map();for(const e of expenses){if(e.voided_at||e.external_reference||e.paid_at)continue;const key=billKey(e)+JSON.stringify([e.paid_at||null,e.planned_paid_at||null,e.payment_method||null]);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(e);}return [...groups.values()].filter(g=>g.length>1).map(g=>g.sort((a,b)=>String(a.id).localeCompare(String(b.id))));}
