@@ -328,7 +328,8 @@
       const current = flatten(captured), changes = [];
       const currentRows = [...current.values()];
       const ownerOf = rowOwners(currentRows, state);
-      function changed(value, deletion) {
+      const reminderBaseline = new Map();
+      function changed(value, deletion, before) {
         const access = state.access[value.table];
         // No hidden baseline rows exist here. Server also checks per-slot permissions.
         if (!access || !access.read) {
@@ -337,20 +338,40 @@
         }
         if (!access.admin && !access.write?.[value.row.slot])
           throw fail('CLOUD_PERMISSION_DENIED', 'Sem permissão de edição: ' + value.table + '/' + value.row.slot);
+        if (value.table === 'reminders' && value.row.slot === 'lem' &&
+          (value.row.kind === 'object' || !deletion && value.row.kind === 'array')) {
+          reminderBaseline.set(value.id, before?.row.dados ?? null);
+        }
         changes.push(deletion ? { table: value.table, id: value.id, delete: true } : value);
       }
       current.forEach((value, key) => {
         if (!deferredRowAllowed(value, ownerOf, state)) return;
         const before = state.baseline.get(key);
-        if (!before || canonical(before.row) !== canonical(value.row)) changed(value, false);
+        if (before && value.table === 'reminders' && value.row.kind === 'object' &&
+          before.row.kind === 'object' && own(value.row.dados,'id') && canonical(before.row.dados) === canonical(value.row.dados)) return;
+        if (!before || canonical(before.row) !== canonical(value.row)) changed(value, false, before);
       });
-      state.baseline.forEach((value, key) => { if (!current.has(key)) changed(value, true); });
+      state.baseline.forEach((value, key) => { if (!current.has(key)) changed(value, true, value); });
       if (changes.length > 50000)
         throw fail('IMPORT_TOO_LARGE', 'Importação excede 50.000 alterações por transação. Não divida automaticamente: solicite uma importação administrativa para manter as relações.');
-      // Even a no-op checks the global revision; never silently accepts a stale snapshot.
-      const result = await c.request('/rest/v1/rpc/clinic_apply', { method: 'POST', body: {
-        p_clinic: clinic, p_revision: state.revision, p_changes: changes
-      } });
+      // Leave a rebased session stale until the normal sync reloads the remote data.
+      if (!changes.length && state.awaitingReminderSync) return state.revision;
+      const writeBody = { p_clinic: clinic, p_revision: state.revision, p_changes: changes };
+      let result;
+      try {
+        result = await rpc('clinic_apply', writeBody);
+      } catch (error) {
+        const conflict = error.code === '40001' || /CLOUD_CONFLICT/i.test(error.message);
+        if (!conflict || !changes.length || reminderBaseline.size !== changes.length || cloud().clinicId !== clinic) throw error;
+        try {
+          result = await rpc('clinic_apply_independent_reminders', {
+            ...writeBody, p_expected: Object.fromEntries(reminderBaseline)
+          });
+        } catch (reminderError) {
+          if (reminderError.code === 'PGRST202') throw error;
+          throw reminderError;
+        }
+      }
       if (!result || typeof result.revision !== 'string') throw fail('INVALID_RESPONSE', 'Revisão inválida.');
       if (cloud().clinicId !== clinic) { state = null; throw fail('CLINIC_CHANGED', 'A clínica mudou durante a gravação.'); }
       // Mantém o baseline parcial: registros clínicos de pacientes ainda não abertos não são apagados.
@@ -361,10 +382,11 @@
         if (!deferredPatientTables.has(value.table) || deferredRowAllowed(value, baselineOwnerOf, state)) baseline.delete(key);
       });
       current.forEach((value, key) => { if (deferredRowAllowed(value, ownerOf, state) || !deferredPatientTables.has(value.table)) baseline.set(key, value); });
-      state = { ...state, revision: result.revision, baseline };
+      const awaitingReminderSync = result.rebased === true;
+      state = { ...state, revision: awaitingReminderSync ? state.revision : result.revision, baseline, awaitingReminderSync };
       state.patients = new Map([...current.values()].filter(value => value.table === 'patients' && value.row.kind === 'object')
         .map(value => [JSON.stringify(value.row.dados.id), state.patients.get(JSON.stringify(value.row.dados.id)) || value.id]));
-      return result.revision;
+      return state.revision;
     });
   }
   function prepareDefaults(snapshot) {

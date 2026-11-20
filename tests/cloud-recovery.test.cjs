@@ -428,3 +428,35 @@ test('revision checks are spread out, back off on failure, and pause when hidden
   vm.runInContext('stopSync();', context);
   assert.equal(timers.size, 0);
 });
+
+test('an independent reminder retry retains the stale revision until a fresh read', async () => {
+  const id='[null,"lem",["id","one"]]';
+  const marker={id:'[null,"lem"]',parent_id:null,slot:'lem',position:-1,kind:'array',dados:null};
+  const stored={id,parent_id:null,slot:'lem',position:0,kind:'object',dados:{id:'one',titulo:'Original'}};
+  const calls=[];
+  let unavailable=false;
+  const context=vm.createContext({window:{OralCloud:{
+    enabled:true,clinicId:'clinic',
+    async request(path,{body}) {
+      if(path.endsWith('/clinic_load_start'))return {protocol:2,revision:'3',access:{reminders:{read:true,write:{lem:true}}}};
+      if(path.endsWith('/clinic_load_page'))return {revision:'3',rows:[marker,stored],next:null};
+      calls.push({path,body:JSON.parse(JSON.stringify(body))});
+      if(path.endsWith('/clinic_apply'))throw Object.assign(Error('CLOUD_CONFLICT'),{code:'40001'});
+      assert.ok(path.endsWith('/clinic_apply_independent_reminders'));
+      if(unavailable)throw Object.assign(Error('Function missing'),{code:'PGRST202'});
+      return {revision:'5',rebased:true};
+    },
+  }}});
+  vm.runInContext(source('assets/js/supabase/data.js'),context);
+  const adapter=context.window.OralCloudData;
+  const data=await adapter.load();
+  data.lem[0].titulo='Alterado';
+  assert.equal(await adapter.save(data),'3');
+  assert.deepEqual(calls[1].body.p_expected,{[id]:stored.dados});
+  assert.equal(adapter.currentRevision(),'3');
+  await adapter.save(data);
+  assert.equal(calls.length,2);
+  unavailable=true;
+  data.lem[0].titulo='Outra edição';
+  await assert.rejects(adapter.save(data),error=>error.code==='40001');
+});
