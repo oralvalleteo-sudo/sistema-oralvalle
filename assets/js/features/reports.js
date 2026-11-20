@@ -486,7 +486,7 @@
   if(!commercial())return '<div class="card"><h2>Relatórios indisponíveis</h2><p>Este módulo não está incluído no plano da clínica.</p></div>';
   const type=current();if(!type)return '<div class="card"><h2>Sem acesso aos relatórios</h2><p>Solicite ao administrador as permissões necessárias.</p></div>';
   view.reportType=type;
-  const [a,b]=[view.reportFrom||today().slice(0,7)+'-01',view.reportTo||today()];
+  const [a,b]=[view.reportFrom||(type==='balanceannual'?'2000-01-01':today().slice(0,7)+'-01'),view.reportTo||(type==='balanceannual'?'2099-12-31':today())];
   const report=type==='generalexpenses'?{heads:[],items:[],summary:''}:rows(type,a,b);
   return `<div class="ov-page-head"><div><h1>Relatórios</h1><p class="sub">Dados carregados da clínica · somente leitura. Totais podem estar incompletos se o carregamento for parcial.</p></div></div>
   <div class="card" style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
