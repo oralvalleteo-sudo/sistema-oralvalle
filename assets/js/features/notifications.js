@@ -1,7 +1,7 @@
 /* Avisos preservam o horário local e continuam funcionando sem notificações nativas. */
 const AVS_DEF={on:true,min:15};
 let avsList=[],avsCtx=null;
-function avsCfg(){db.avs=Object.assign({},AVS_DEF,db.avs||{});return db.avs}
+function avsCfg(){return {...AVS_DEF,...db.avs}}
 function avsDoneGet(){try{return JSON.parse(localStorage.getItem('consultorio_avs')||'{}')}catch(e){return{}}}
 function avsDoneSet(o){try{localStorage.setItem('consultorio_avs',JSON.stringify(o))}catch(e){}}
 function avsStart(a){const d=String(a.data).split('-'),h=String(a.hora).split(':');return new Date(+d[0],(+d[1])-1,+d[2],+h[0]||0,+h[1]||0,0,0)}

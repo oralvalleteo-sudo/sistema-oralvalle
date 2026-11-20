@@ -26,6 +26,9 @@ test('audio waits for a trusted active gesture and handles resume failures', asy
     document: { addEventListener: (name, listener) => listeners.set(name, listener) },
   });
   vm.runInContext(source('assets/js/features/notifications.js'), context);
+  context.db = {};
+  assert.equal(vm.runInContext('avsCfg().min', context), 15);
+  assert.equal(Object.hasOwn(context.db, 'avs'), false);
   vm.runInContext('avsBeep()', context);
   assert.equal(created, 0);
   await listeners.get('pointerdown')({ isTrusted: true });
