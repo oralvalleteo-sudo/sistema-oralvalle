@@ -433,7 +433,9 @@ const A={
     const teeth=(view.trSel||[]).map(String).sort((a,b)=>a-b),list=teeth.length?teeth:[''];
     let orc=null;
     if(oid==='new'){orc={id:uid(),data:new Date().toLocaleDateString('pt-BR'),status:'Pendente',itens:[],desc:'',val:plusDays(15),cond:''};p.orcs.unshift(orc)}
-    else if(oid&&oid!=='none')orc=getO(p,oid);
+    else if(oid&&oid!=='none'){
+      orc=getO(p,oid);if(!orc||orc.archivedAt){toast('Selecione um orçamento ativo.');return}
+    }
     list.forEach(n=>{
       const t={id:uid(),proc,dente:n,obs,valor:r2(val),custo:r2(custo),mats:m?matSnap(m):[],dt,status:'Pendente',rep:0,vid:null,data:''};
       if(orc){const it={id:uid(),proc,dente:n,valor:String(r2(val)),obs,dt,tid:t.id};orc.itens.push(it);t.oid=orc.id;t.oiid=it.id}
@@ -486,18 +488,29 @@ const A={
   cfgretmsg:()=>{db.cl=db.cl||{};db.cl.retMsg=RET_MSG_DEF;save();render();toast('Mensagem padrão restaurada',2500)},
   rmorc:(b,d,p)=>{
     if(!p)return;
-    const o=(p.orcs||[]).find(x=>String(x.id)===String(d.o));if(!o)return;
-    const vinculados=(p.trat||[]).filter(t=>String(t.oid)===String(o.id));
-    if((o.itens||[]).some(i=>i.vid||i.paymentSaleId)||vinculados.some(t=>t.vid)){
-      toast('Não é possível excluir uma proposta com procedimentos já baixados ou vendidos.',4500);return;
-    }
+    const o=(p.orcs||[]).find(x=>String(x.id)===String(d.o));if(!o||o.archivedAt)return;
     arm('orc:'+o.id,()=>{
-      if(!confirm('Excluir definitivamente este orçamento e sua proposta financeira? Os tratamentos vinculados serão mantidos, mas sem vínculo com a proposta.'))return;
-      vinculados.forEach(t=>{t.oid=null;t.oiid=null});
-      p.orcs=p.orcs.filter(x=>String(x.id)!==String(o.id));
+      const vinculados=(p.trat||[]).filter(t=>String(t.oid)===String(o.id));
+      const hasFinancial=(o.itens||[]).some(i=>i.vid||i.paymentSaleId)||vinculados.some(t=>t.vid);
+      const message=hasFinancial
+        ? 'Retirar este orçamento da lista? O orçamento ficará em Arquivados. Recebimentos, taxas, comissões e histórico clínico serão preservados.'
+        : 'Excluir definitivamente este orçamento e sua proposta financeira? Os tratamentos vinculados serão mantidos, mas sem vínculo com a proposta.';
+      if(!confirm(message))return;
+      if(hasFinancial){
+        o.archivedAt=new Date().toISOString();
+      }else{
+        vinculados.forEach(t=>{t.oid=null;t.oiid=null});
+        p.orcs=p.orcs.filter(x=>String(x.id)!==String(o.id));
+      }
       if(view.orcOpen)delete view.orcOpen[o.id];
-      save();render();toast('Orçamento e proposta excluídos.');
+      if(view.obxAll===o.id)view.obxAll=null;
+      save();render();toast(hasFinancial?'Orçamento retirado da lista e arquivado.':'Orçamento e proposta excluídos.');
     });
+  },
+  restoreorc:(b,d,p)=>{
+    const o=p&&getO(p,d.o);if(!o?.archivedAt)return;
+    delete o.archivedAt;
+    save();render();toast('Orçamento restaurado à lista.');
   },
   orcsave:(b,d,p)=>{
     const o=p&&getO(p,d.o);if(!o)return;

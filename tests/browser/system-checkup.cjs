@@ -383,6 +383,26 @@ await page.evaluate(()=>{
 });
 const budgetHistory=page.locator('[data-oid="mixed-budget"] section').filter({hasText:'Recebimentos registrados'});
 assert.match(await budgetHistory.innerText(),/Débito.*1\.000,00.*33,30.*966,70/);
+const removeBudget=mixedBudget.locator('[data-act="rmorc"]');
+await removeBudget.click();
+page.once('dialog',async dialog=>{
+ assert.match(dialog.message(),/Recebimentos, taxas, comissões e histórico clínico serão preservados/);
+ await dialog.accept();
+});
+await removeBudget.click();
+await mixedBudget.waitFor({state:'detached'});
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+assert.equal(await page.evaluate(()=>pfAll().some(x=>x.o.id==='mixed-budget')),false);
+const archivedMixedBudget=(await db.query("select dados from budgets where dados->>'id'='mixed-budget'")).rows[0].dados;
+assert.ok(archivedMixedBudget.archivedAt);
+const paymentAfterArchive=(await db.query("select dados from receipts where kind='object' and dados->>'data'='2025-10-19' and dados->>'forma'='Débito'")).rows;
+assert.deepEqual(paymentAfterArchive.map(x=>x.dados).sort((a,b)=>a.id.localeCompare(b.id)),groupedUpdate.map(x=>x.dados).sort((a,b)=>a.id.localeCompare(b.id)));
+await page.getByText('Orçamentos arquivados (1)',{exact:true}).click();
+await page.locator('[data-act="restoreorc"][data-o="mixed-budget"]').click();
+await mixedBudget.waitFor();
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+assert.equal(await page.evaluate(()=>pfAll().some(x=>x.o.id==='mixed-budget')),true);
+console.log('Excluir orçamento com baixa arquiva a proposta e preserva os recebimentos no banco.');
 console.log('Recebimentos cabem no relatório móvel e a edição agrupada reflete no orçamento e no mês.');
 console.log('Quitação em uma forma e correção histórica atualizam taxas e líquido do mês.');
 console.log('Pagamento misto no orçamento e divisão de recebimento antigo conservam o bruto e as formas.');

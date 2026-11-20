@@ -48,7 +48,7 @@ function ttSharedHtml(p){
   const sel=ttSel(),bk=ttBasket();
   if(!sel.length&&!bk.length)return '';
   const sh=view.trSh=view.trSh||{};
-  const orcOpts=p.orcs.filter(o=>o.status!=='Recusado');
+  const orcOpts=p.orcs.filter(o=>!o.archivedAt&&o.status!=='Recusado');
   const defOr=sh.or!==undefined?sh.or:(orcOpts[0]?orcOpts[0].id:'new'),so=v=>defOr===v?' selected':'';
   const nProc=bk.length+(sel.length?(ttUni()?1:sel.length):0);
   return `<div class="tt-panel">${sel.length?'':'<p class="note" style="margin:0 0 8px">Selecione no odontograma os dentes de outro procedimento para incluir neste orçamento, ou toque em Salvar tratamento.</p>'}
@@ -85,14 +85,16 @@ function ttSave(p){
   if(c.err){toast(c.err[0],2800);ttFocus(c.err[1]);return}
   const lines=ttBasket().concat(c.lines);
   if(!lines.length)return;
-  const sh=view.trSh||{},orcOpts=p.orcs.filter(o=>o.status!=='Recusado');
+  const sh=view.trSh||{},orcOpts=p.orcs.filter(o=>!o.archivedAt&&o.status!=='Recusado');
   const dt=sh.dt!==undefined?sh.dt:defDt();
   const oid=sh.or!==undefined?sh.or:(orcOpts[0]?orcOpts[0].id:'new');
   if(!dt){toast('Escolha o dentista responsável');const e=$('ttd');if(e)e.focus();return}
   p.trat=p.trat||[];
   let orc=null;
   if(oid==='new'){orc={id:uid(),data:new Date().toLocaleDateString('pt-BR'),status:'Pendente',itens:[],desc:'',val:plusDays(15),cond:''};p.orcs.unshift(orc)}
-  else if(oid&&oid!=='none')orc=getO(p,oid);
+  else if(oid&&oid!=='none'){
+    orc=getO(p,oid);if(!orc||orc.archivedAt){toast('Selecione um orçamento ativo.');return}
+  }
   lines.forEach(l=>{
     const m=procBy(l.proc),k=l.mult?l.q:1,tot=ttLineTot(l),obs=l.obs||'';
     const mats=m?matSnap(m).map(z=>k>1?Object.assign({},z,{q:z.q*k,sub:r2(z.sub*k)}):z):[];
@@ -243,7 +245,7 @@ function trLabResumoHtml(p){
 }
 function tratHtml(p){
   const all=p.trat||[],tr=trList(p),dr=view.trDraft||{},dec=(view.dent||'perm')==='dec';
-  const orcOpts=p.orcs.filter(o=>o.status!=='Recusado');
+  const orcOpts=p.orcs.filter(o=>!o.archivedAt&&o.status!=='Recusado');
   const flt=`<label for="trflt" style="margin-top:0">Filtrar por proposta</label><select id="trflt"><option value="">Todas as propostas</option>${p.orcs.map(o=>`<option value="${esc(o.id)}"${view.trFlt===o.id?' selected':''}>${esc(o.data)} · ${brl(total(o))} · ${esc(o.status)}</option>`).join('')}${all.some(x=>!x.oid)?`<option value="none"${view.trFlt==='none'?' selected':''}>Sem proposta</option>`:''}</select>`;
   const seg=`<div class="tp-seg"><button type="button" data-act="dent" data-t="perm" class="${dec?'':'on'}">Permanente</button><button type="button" data-act="dent" data-t="dec" class="${dec?'on':''}">Decíduos</button></div>`;
   const lg=`<div class="tp-lg"><span><i style="border-color:#E8741A;background:#E8741A"></i>Finalizado</span><span><i style="border-color:#FFB56B;background:#FFB56B"></i>Finalizado/A realizar</span><span><i style="border-color:#BDBDBD;background:#BDBDBD"></i>A realizar</span></div>`;
@@ -272,7 +274,15 @@ function tratHtml(p){
   return `${trResumoHtml(p)}${trLabResumoHtml(p)}${trMargemDetalhadaHtml(p)}${trAuditoriaHtml(p)}${trConciliacaoHtml(p)}<div class="card">${flt}<h2 style="margin-top:16px">Odontograma</h2>${seg}${odxHtml(p,tr)}${lg}<div id="trchips" style="margin-top:10px">${trChips()}</div><div id="trbasket">${ttBasketHtml(p)}</div><div id="trteeth">${ttPanelHtml(p)}</div><div id="trshared">${ttSharedHtml(p)}</div></div>${form}<h2>Tratamentos (${tr.length})</h2>${lista}${bar}`;
 }
 function tabOrc(p){
-  return `<button data-act="addo" style="width:100%;margin-bottom:12px">Novo orçamento</button>`+(p.orcs.length?p.orcs.map(o=>orcHtml(o,p)).join(''):'<div class="empty">Nenhum orçamento para este paciente.</div>');
+  const active=p.orcs.filter(o=>!o.archivedAt);
+  const archived=p.orcs.filter(o=>o.archivedAt);
+  const history=archived.length?`<details class="card"><summary>Orçamentos arquivados (${archived.length})</summary>
+    ${archived.map(o=>`<div class="row" style="margin-top:8px"><span>${esc(o.data)} · ${brl(total(o))}</span>
+      <button type="button" class="ghost sm" data-act="restoreorc" data-o="${esc(o.id)}">Restaurar orçamento</button></div>`).join('')}
+  </details>`:'';
+  return `<button data-act="addo" style="width:100%;margin-bottom:12px">Novo orçamento</button>
+    ${active.length?active.map(o=>orcHtml(o,p)).join(''):'<div class="empty">Nenhum orçamento ativo para este paciente.</div>'}
+    ${history}`;
 }
 
 // NexoDent 254 — carregamento sob demanda do laboratório no prontuário.
