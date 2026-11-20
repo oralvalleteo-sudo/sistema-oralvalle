@@ -2,7 +2,7 @@
 const panel=document.getElementById('crm-view-panel');
 const tabs=[...document.querySelectorAll('.crm-view-tabs [data-crm-view]')];
 if(!panel||!tabs.length)return;
-const groups=new Set(['overview','opportunities','followup','reports']);
+const groups=new Set(['overview','opportunities','followup','reports','marketing']);
 // Classify by stable section identity rather than fragile child indexes.
 const sectionGroups=[
  ['overview',['crm-goals','metrics']],
@@ -38,6 +38,7 @@ function sync(){
 }
 function activate(name,focus=false){
  current=groups.has(name)?name:'overview';sync();
+ window.dispatchEvent(new CustomEvent('nexocrm:view-changed',{detail:current}));
  if(focus)tabs.find(tab=>tab.dataset.crmView===current)?.focus();
  try{sessionStorage.setItem('nexodent-crm-view',current);}catch(e){}
 }

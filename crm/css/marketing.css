@@ -1,0 +1,14 @@
+.crm-marketing[hidden]{display:none!important}
+.crm-marketing{color:#192d3a;padding:clamp(12px,2vw,24px)}
+.crm-marketing h2{margin:0 0 14px;color:#172c38}
+.crm-marketing-filters{display:grid;grid-template-columns:repeat(3,minmax(115px,1fr)) auto;align-items:end;gap:12px}
+.crm-marketing-filters label{display:grid;gap:5px;font-size:.88rem;font-weight:650}
+.crm-marketing-filters select{min-height:42px;width:100%;border:1px solid #aebdc6;border-radius:8px;background:white;color:#172c38;padding:6px}
+.crm-marketing-filters button{min-height:42px}
+.crm-marketing-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin:14px 0}
+.crm-marketing-cards>div{border:1px solid #d9e2e7;border-radius:10px;background:#f8fafb;padding:14px;min-width:0}
+.crm-marketing-cards dt{color:#435967;font-size:.85rem}
+.crm-marketing-cards dd{margin:6px 0 0;font-size:1.28rem;font-weight:750;font-variant-numeric:tabular-nums}
+.crm-marketing p{color:#435967;line-height:1.5;font-size:.86rem}
+.crm-marketing p:empty{display:none}
+@media(max-width:700px){.crm-marketing-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.crm-marketing-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.crm-marketing-cards dd{font-size:1.1rem}}

@@ -65,6 +65,50 @@ const { chromium } = require('playwright');
 
     await frame.locator('#recovery-message').evaluate(dialog => dialog.showModal());
     await frame.locator('#recovery-send').click({ trial: true });
+    await frame.locator('#recovery-message').evaluate(dialog=>dialog.close());
+    await frame.locator('body').evaluate(()=>{
+      document.getElementById('app').hidden=false;
+      document.getElementById('clinic').replaceChildren(new Option('Clínica de teste','test-clinic'));
+      const object=(id,parent_id,dados)=>({id,parent_id,dados,kind:'object'});
+      const tables={
+        budgets:[object('budget','patient',{status:'Aprovado'})],
+        budget_items:[object('item','budget',{valor:800,paymentSaleId:'legacy-sale'})],
+        sales:[object('sale',null,{id:'legacy-sale'})],
+        receipts:[object('receipt','sale',{data:'2026-11-12',valor:400})]
+      };
+      window.OralCloud.enabled=true;
+      window.OralCloud.request=async(path,options)=>{
+        if(path.includes('nexodent_crm_leads'))return [
+          {id:'google',source:'Google Ads',created_at:'2026-11-01',budget_id:'budget'},
+          {id:'instagram',source:'Instagram',created_at:'2026-10-01'}
+        ];
+        if(path.includes('nexodent_general_expenses'))return [
+          {category:'Marketing — Google Ads',paid_at:'2026-11-06',amount:100}
+        ];
+        if(path.includes('clinic_load_start'))return {revision:'19',access:Object.fromEntries(Object.keys(tables).map(key=>[key,{read:true}]))};
+        if(path.includes('clinic_load_page'))return {revision:'19',next:null,rows:tables[options.body.p_table]};
+        return [];
+      };
+    });
+    const marketing=frame.getByRole('tab',{name:'Análise de Marketing'});
+    await marketing.click();
+    const report=frame.locator('#crm-marketing');
+    await report.getByText('Retorno sobre anúncios',{exact:true}).waitFor();
+    const metric=label=>report.getByText(label,{exact:true}).locator('..').locator('dd');
+    await report.getByLabel('Ano').selectOption('2026');
+    assert.equal(await report.getByLabel('Mês').inputValue(),'');
+    assert.equal(await report.getByLabel('Origem').inputValue(),'');
+    assert.equal(await metric('Leads').innerText(),'2');
+    await report.getByLabel('Mês').selectOption('11');
+    await report.getByLabel('Origem').selectOption('google ads');
+    assert.equal(await metric('Leads').innerText(),'1');
+    assert.equal(await metric('Pacientes convertidos').innerText(),'1');
+    assert.match(await metric('Valores contratados').innerText(),/800,00/);
+    assert.match(await metric('Pagamentos recebidos').innerText(),/400,00/);
+    assert.equal(await metric('Retorno sobre anúncios').innerText(),'4×');
+    await frame.getByRole('tab',{name:'Oportunidades'}).click();
+    await report.waitFor({state:'hidden'});
+    console.log('Análise de Marketing: visão geral, filtros, pagamentos reais vinculados e navegação do CRM.');
     console.log('Ações dos diálogos do CRM continuam acessíveis em telas móveis.');
   } finally {
     await browser.close();
