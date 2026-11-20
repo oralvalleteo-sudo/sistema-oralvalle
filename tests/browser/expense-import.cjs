@@ -1,5 +1,5 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
-(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});try{
+(async()=>{const b=await chromium.launch({executablePath:process.env.CHROMIUM_BIN||'/usr/bin/chromium',args:['--no-sandbox']});try{
  const p=await b.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>d.accept());
  await p.route('https://expense-import.invalid/**',r=>r.fulfill({contentType:'text/html',body:'<main id="app"></main>'}));await p.goto('https://expense-import.invalid');
  await p.addScriptTag({content:`let view={h:'cash'},epoch=1,rows=[],writes=0;window.pmLvl=()=>2;window.OralCloud={clinicId:'clinic-one',request:async(path,opt)=>{if(opt){writes++;rows.push(structuredClone(opt.body));return null;}const id=new URL('https://api.invalid'+path).searchParams.get('id')?.slice(3);return rows.filter(r=>!id||r.id===id);}};window.NexoCash={refreshForImport:async()=>{epoch++},importContext:()=>({clinicId:OralCloud.clinicId,epoch,expenses:structuredClone(rows),automatic:[{id:'LABPAY-test',amount:2000,date:'2026-11-03'}],warnings:[]})};window.render=()=>document.getElementById('app').innerHTML=NexoCashImport.html();`});
