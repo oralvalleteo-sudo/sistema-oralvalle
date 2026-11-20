@@ -477,7 +477,8 @@
  function allowed(type){
   if(!can('reports') || !commercial() || !Object.prototype.hasOwnProperty.call(kinds,type))return false;
   if(type==='patients')return can('pac');
-  if(type==='balanceannual'||type==='balancedentists')return moduleAllowed('finance') && can('vd') && can('cm') && can('reports');
+  if(type==='balanceannual')return moduleAllowed('finance') && can('vd') && can('cm') && can('reports') && can('pac') && !!window.OralCloud?.enabled && typeof pmLvl==='function' && pmLvl('vd')>=2 && allowed('labhistory');
+  if(type==='balancedentists')return moduleAllowed('finance') && can('vd') && can('cm') && can('reports');
   if(type==='cashcomplete')return moduleAllowed('finance') && can('vd') && can('pac') && typeof pmLvl==='function' && pmLvl('vd')>=2 && !!window.OralCloud?.enabled;
   if(type==='generalexpenses')return moduleAllowed('finance') && can('vd') && typeof pmLvl==='function' && pmLvl('vd')>=2 && !!window.OralCloud?.enabled;
   if(type==='labreconcile')return moduleAllowed('finance') && can('vd') && can('pac') && !!window.OralCloud?.enabled;
