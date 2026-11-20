@@ -675,6 +675,24 @@ const A={
     if(val>t.apagar+0.005){toast('Valor maior que o saldo a pagar ('+brl(t.apagar)+')',3000);return}
     const dI=document.querySelector(`[data-cpd="${esc(d.id)}"]`),oI=document.querySelector(`[data-cpo="${esc(d.id)}"]`);
     db.cp.push({id:uid(),dt:d.id,data:(dI&&dI.value)||tdy(),valor:r2(val),obs:oI?oI.value.trim():''});save();render();toast('Pagamento registrado')},
+  cpayretro:(b,d)=>{
+    const dentist=db.dt.find(item=>String(item.id)===String(d.id));
+    if(!dentist||pmLvl('cm')<2)return;
+    ovAgDialog('Registrar repasse retroativo',`<p>Repasse já realizado a ${esc(dentist.nome)}.</p>
+      <label>Data em que foi pago<input name="date" type="date" max="${tdy()}" required></label>
+      <label>Valor pago (R$)<input name="amount" type="number" min="0.01" step="0.01" required></label>
+      <label>Referência ou observação<input name="note" maxlength="200"></label>`,form=>{
+      const data=String(form.get('date')||''),valor=Number(form.get('amount')),obs=String(form.get('note')||'').trim();
+      if(pmLvl('cm')<2||!db.dt.includes(dentist))return false;
+      if(!window.NexoCashModel?.validDate(data)||data>tdy()||!Number.isFinite(valor)||valor<=0){
+        toast('Informe o valor e a data em que o repasse foi pago.');return false;
+      }
+      if(db.cp.some(payment=>payment.dt===dentist.id&&payment.data===data&&r2(num(payment.valor))===r2(valor))&&
+         !confirm('Já existe um repasse com a mesma data e valor. Confirmar que é outro pagamento?'))return false;
+      db.cp.push({id:uid(),dt:dentist.id,data,valor:r2(valor),obs,retroativo:true});
+      save();render();toast('Repasse retroativo registrado.');
+    });
+  },
   rmcp:(b,d)=>arm(d.id,()=>{db.cp=db.cp.filter(c=>c.id!==d.id);save();render()}),
   addpr:()=>{const n={id:uid(),nome:'Novo procedimento',min:'30',mat:'',lab:'',custo:'',par:'',parTipo:'reais',preco:'',parc:false,mats:[]};db.pr.unshift(n);view.prOpen=n.id;view.prFilter='all';view.prq='';save();render();setTimeout(()=>document.querySelector('.nc-editor[open]')?.scrollIntoView({block:'nearest',behavior:'smooth'}),0)},
   addmt:()=>{const nome=$('mtn').value.trim(),preco=num($('mtp').value),qtd=num($('mtq').value)||1,stock=num($('mts').value),val=$('mtv').value;if(!nome){toast('Digite o nome do material');return}if(!(preco>0)){toast('Informe o preço da embalagem');return}if(stock<0||!Number.isFinite(stock)){toast('Quantidade em estoque inválida');return}db.mt.push({id:uid(),nome,un:$('mtu').value,preco:String(preco),qtd:String(qtd),val:'',ret:false,lotes:stock>0?[{id:uid(),qtd:String(stock),val,ret:false}]:[]});save();render();toast('Material cadastrado')},

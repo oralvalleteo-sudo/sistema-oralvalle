@@ -3,6 +3,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
 await p.locator('[data-cash="new"]').click();assert.equal(await p.locator('[name="supplier"]').count(),0);assert.equal(await p.locator('[name="due_date"]').getAttribute('required'),null);await p.locator('[name="description"]').fill('Sem prazo');await p.locator('[name="category"]').selectOption('__new__');await p.locator('[name="custom_category"]').fill('Serviço externo');await p.locator('[name="amount"]').fill('40');await p.locator('#nx-cash-form button[type="submit"]').click();await p.waitForFunction(()=>!document.getElementById('nx-cash-form'));const added=await p.evaluate(()=>rows.find(r=>r.description==='Sem prazo'));assert.equal(added.due_date,null);assert.equal(added.reference_month,'2026-11-01');assert.match(await dashboard.innerText(),/Serviço externo/);await p.locator('[data-cash="pay"][data-id="'+added.id+'"]').click();await p.waitForFunction(()=>document.querySelector('.nx-cash-metrics').textContent.includes('415,00'));assert.equal(await p.locator('details.card [data-cash="pay"][data-id="'+added.id+'"]').count(),0);assert.match(await p.locator('details.card').filter({has:p.getByText('Despesas do mês',{exact:true})}).innerText(),/Sem prazo/);
 await p.locator('[data-cash="edit"][data-id="a"]').click();await p.locator('[name="amount"]').fill('120');await p.locator('#nx-cash-form button[type="submit"]').click();await p.waitForFunction(()=>!document.getElementById('nx-cash-form'));assert.equal(await p.evaluate(()=>rows.find(r=>r.id==='a').supplier),'Dado antigo preservado');await dashboard.locator('summary').click();assert.deepEqual(await p.locator('#nx-cash-merge [name="sources"] option').filter({hasText:/^folha$/i}).allTextContents(),['Folha']);await p.locator('#nx-cash-merge [name="sources"]').selectOption('Folha');await p.locator('#nx-cash-merge [name="target"]').fill('Equipe');await p.locator('#nx-cash-merge button').click();await p.waitForFunction(()=>document.querySelector('[role="status"]')?.textContent.includes('Categorias unidas'));assert.match(await dashboard.innerText(),/Equipe/);assert.doesNotMatch(await dashboard.getByLabel('Gráfico de despesas por categoria').innerText(),/Folha|folha/);assert.equal(await p.evaluate(()=>rows.filter(r=>r.category==='Equipe').length),2);
 await p.locator('[data-cash="delete"][data-id="'+added.id+'"]').click();await p.waitForFunction(()=>document.querySelector('.nx-cash-metrics').textContent.includes('375,00'));assert.equal(await p.evaluate(id=>!!rows.find(r=>r.id===id).voided_at,added.id),true);const before=await p.evaluate(()=>posts.filter(x=>x.path==='/rest/v1/nexodent_general_expenses').length);await p.evaluate(()=>{labAmount=500;window.dispatchEvent(new Event('nexodent:lab-payments-updated'))});await p.waitForFunction(()=>document.querySelector('.nx-cash-metrics').textContent.includes('675,00'));assert.equal(await p.evaluate(()=>posts.filter(x=>x.path==='/rest/v1/nexodent_general_expenses').length),before);await p.evaluate(()=>{db.cp.push({id:'new-cp',data:'2026-11-10',valor:70});render()});assert.match(await p.locator('.nx-cash-metrics').innerText(),/745,00/);await p.evaluate(()=>{
+ window.r2=value=>Math.round(value*100)/100;window.num=Number;
  const request=OralCloud.request;
  window.failLab=true;
  OralCloud.request=(path,options)=>{
@@ -26,5 +27,38 @@ assert.equal(await annualCard('Laboratórios pagos').innerText(),'500.00');
 await p.locator('#nx-r-type').selectOption('balancemonthly');
 assert.equal(await p.locator('.nx-report-table tbody tr').count(),13);
 assert.doesNotMatch(await p.locator('.nx-report-table').innerText(),/Indisponível/);
+await p.evaluate(()=>{
+ window.render=()=>document.getElementById('app').innerHTML=view.h==='cash'?NexoCash.html():nexoReportsHtml();
+ NexoCash.openExpense('Laboratório',true);
+});
+await p.getByRole('heading',{name:'Pagamento retroativo ao laboratório'}).waitFor();
+const retroForm=p.locator('#nx-cash-form');
+assert.equal(await retroForm.locator('[name="category"]').inputValue(),'Laboratório');
+await retroForm.locator('[name="description"]').fill('Laboratório retroativo');
+await retroForm.locator('[name="amount"]').fill('120');
+await retroForm.locator('[name="paid_at"]').fill('2026-10-10');
+await retroForm.locator('[name="payment_method"]').fill('Pix');
+assert.equal(await retroForm.locator('[name="reference_month"]').inputValue(),'2026-10');
+await retroForm.getByRole('button',{name:'Salvar despesa'}).click();
+await retroForm.waitFor({state:'detached'});
+await p.getByRole('button',{name:'Salários da equipe'}).click();
+assert.equal(await p.locator('#nx-cash-form [name="category"]').inputValue(),'Salários');
+await p.getByRole('button',{name:'Cancelar',exact:true}).click();
+await p.getByRole('button',{name:'Contabilidade',exact:true}).click();
+assert.equal(await p.locator('#nx-cash-form [name="category"]').inputValue(),'Contabilidade');
+await p.getByRole('button',{name:'Cancelar',exact:true}).click();
+await p.getByRole('button',{name:'Impostos',exact:true}).click();
+assert.equal(await p.locator('#nx-cash-form [name="category"]').inputValue(),'Impostos');
+await p.evaluate(()=>{view.h='reports';view.reportType='balanceannual';render();});
+await p.waitForFunction(()=>!document.getElementById('app').textContent.includes('Carregando'));
+assert.equal(await annualCard('Laboratórios pagos').innerText(),'620.00');
+await p.evaluate(()=>{
+ db.vd.push({id:'new-sale',valor:150,data:'2026-10-13',pg:[{id:'new-receipt',valor:150,data:'2026-10-13'}]});
+ render();
+});
+assert.equal(await annualCard('Recebimentos').innerText(),'1150.00');
+await p.evaluate(()=>{window.labAmount=550;window.dispatchEvent(new Event('nexodent:lab-payments-updated'));});
+await p.waitForFunction(()=>!document.getElementById('app').textContent.includes('Carregando'));
+assert.equal(await annualCard('Laboratórios pagos').innerText(),'670.00');
 console.log('Balanço anual carrega automaticamente, preserva fontes disponíveis durante falhas e atualiza com o balanço mensal.');
 assert.deepEqual(errors,[]);console.log('Mensal: referência independente do dia pago, vencimento opcional, categoria livre, totais/gráfico, união de categorias, edição/exclusão auditáveis e atualizações automáticas de laboratório/dentistas.');}finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});

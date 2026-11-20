@@ -37,7 +37,7 @@
  let balanceSources=null;
  function balanceState(){
   const clinic=window.OralCloud?.clinicId;
-  if(!balanceSources||balanceSources.clinic!==clinic)balanceSources={clinic,expenses:null,lab:null,errors:[],loading:false,attempted:false};
+  if(!balanceSources||balanceSources.clinic!==clinic)balanceSources={clinic,expenses:null,lab:null,errors:[],loading:false,attempted:false,loadedAt:0};
   return balanceSources;
  }
  function loadBalance(force=false){
@@ -55,7 +55,7 @@
    read('lab','Laboratório','/rest/v1/nexodent_lab_payment_events?select=id,source_order_id,amount,paid_at,kind')
   ]).then(()=>{
    if(balanceSources!==state)return;
-   state.loading=false;
+   state.loading=false;state.loadedAt=Date.now();
    if(view.h==='reports'&&isBalance(view.reportType))render();
   });
  }
@@ -323,8 +323,9 @@
    let general=null,lab=null,dentists=null,result=null,warnings=0;
    if(window.NexoCashModel){
     const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:sources.lab||[],expenses:sources.expenses||[],from:a,to:b});
-    if(sources.expenses!==null)general=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Despesa manual'),x=>x.cents)/100;
-    if(sources.lab!==null)lab=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Laboratório'),x=>x.cents)/100;
+    const manualLab=row=>row.source==='Despesa manual'&&window.NexoCashModel.categoryKey(row.category)==='laboratorio';
+    if(sources.expenses!==null)general=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Despesa manual'&&!manualLab(x)),x=>x.cents)/100;
+    if(sources.lab!==null)lab=total(ledger.rows.filter(x=>x.direction<0&&(x.source==='Laboratório'||manualLab(x))),x=>x.cents)/100;
     dentists=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Dentista'),x=>x.cents)/100;
     if(ready)result=received-general-lab-dentists-fees;
     warnings=ledger.warnings.length;
@@ -466,9 +467,9 @@
   const remaining=Math.max(0,n(order.laboratory_cost)-labPaidForOrder(orderId).paid);
   if(!Number.isFinite(amount)||amount<=0||Math.round(amount*100)>Math.round(remaining*100))throw Error('Informe um valor positivo até '+cash(remaining)+'.');
   if(!validDate(date)||!method)throw Error('Informe data e forma de pagamento.');
-  if(!confirm('Registrar novo pagamento de '+cash(amount)+'? Esta operação cria histórico individual, mas NÃO lança despesa no caixa.'))return;
+  if(!confirm('Registrar novo pagamento de '+cash(amount)+'? O pagamento será contabilizado no Balanço.'))return;
   await window.OralCloud.request('/rest/v1/rpc/nexodent_add_lab_payment_event',{method:'POST',body:{p_clinic:id,p_order_id:String(orderId),p_amount:amount,p_paid_at:date,p_method:method}});
-  if(window.OralCloud.clinicId!==id)return;await loadLabEvents();if(window.view?.h==='reports')window.render();
+  if(window.OralCloud.clinicId!==id)return;window.dispatchEvent(new Event('nexodent:lab-payments-updated'));await loadLabEvents();if(view.h==='reports')render();
  }
  async function loadLabCash(){
   if(!allowed('labcash'))throw Error('Acesso não autorizado.');
@@ -580,7 +581,7 @@
   if(!commercial())return '<div class="card"><h2>Relatórios indisponíveis</h2><p>Este módulo não está incluído no plano da clínica.</p></div>';
   const type=current();if(!type)return '<div class="card"><h2>Sem acesso aos relatórios</h2><p>Solicite ao administrador as permissões necessárias.</p></div>';
   view.reportType=type;
-  if(isBalance(type))loadBalance();
+  if(isBalance(type))loadBalance(Date.now()-balanceState().loadedAt>=60000);
   const chosenYear=view.balanceYear&&view.balanceYear!=='all'?view.balanceYear:today().slice(0,4);
   const [a,b]=(type==='balanceannual'||type==='balancemonthly')?[chosenYear+'-01-01',chosenYear+'-12-31']:[view.reportFrom||today().slice(0,7)+'-01',view.reportTo||today()];
   const currentYear=Number(today().slice(0,4));
@@ -661,6 +662,12 @@
   const html=`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>${safe(kinds[type])}</title><style>body{font:12px Arial;margin:24px;color:#222}h1{color:#bd6000}table{border-collapse:collapse;width:100%}th,td{padding:7px;text-align:left;border-bottom:1px solid #ddd}th{background:#f2eee9}@page{size:A4 landscape;margin:12mm}</style><h1>NexoDent — ${safe(kinds[type])}</h1><p>Período: ${safe(a)} a ${safe(b)} · Dados carregados no navegador; podem estar incompletos.</p><p>${safe(r.summary)}</p><table><thead><tr>${r.heads.map(h=>`<th>${safe(h)}</th>`).join('')}</tr></thead><tbody>${r.items.map(row=>`<tr>${row.map(v=>`<td>${safe(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></html>`;
   const w=window.open('','_blank');if(!w){alert('Permita janelas pop-up para imprimir o relatório.');return}w.document.write(html);w.document.close();w.focus();setTimeout(()=>w.print(),400);
  },true);
+ function refreshVisibleBalance(){
+  if(document.hidden||view.h!=='reports'||!isBalance(view.reportType)||document.activeElement?.id==='nx-r-year')return;
+  if(Date.now()-balanceState().loadedAt>=60000)loadBalance(true);
+ }
+ setInterval(refreshVisibleBalance,15000);
+ window.addEventListener('focus',refreshVisibleBalance);
  window.addEventListener('nexodent:signed-out',()=>{balanceSources=null;reportClinic=null;});
  window.addEventListener('nexodent:clinic-data-loaded',()=>{
   const id=window.OralCloud?.clinicId;

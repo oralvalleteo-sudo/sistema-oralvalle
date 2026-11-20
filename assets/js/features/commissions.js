@@ -34,6 +34,7 @@ function comHtml(){
   ${t.exc>0?rw('Pago adiantado (geral)',brl(t.exc)):''}
   <div class="tot" style="color:var(--ac)"><span>A pagar agora (geral)</span><span>${brl(t.apagar)}</span></div>
   ${t.apagar>0?`<div class="row" style="margin-top:8px"><input data-cpv="${esc(d.id)}" inputmode="decimal" value="${t.apagar.toFixed(2)}" aria-label="Valor a pagar"><button data-act="cpay" data-id="${esc(d.id)}">Registrar pagamento</button></div>`:'<p class="note" style="margin:8px 0 0">Nada a pagar agora.</p>'}
+    ${pmLvl('cm')>=2?`<button type="button" class="ghost sm" data-act="cpayretro" data-id="${esc(d.id)}">Registrar repasse retroativo</button>`:''}
   ${pm.length?pm.map(c=>`<div class="pg"><span>${fd(c.data)} · pagamento${c.obs?' ('+esc(c.obs)+')':''}</span><span>${brl(c.valor)} <button class="danger sm" data-act="rmcp" data-id="${esc(c.id)}" aria-label="Remover pagamento">${delArm===c.id?'Confirmar':'×'}</button></span></div>`).join(''):''}
   <details open><summary>Comissionamentos do mês (${vm.length})</summary>${vm.length?vm.map(v=>`<div class="pg"><span>${fd(v.data)} · ${esc(pName(v.pid))}<br>${esc(v.proc||'Atendimento')} · ${brl(v.valor)} · ${esc(dName(v.dt))}</span><span style="text-align:right"><strong>${brl(v.rep)}</strong><br>${Math.round(Math.min(1,recebido(v)/(num(v.valor)||1))*100)}% recebido</span></div>`).join(''):'<p class="note" style="margin:0">Nenhum comissionamento neste mês.</p>'}</details></div>`;
   return h;
