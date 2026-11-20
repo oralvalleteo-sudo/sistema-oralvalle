@@ -62,11 +62,40 @@
    return item;
   }));
  }
+ function selectOrigin(key){
+  source.value=key;
+  visibleRows=25;
+  draw();
+ }
+ function drawReceiptOrigins(origins){
+  const panel=$('#crm-marketing-receipts'), list=$('#crm-marketing-receipt-origins');
+  panel.hidden=!origins.length;
+  if(!origins.length){list.replaceChildren();return}
+  const total=origins.some(row=>row.received===null)?null:origins.reduce((sum,row)=>sum+row.received,0);
+  const label=key=>names.get(key)||[...source.options].find(option=>option.value===key)?.textContent||key;
+  const rows=[{key:'',received:total},...origins.sort((a,b)=>(b.received??0)-(a.received??0)||label(a.key).localeCompare(label(b.key),'pt-BR'))];
+  list.replaceChildren(...rows.map(({key,received})=>{
+   const item=document.createElement('li'), button=document.createElement('button');
+   const title=document.createElement('span'), amount=document.createElement('strong');
+   button.type='button';
+   button.dataset.receiptOrigin=key;
+   button.setAttribute('aria-pressed',String(source.value===key));
+   title.textContent=key?label(key):'Total recebido no período';
+   amount.textContent=monetary(received);
+   button.append(title,amount);item.append(button);
+   button.onclick=()=>{
+    selectOrigin(key);
+    [...list.querySelectorAll('button')].find(option=>option.dataset.receiptOrigin===key)?.focus({preventScroll:true});
+   };
+   return item;
+  }));
+ }
  function draw(){
   const status=$('#crm-marketing-status'),cards=$('#crm-marketing-cards');
-  if(!state?.result){cards.replaceChildren();drawList([]);status.textContent=state?.error||(state?.loading?'Carregando dados de marketing…':'Selecione uma clínica.');return}
-  const rows=[];
-  const totals=model.calculate(state.result,{year:year.value,month:month.value,source:source.value},rows);
+  if(!state?.result){cards.replaceChildren();drawReceiptOrigins([]);drawList([]);status.textContent=state?.error||(state?.loading?'Carregando dados de marketing…':'Selecione uma clínica.');return}
+  const rows=[], receiptOrigins=[];
+  const totals=model.calculate(state.result,{year:year.value,month:month.value,source:source.value},rows,receiptOrigins);
+  drawReceiptOrigins(receiptOrigins);
   drawList(rows);
   const metrics=[
    ['Investimentos publicitários',monetary(totals.investment)],['Leads',totals.leads],['Pacientes convertidos',totals.converted],

@@ -45,7 +45,7 @@ test('origin filters include legacy links, independent payment dates and budgets
  const data=prepare({
   leads:[
    {id:'meta',created_at:'2026-10-01',source:'Meta',notes:'[NEXODENT_BUDGET:meta%20budget]'},
-   {id:'google',created_at:'2026-11-01',source:'google_ads',budget_id:'google-budget'},
+   {id:'google',created_at:'2026-11-01',source:' Google  -  Ads ',budget_id:'google-budget'},
    {id:'imported',created_at:'2026-10-02',source:'Outros',budget_id:'meta budget'}
   ],
   budgets:[
@@ -79,4 +79,23 @@ test('origin filters include legacy links, independent payment dates and budgets
  assert.equal(totals('Orçamento').received,30000);
  assert.equal(totals('Orçamento').roas,null);
  assert.equal(totals('').roas,35000/7500);
+});
+
+test('recebimentos de todas as origens fecham com o total, incluindo orçamentos sem origem',()=>{
+ const data=prepare({
+  leads:[
+   {id:'g',source:' Google   - Ads ',created_at:'2026-10-01',budget_id:'b1'},
+   {id:'p',source:'Parceria - Local',created_at:'2026-10-01',budget_id:'b2'}
+  ],
+  budgets:['b1','b2','b3'].map(id=>row(id,id,{status:'Aprovado',data:'2026-10-01'})),
+  budget_items:['b1','b2','b3'].map(id=>row('i'+id,id,{valor:200,vid:id})),
+  sales:['b1','b2','b3'].map(id=>row('s'+id,null,{id})),
+  receipts:['b1','b2','b3'].map((id,index)=>row('r'+id,'s'+id,{valor:index+90,data:'2026-11-01'}))
+ });
+ const period={year:2026,month:'11'}, breakdown=[];
+ const all=calculate(data,period,[],breakdown);
+ assert.equal(all.received,27300);
+ assert.deepEqual(breakdown.map(row=>row.key),['google ads','parceria local','orcamento']);
+ assert.equal(breakdown.reduce((sum,row)=>sum+row.received,0),all.received);
+ for(const row of breakdown)assert.equal(calculate(data,{...period,source:row.key}).received,row.received);
 });

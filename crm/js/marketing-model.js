@@ -5,7 +5,7 @@
 })(globalThis,()=>{
  const normalize=value=>String(value||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/\s+/g,' ');
  const origin=value=>{
-  const key=normalize(value).replace(/[_-]+/g,' ');
+  const key=normalize(String(value||'').replace(/[_-]+/g,' '));
   if(['meta','meta ads','meta ads facebook','facebook','facebook ads','instagram','instagram ads','facebook e instagram','instagram / meta ads'].includes(key))return 'instagram';
   if(['google','google ads','google adwords','adwords','google ad words','google publicidade'].includes(key))return 'google ads';
   if(['orcamento','orcamentos','proposta','proposta financeira'].includes(key))return 'orcamento';
@@ -113,7 +113,7 @@
   return {leads:leadRows,contracts,saleOwners,receiptRows,spending,available:{expenses:expenses!==null,contracts:budgets!==null&&budget_items!==null,
    receipts:budgets!==null&&budget_items!==null&&sales!==null&&receipts!==null}};
  }
- function calculate(model,{year,month='',source=''},entries){
+ function calculate(model,{year,month='',source=''},entries,receiptOrigins){
   const prefix=String(year)+(month?'-'+month:'');
   const inPeriod=day=>day.startsWith(prefix);
   const selected=key=>!source||key===origin(source);
@@ -135,12 +135,15 @@
   const moneyTotal=values=>values.some(value=>value===null)?null:values.reduce((sum,value)=>sum+value,0);
   const investment=model.available.expenses?moneyTotal(expenses.map(expense=>expense.value)):null;
   const contracted=model.available.contracts?moneyTotal(contracts.map(contract=>contract.total)):null;
-  const actual=[], attributed=[];
+  const actual=[], attributed=[], byOrigin=new Map();
   for(const [sale,contract] of model.saleOwners){
-   if(!selected(contract.origin))continue;
+   const included=selected(contract.origin);
+   if(!included&&!receiptOrigins)continue;
    for(const receipt of model.receiptRows.get(sale)||[]){
     if(!inPeriod(date(receipt.dados?.data)))continue;
     const amount=cents(receipt.dados?.valor);
+    if(receiptOrigins)add(byOrigin,contract.origin,amount);
+    if(!included)continue;
     actual.push(amount);
     if(entries)entry(contract.lead,contract).received.push(amount);
     if(!['orcamento','sem origem','outros'].includes(contract.origin))attributed.push(amount);
@@ -151,6 +154,7 @@
    contracted:model.available.contracts?moneyTotal(row.contracted):null,
    received:model.available.receipts?moneyTotal(row.received):null
   });
+  if(receiptOrigins&&model.available.receipts)for(const [key,values] of byOrigin)receiptOrigins.push({key,received:moneyTotal(values)});
   const received=model.available.receipts?moneyTotal(actual):null;
   const converted=model.available.contracts?patients.size:null;
   const attributedReceived=model.available.receipts&&origin(source)!=='orcamento'?moneyTotal(attributed):null;

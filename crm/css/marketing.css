@@ -16,3 +16,8 @@
 #crm-marketing-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #d9e2e7}
 #crm-marketing-list li small{display:block;color:#435967;overflow-wrap:anywhere}
 @media(max-width:480px){#crm-marketing-list li{grid-template-columns:1fr;align-items:start}#crm-marketing-list li button{justify-self:start}}
+#crm-marketing-receipts[hidden]{display:none!important}
+#crm-marketing-receipt-origins{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:8px;list-style:none;margin:0 0 18px;padding:0}
+#crm-marketing-receipt-origins button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;height:100%;text-align:left;color:#192d3a;background:#fff;border:1px solid #d9e2e7;border-radius:8px;padding:8px 10px;white-space:normal}
+#crm-marketing-receipt-origins button strong{white-space:nowrap}
+#crm-marketing-receipt-origins button[aria-pressed=true]{background:#edf2f7;border-color:#9eafbd}
