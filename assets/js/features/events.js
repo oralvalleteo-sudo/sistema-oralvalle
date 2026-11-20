@@ -189,6 +189,7 @@ document.addEventListener('change',e=>{
   if(t.id==='agDent'){view.agDent=t.value||'todos';render();return}
   if(t.dataset&&t.dataset.ag&&t.dataset.f==='st'){const a=db.ag.find(x=>x.id===t.dataset.ag);if(a){a.st=t.value;save();render()}return}
   if(t.id==='pfPaciente'){view.pfPid=t.value||'';if(view.pfNew){return}render();return}
+  if(t.id==='avsSound'){window.NexoNotificationSound?.setEnabled(t.checked);return}
   if(t.id==='avsOn'){avsCfg().on=t.checked;save();toast(t.checked?'Aviso de horário ativado':'Aviso de horário desativado',1800);return}
   if(t.id==='avsMin'){avsCfg().min=+t.value||15;save();toast('Aviso com '+t.value+' min de antecedência',1800);return}
   if(t.id==='pfSt'){view.pfSt=t.value;render();return}

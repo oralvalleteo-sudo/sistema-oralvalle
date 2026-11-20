@@ -124,7 +124,7 @@ html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-red .
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-yellow .ag-compact-dot {background:#eab308!important;box-shadow:0 0 0 1px #b88b00!important;opacity:1!important}
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-orange .ag-compact-dot {background:#f07800!important;box-shadow:0 0 0 1px #bd5e00!important;opacity:1!important}
 html[data-ov-mode="light"] .ag-date-panel,html[data-ov-mode="light"] .ag-date-panel .note,html[data-ov-mode="light"] .ag-rental-panel .note {color:#586675!important}
-html[data-ov-mode="light"] .ag-date-panel strong,html[data-ov-mode="light"] .ag-date-panel label,html[data-ov-mode="light"] .ag-rental-panel strong {color:#26313b!important}
+html[data-ov-mode="light"] .ag-date-panel h1,html[data-ov-mode="light"] .ag-date-panel label,html[data-ov-mode="light"] .ag-rental-panel strong {color:#26313b!important}
 html[data-ov-mode="light"] .ov-ag-status-options label:has(input[value="Compareceu"]) input {accent-color:#f07800!important}
 html[data-ov-mode="light"] .ov-ag-status-options label:has(input[value="Faltou"]) input {accent-color:#dc3545!important}
 html[data-ov-mode="light"] .ov-ag-status-options label:has(input[value="Cancelado"]) input {accent-color:#eab308!important}

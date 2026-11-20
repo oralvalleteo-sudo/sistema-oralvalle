@@ -79,10 +79,13 @@ function retMsg(p,last){
   return String(cl.retMsg||RET_MSG_DEF).replace(/\s*\(\{ultima\}\)/g,u?' ('+u+')':'').replace(/\{nome\}/g,pn).replace(/\{clinica\}/g,cl.nome||'clínica').replace(/\{ultima\}/g,u);
 }
 function mesesDesde(iso){const n=new Date(),t=new Date(iso+'T12:00:00');let m=(n.getFullYear()-t.getFullYear())*12+n.getMonth()-t.getMonth();if(n.getDate()<t.getDate())m--;return Math.max(m,0)}
-function retBanner(){
-  if(typeof pmLvl==='function'&&pmLvl('lem')<1)return '';
-  const n=retPend();if(!n)return '';
-  return `<details class="card nexo-agenda-followup"><summary>Pacientes sem retorno <span class="badge">${n}</span></summary><div class="nexo-agenda-followup-body"><p class="note">${n} ${n===1?'paciente sem retorno':'pacientes sem retorno'} há mais de ${retMeses()} meses. Chame no WhatsApp para reagendar.</p><button type="button" class="ghost sm" data-act="lemgo">Ver lista</button></div></details>`;
+function pendingRescheduleHtml(appointments,canEdit){
+  const rows=appointments.map(appointment=>`<div class="ret-it">
+    <div class="ret-i"><strong>${esc(pName(appointment.pid))}</strong>
+      <small>Consulta anterior: ${esc(fd(appointment.data))} · ${esc(appointment.hora||'')} ${esc(db.p.find(p=>String(p.id)===String(appointment.pid))?.tel||'')}</small></div>
+    ${canEdit?`<div class="ret-act"><button type="button" class="sm" data-act="agreagpend" data-id="${esc(appointment.id)}">Reagendar</button></div>`:''}
+  </div>`);
+  return `<section class="card ret-card"><h2>Aguardando reagendamento</h2>${rows.join('')||'<p class="note">Nenhum paciente aguardando nova data.</p>'}</section>`;
 }
 function retHtml(){
   const {out,never}=retLista(),pend=out.filter(x=>!retRecente(x.p)).length,N=retMeses(),lim=view.retAll?out.length:8;
@@ -118,7 +121,11 @@ function lembretesHtml(){
   const hoje=tdy();
   const pend=list.filter(x=>!x.feito).length;
   const TIPOS=['Geral','Paciente','Financeiro','Agenda','Administrativo','Retorno'],rp=retPend(),op=orthoLista().length,birthdays=ovBirthdayToday().length;
-  const tabs=[['todos','Todos',pend],['aniversarios','Aniversários',birthdays],['ret','Sem retorno',rp],['ortho','Ortodontia',op]].concat(TIPOS.map(t=>[t,t,list.filter(x=>!x.feito&&(x.tipo||'Geral')===t).length]));
+  const agendaAccess=pmLvl('ag');
+  const reschedule=agendaAccess>0?(db.ag||[]).filter(a=>a.tipoRegistro!=='aluguel'&&a.reagendamentoPendente===true&&a.st==='Reagendou'):[];
+  const tabs=[['todos','Todos',pend],['aniversarios','Aniversários',birthdays],
+    ...(agendaAccess>0?[['reag','Aguardando reagendamento',reschedule.length]]:[]),
+    ['ret','Pacientes sem retorno',rp],['ortho','Ortodontia',op]].concat(TIPOS.map(t=>[t,t,list.filter(x=>!x.feito&&(x.tipo||'Geral')===t).length]));
   const T=tabs.some(x=>x[0]===view.lemTab)?view.lemTab:'todos';
   const shown=T==='todos'?list:list.filter(x=>(x.tipo||'Geral')===T),tipoSel=TIPOS.includes(T)?T:'Geral';
   const tabsHtml=`<nav class="lem-tabs" aria-label="Assuntos dos lembretes">${tabs.map(([key,label,count])=>`<button type="button"${T===key?' aria-current="page"':''} data-act="lemtab" data-t="${key}"><strong>${label}</strong>${count?`<span class="lem-n">${count}</span>`:''}</button>`).join('')}</nav>`;
@@ -127,7 +134,7 @@ function lembretesHtml(){
     ${birthdays?`<button type="button" class="ghost" data-act="lemtab" data-t="aniversarios">${birthdays} aniversariante${birthdays===1?'':'s'} hoje <span aria-hidden="true">→</span></button>`:''}
   </div>`:'';
   return `<div class="ov-reminders-page"><div class="ov-page-head"><h1>Lembretes</h1><span class="ov-reminder-count">${pend} pendente${pend===1?'':'s'}</span></div>
-  ${tabsHtml}<div class="ov-reminders-content">${T==='aniversarios'?ovBirthdayHtml():T==='ret'?retHtml():T==='ortho'?orthoHtml(false):`
+  ${tabsHtml}<div class="ov-reminders-content">${T==='aniversarios'?ovBirthdayHtml():T==='ret'?retHtml():T==='reag'?pendingRescheduleHtml(reschedule,agendaAccess>=2):T==='ortho'?orthoHtml(false):`
   <div class="ov-reminder-grid">
     <section class="ov-reminder-form ov-reminder-toolbar">
       <details class="nd-lem-create">

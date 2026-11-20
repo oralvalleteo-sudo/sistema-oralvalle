@@ -420,5 +420,36 @@ console.log('Excluir orçamento com baixa arquiva a proposta e preserva os receb
 console.log('Recebimentos cabem no relatório móvel e a edição agrupada reflete no orçamento e no mês.');
 console.log('Quitação em uma forma e correção histórica atualizam taxas e líquido do mês.');
 console.log('Pagamento misto no orçamento e divisão de recebimento antigo conservam o bruto e as formas.');
+await page.evaluate(()=>{
+ const patient=db.p.find(p=>p.nome==='Novo paciente sintético');
+ db.ag.push({id:'move-reschedule',pid:patient.id,data:'2025-10-01',hora:'09:00',dur:30,
+  cadeira:'1',dt:'staff-dentist',st:'Reagendou',reagendamentoPendente:true});
+ save();
+});
+await menu.locator('[data-t="ag"]').click();
+assert.match(await page.locator('.nexo-agenda-page > :first-child').innerText(),/^Agenda do dia/);
+assert.equal(await page.getByText('Aguardando reagendamento',{exact:true}).count(),0);
+assert.equal(await page.locator('#avsOn').count(),0);
+await menu.locator('[data-t="lem"]').click();
+await page.getByRole('button',{name:'Pacientes sem retorno'}).click();
+await page.getByRole('heading',{name:/Pacientes sem retorno/}).waitFor();
+await page.getByRole('button',{name:/Aguardando reagendamento/}).click();
+await page.getByRole('heading',{name:'Aguardando reagendamento'}).waitFor();
+await page.locator('[data-act="agreagpend"][data-id="move-reschedule"]').click();
+const rescheduleDialog=page.getByRole('dialog',{name:'Definir nova consulta'});
+const newDate=await page.evaluate(()=>{const day=new Date();day.setDate(day.getDate()+10);return day.toISOString().slice(0,10);});
+await rescheduleDialog.getByLabel('Nova data').fill(newDate);
+await rescheduleDialog.locator('button[type=submit]').click();
+await page.getByText('Nenhum paciente aguardando nova data.').waitFor();
+assert.equal(await page.evaluate(date=>db.ag.some(a=>a.data===date&&a.st==='Agendado'),newDate),true);
+await menu.locator('[data-t="cfg"]').click();
+await page.getByRole('button',{name:/Aparência/}).click();
+await page.getByRole('heading',{name:'Som e notificações'}).waitFor();
+await page.locator('#avsSound').uncheck();
+assert.equal(await page.evaluate(()=>window.NexoNotificationSound.enabled()),false);
+await page.locator('#avsSound').check();
+assert.equal(await page.evaluate(()=>window.NexoNotificationSound.enabled()),true);
+await page.locator('#avsMin').waitFor();
+console.log('Agenda abre no dia, reagendamento funciona em Lembretes e o som é controlado em Aparência.');
 await page.locator('[data-act="logout"]').first().click();await page.locator('#cloudEmail').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>window.OralCloud.session),null);assert.equal(await page.locator('.ov-sidebar').count(),0);assert.deepEqual(errors,[]);console.log('Aplicação real: entrada, cadastro e persistência de paciente, agendamento, navegação de módulos, central interna e saída sem dados clínicos visíveis.');
 }finally{if(browser)await browser.close();await db.close();}})().catch(error=>{console.error(error);process.exit(1)});

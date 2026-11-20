@@ -59,10 +59,6 @@ window.NexoOpenCommunication = function(){
 if (!window.OralCloud?.enabled) load();
 authBoot();
 
-document.addEventListener('toggle', (event) => {
-	if (event.target && event.target.id === 'avsBox') view.avsOpen = event.target.open;
-}, true);
-
 avsTickStart();
 setTimeout(avsCheck, 2500);
 document.addEventListener('visibilitychange', () => {

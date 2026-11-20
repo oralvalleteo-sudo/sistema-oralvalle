@@ -95,10 +95,11 @@ function avsStatusTxt(){
 function avsCardHtml(){
   const c=avsCfg(),st=avsStatusTxt(),pm=('Notification' in window)?Notification.permission:'none';
   const can=window.isSecureContext&&('Notification' in window)&&pm==='default'&&!(isIOS()&&!isStandalone());
-  const dot=!c.on?'off':(pm==='granted'?'ok':'warn');
-  return `<details class="avs-mini" id="avsBox"${view.avsOpen?' open':''}><summary title="Aviso de horário dos pacientes"><span class="avs-dot ${dot}"></span>${c.on?'🔔 Aviso '+c.min+' min':'🔕 Aviso desligado'}</summary>
-  <div class="avs-panel"><label class="avs-sw"><input type="checkbox" id="avsOn"${c.on?' checked':''}> Avisar quando o horário do paciente estiver chegando</label>
+  const sound=window.NexoNotificationSound?.enabled()!==false;
+  return `<section class="card cfg-card"><h2>Som e notificações</h2>
+  <label class="avs-sw"><input type="checkbox" id="avsSound"${sound?' checked':''}> Ativar som neste aparelho</label>
+  <label class="avs-sw" style="margin-top:10px"><input type="checkbox" id="avsOn"${c.on?' checked':''}> Avisar quando o horário do paciente estiver chegando</label>
   <div class="avs-line"><label for="avsMin">Antecedência</label><select id="avsMin">${[5,10,15,20,30,60].map(m=>`<option value="${m}"${c.min===m?' selected':''}>${m} min</option>`).join('')}</select></div>
   <p class="avs-st ${st[0]}">${esc(st[1])}</p>
-  <div class="avs-btns">${can?'<button class="sm" data-act="avsperm">Ativar notificações</button>':''}<button class="sm" type="button" data-act="pushactivate">Ativar Push (iPhone/Windows)</button><button class="ghost sm" data-act="avstest">Testar alarme</button></div></div></details>`;
+  <div class="avs-btns">${can?'<button class="sm" data-act="avsperm">Ativar notificações</button>':''}<button class="sm" type="button" data-act="pushactivate">Ativar Push (iPhone/Windows)</button><button class="ghost sm" data-act="avstest">Testar alarme</button></div></section>`;
 }

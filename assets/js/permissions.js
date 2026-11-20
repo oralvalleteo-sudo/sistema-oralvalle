@@ -10,7 +10,7 @@ const PM_TABS=['dados','anam','odo','orc','trat','pag','agd','arquivos'];
 const PM_ORDER=PM_MODS.flatMap(g=>g[1].map(x=>x[0])).filter(k=>!k.includes('.'));
 const PM_LV={none:0,view:1,edit:2};
 const PM_LAB={none:'Oculto',view:'Só ver',edit:'Ver e alterar'};
-const PM_SAFE=new Set(['actab','logout','nav','svw','ovFinDetail','ovFinPdf','pPage','vPage','otoggle','retall','lemtab','orthowa','implnav','protnav','lemgo','cmdent','cmback','agf','agdate','agtoday','arqt','dent','open','back','tab','copy','owa','print','pdf','printevol','printficha','rxpdf','rxprint','atpdf','atprint','atreset','prprint','prshare','bktxt','bkcopy','bksave','pfOpen','prsearch','avsok','avsgo','avsperm','avstest','savebtn','acpw']);
+const PM_SAFE=new Set(['actab','logout','nav','svw','ovFinDetail','ovFinPdf','pPage','vPage','otoggle','retall','lemtab','orthowa','implnav','protnav','cmdent','cmback','agf','agdate','agtoday','arqt','dent','open','back','tab','copy','owa','print','pdf','printevol','printficha','rxpdf','rxprint','atpdf','atprint','atreset','prprint','prshare','bktxt','bkcopy','bksave','pfOpen','prsearch','avsok','avsgo','avsperm','avstest','savebtn','acpw']);
 const PM_FREE_IDS=new Set(['q','pfQ','pendOnly','cmm']);
 const pmKeys=()=>PM_MODS.flatMap(g=>g[1].map(x=>x[0]));
 function pmUser(){return ME?(AUTH.users.find(x=>x.id===ME.id)||ME):null}
@@ -68,6 +68,7 @@ function pmAllowed(act,d){
   if(['orthonav','implnav','protnav'].includes(act))return pmSee({orthonav:'ortho',implnav:'impl',protnav:'prot'}[act]);
   if(act==='open')return pmLvl('pac')>=1;
   if(act==='pfOpen')return pmLvl('pf')>=1;
+  if(act==='agreagpend')return pmLvl('ag')>=2;
   if(act==='pfFollow')return pmLvl('pf')>=2;
   if(act==='tab')return pmTabOk(d.t);
   if(act.slice(0,3)==='cfg'||act==='acadd'||act==='acrm'||act==='acrec'||act==='acadmin'||act==='pmset')return false;
