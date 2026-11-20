@@ -266,6 +266,20 @@
    const entradas=income.reduce((t,x)=>t+x.amount,0),saidas=expense.reduce((t,x)=>t-x.amount,0);
    return {heads:['Data','Tipo','Referência','Descrição','Entrada','Saída'],items:combined.map(x=>[x.date,x.kind,x.ref,x.description,x.amount>0?cash(x.amount):'—',x.amount<0?cash(-x.amount):'—']),summary:loaded?`Entradas registradas: ${cash(entradas)} · Pagamentos laboratoriais individuais: ${cash(saidas)} · Diferença parcial: ${cash(entradas-saidas)}. NÃO representa saldo bancário ou lucro: outras despesas, taxas e repasses não estão incluídos. Pagamentos antigos (opening) são excluídos. Nenhum lançamento é criado ou duplicado.`:'Carregue as parcelas do laboratório para incluir saídas. Entradas dos pacientes já carregadas: '+cash(entradas)+'. Resultado incompleto até carregar o laboratório.'};
   }
+  if(type==='balancedentists'){
+   const sales=salesForAccounting().filter(v=>dateOK(v.data,a,b));
+   const payments=(db.cp||[]).filter(p=>dateOK(p.data,a,b));
+   const ids=new Set([...sales.map(v=>String(v.dt||'')),...payments.map(p=>String(p.dt||''))].filter(Boolean));
+   const result=[...ids].sort((x,y)=>dentist(x).localeCompare(dentist(y),'pt-BR')).map(id=>{
+    const own=sales.filter(v=>String(v.dt||'')===id);
+    const paid=payments.filter(p=>String(p.dt||'')===id).reduce((t,p)=>t+n(p.valor),0);
+    const produced=own.reduce((t,v)=>t+n(v.valor),0);
+    const commission=own.reduce((t,v)=>t+n(v.rep),0);
+    const received=own.reduce((t,v)=>t+(typeof recebido==='function'?n(recebido(v)):0),0);
+    return [dentist(id),String(own.length),cash(produced),cash(received),cash(commission),cash(paid),'Não apurado'];
+   });
+   return {heads:['Dentista','Procedimentos','Produção no período','Recebido até hoje dessas vendas','Comissão gerada','Repasses pagos no período','Lucro por dentista'],items:result,summary:'Conferência por dentista, somente leitura. Recebido até hoje não é recebimento exclusivamente do período. Repasses pagos no período podem quitar produções antigas. Lucro não apurado: custos, taxas e despesas compartilhadas ainda não estão atribuídos com segurança a cada profissional. Não subtraia novamente repasses registrados como despesas.'};
+  }
   if(type==='balanceannual'){
    const all=salesForAccounting();
    const expenseState=window.NexoGeneralExpenses?.snapshot?.();
@@ -450,11 +464,11 @@
   const metrics=[['Entradas recebidas',d.entries],['Despesas gerais pagas',d.other],['Laboratório no livro auxiliar',d.labor],['Repasses não vinculados',d.repasses],['Resultado operacional estimado',d.result],['Contas a pagar até o fim do período',d.unpaidAmount],['Vencidas hoje',d.overdueAmount]];
   return `<section aria-label="Painel financeiro" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin:14px 0">${metrics.map(([label,value])=>`<div style="padding:13px;border:1px solid #f1d5bd;border-radius:10px;background:#fff8f1"><div style="font-size:12px">${safe(label)}</div><strong style="font-size:20px;color:#a34e00">${safe(cash(value))}</strong></div>`).join('')}</section><p class="note" role="status"><strong>Conferência:</strong> ${d.pendingLab} parcela(s) laboratoriais sem conciliação · ${d.conflicts} alerta(s) de divergência/sobreposição · ${d.overdueCount} conta(s) vencida(s). ${d.limited?'Atenção: limite de consulta de despesas atingido; totais podem estar incompletos. ':''}Resultado estimado, não saldo bancário. Revise os vínculos antes de tomar decisões.</p>`;
  }
- const kinds={balanceannual:'Balanço Geral — todos os anos',cashcomplete:'Fluxo de caixa consolidado — despesas gerais e laboratório',generalexpenses:'Despesas gerais — contas a pagar',cashcontrol:'Caixa operacional — entradas e saídas conciliadas',cashverified:'Conciliação integrada de saídas (sem duplicidades)',labposting:'Livro auxiliar de despesas laboratoriais',labmatching:'Conciliação de parcelas com despesas manuais',cashflow:'Fluxo financeiro integrado (parcial)',labexpenses:'Razão auxiliar de saídas laboratoriais',labreconcile:'Conferência de custos e parcelas laboratoriais',labhistory:'Histórico individual de pagamentos laboratoriais',labcash:'Conciliação de saídas laboratoriais',labpayments:'Pagamentos aos laboratórios',finance:'Financeiro',dentists:'Dentistas e comissões',procedures:'Procedimentos',patients:'Novos pacientes',laboratory:'Custos do laboratório',labledger:'Obrigações laboratoriais'};
+ const kinds={balancedentists:'Balanço por dentista — conferência',balanceannual:'Balanço Geral — todos os anos',cashcomplete:'Fluxo de caixa consolidado — despesas gerais e laboratório',generalexpenses:'Despesas gerais — contas a pagar',cashcontrol:'Caixa operacional — entradas e saídas conciliadas',cashverified:'Conciliação integrada de saídas (sem duplicidades)',labposting:'Livro auxiliar de despesas laboratoriais',labmatching:'Conciliação de parcelas com despesas manuais',cashflow:'Fluxo financeiro integrado (parcial)',labexpenses:'Razão auxiliar de saídas laboratoriais',labreconcile:'Conferência de custos e parcelas laboratoriais',labhistory:'Histórico individual de pagamentos laboratoriais',labcash:'Conciliação de saídas laboratoriais',labpayments:'Pagamentos aos laboratórios',finance:'Financeiro',dentists:'Dentistas e comissões',procedures:'Procedimentos',patients:'Novos pacientes',laboratory:'Custos do laboratório',labledger:'Obrigações laboratoriais'};
  function allowed(type){
   if(!can('reports') || !commercial() || !Object.prototype.hasOwnProperty.call(kinds,type))return false;
   if(type==='patients')return can('pac');
-  if(type==='balanceannual')return moduleAllowed('finance') && can('vd') && can('cm') && can('reports');
+  if(type==='balanceannual'||type==='balancedentists')return moduleAllowed('finance') && can('vd') && can('cm') && can('reports');
   if(type==='cashcomplete')return moduleAllowed('finance') && can('vd') && can('pac') && typeof pmLvl==='function' && pmLvl('vd')>=2 && !!window.OralCloud?.enabled;
   if(type==='generalexpenses')return moduleAllowed('finance') && can('vd') && typeof pmLvl==='function' && pmLvl('vd')>=2 && !!window.OralCloud?.enabled;
   if(type==='labreconcile')return moduleAllowed('finance') && can('vd') && can('pac') && !!window.OralCloud?.enabled;
