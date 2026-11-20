@@ -115,6 +115,22 @@ function ovBudgetUndoRows(p,o){
   return rows;
 }
 
+function obAllocateReceipts(sales,payments){
+  const entries=payments.map(payment=>({payment,allocated:0}));
+  for(const sale of sales){
+    let balance=saldoV(sale);
+    for(const entry of entries){
+      const {payment,allocated}=entry;
+      const value=r2(Math.min(balance,payment.valor-allocated));
+      if(value<=0)continue;
+      entry.allocated=r2(allocated+value);
+      // A soma das partes conserva a taxa arredondada da operação original.
+      const fee=r2(r2(payment.taxaValor*entry.allocated/payment.valor)-r2(payment.taxaValor*allocated/payment.valor));
+      (sale.pg??=[]).push({...payment,id:uid(),valor:value,taxaValor:fee,liquido:r2(value-fee)});
+      balance=r2(balance-value);
+    }
+  }
+}
 const A={
   agrentadd:()=>{
     const date=view.agDate||tdy(),chair=$('agRentChair').value,start=$('agRentStart').value,end=$('agRentEnd').value;
@@ -516,6 +532,23 @@ const A={
     const sd=pend.find(it=>!it.dt);if(sd){toast('Escolha o dentista do item "'+(sd.proc||'sem nome')+'" antes de dar baixa',3500);return}
     const sv=pend.find(it=>!(r2(num(it.valor)*fac(o))>0));if(sv){toast('Informe o valor do item "'+(sv.proc||'sem nome')+'"',3500);return}
     view.obx=null;view.obxAll=o.id;render()},
+  obfull:(b,d,p)=>{
+    const o=p&&getO(p,d.o);
+    if(!o||o.status!=='Aprovado')return;
+    const method=b.closest('details')?.querySelector('[data-ob-full-method]')?.value;
+    if(!method){toast('Selecione a forma realmente utilizada no pagamento.');return}
+    const linked=obLinkedSales(p,o);
+    const pending=o.itens.filter(it=>!it.paymentSaleId&&!it.vid);
+    if(linked.length+pending.length!==o.itens.length){toast('Confira os vínculos financeiros deste orçamento antes de quitar.');return}
+    const value=it=>r2(num(it.valor)*fac(o));
+    if(pending.some(it=>!it.dt||value(it)<=0)){toast('Confira o dentista e o valor de cada item.');return}
+    const due=r2(linked.reduce((sum,sale)=>sum+saldoV(sale),0)+pending.reduce((sum,it)=>sum+value(it),0));
+    if(due<=0||due!==Number(d.amount)){toast('O saldo mudou. Abra novamente o recebimento para conferir.');render();return}
+    const date=$(d.dateField)?.value||tdy();
+    const sales=[...linked,...pending.map(it=>obLaunch(p,it,value(it),0,'',date,0))];
+    obAllocateReceipts(sales,[ovFeeMake(due,method,date)]);
+    view.obxAll=null;save();render();toast('Quitação registrada no orçamento.');
+  },
   oballconf:(b,d,p)=>{
     const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);if(!pend.length)return;
     const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
@@ -527,26 +560,13 @@ const A={
     if(amounts.some(amount=>amount<0)||!(received>0)){toast('Informe os valores efetivamente recebidos.');return}
     if(received>tot){toast('O valor recebido é maior que o total da baixa ('+brl(tot)+')',3500);return}
     const data=$('oad').value||tdy();
-    const receipts=forms.flatMap((method,index)=>amounts[index]>0?
-      [{payment:ovFeeMake(amounts[index],method,data),allocated:0}]:[]);
-    pend.forEach(it=>{
-      const vv=val(it),sale=obLaunch(p,it,vv,0,'',data,0);
-      let balance=vv;
-      for(const entry of receipts){
-        const {payment,allocated}=entry;
-        const value=r2(Math.min(balance,payment.valor-allocated));
-        if(value<=0)continue;
-        entry.allocated=r2(allocated+value);
-        // A soma das partes conserva a taxa arredondada da operação original.
-        const fee=r2(r2(payment.taxaValor*entry.allocated/payment.valor)-r2(payment.taxaValor*allocated/payment.valor));
-        sale.pg.push({...payment,id:uid(),valor:value,taxaValor:fee,liquido:r2(value-fee)});
-        balance=r2(balance-value);
-      }
-    });
+    const receipts=forms.flatMap((method,index)=>amounts[index]>0?[ovFeeMake(amounts[index],method,data)]:[]);
+    const sales=pend.map(it=>obLaunch(p,it,val(it),0,'',data,0));
+    obAllocateReceipts(sales,receipts);
     view.obxAll=null;save();render();toast(pend.length+(pend.length===1?' item financeiro':' itens financeiros')+': financeiro registrado, procedimentos permanecem pendentes',3500)},
   obcollectconf:(b,d,p)=>{
     const o=getO(p,d.o);if(!o||o.status!=='Aprovado')return;
-    const sales=(o.itens||[]).map(it=>db.vd.find(v=>String(v.id)===String(it.paymentSaleId||it.vid))).filter(Boolean);
+    const sales=obLinkedSales(p,o);
     const outstanding=sales.filter(v=>saldoV(v)>0.005);
     const totalDue=r2(outstanding.reduce((sum,v)=>sum+saldoV(v),0));
     if(!outstanding.length){toast('Este orçamento não tem saldo em aberto.');return}
@@ -559,23 +579,8 @@ const A={
     if(!(totalReceived>0)){toast('Informe pelo menos um valor recebido.');return}
     if(totalReceived>totalDue+0.005){toast('O recebimento supera o saldo em aberto ('+brl(totalDue)+').');return}
     const date=$('obcd')?.value||tdy();
-    const entries=forms.flatMap((method,index)=>amounts[index]>0?[{payment:ovFeeMake(amounts[index],method,date),allocated:0}]:[]);
-    let remaining=totalReceived;
-    for(const sale of outstanding){
-      let balance=r2(saldoV(sale));
-      for(const entry of entries){
-        if(balance<=0.005||remaining<=0.005)break;
-        const payLeft=r2(entry.payment.valor-entry.allocated);
-        if(payLeft<=0.005)continue;
-        const value=r2(Math.min(balance,payLeft,remaining));
-        if(value<=0.005)continue;
-        const prior=entry.allocated;
-        entry.allocated=r2(prior+value);
-        const fee=r2(r2(entry.payment.taxaValor*entry.allocated/entry.payment.valor)-r2(entry.payment.taxaValor*prior/entry.payment.valor));
-        sale.pg.push({...entry.payment,id:uid(),valor:value,taxaValor:fee,liquido:r2(value-fee)});
-        balance=r2(balance-value);remaining=r2(remaining-value);
-      }
-    }
+    const receipts=forms.flatMap((method,index)=>amounts[index]>0?[ovFeeMake(amounts[index],method,date)]:[]);
+    obAllocateReceipts(outstanding,receipts);
     save();render();toast('Recebimento registrado no orçamento e distribuído entre os saldos em aberto.');
   },
   obconf:(b,d,p)=>{

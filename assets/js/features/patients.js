@@ -356,7 +356,21 @@ function obUndoHtml(o){
   const historico=(o.baixasDesfeitas||[]).map(h=>`<div class="note">${esc(new Date(h.data).toLocaleString('pt-BR'))} · ${esc(h.usuario||'Usuário')} · ${h.vendas.length} atendimento(s) · ${brl(h.recebido)} em recebimentos removidos</div>`).join('');
   return (baixados.length?`<div class="ob-all"><button type="button" class="danger sm" data-act="obundoall" data-o="${esc(o.id)}">Desfazer todas as baixas (${baixados.length})</button><p class="note">Remove os atendimentos financeiros, recebimentos e comissões vinculados a este orçamento para refazer os lançamentos. O histórico clínico é preservado.</p></div>`:'')+(historico?`<details style="margin:10px 0"><summary>Histórico de baixas desfeitas</summary>${historico}</details>`:'');
 }
-function obAllHtml(o){
+function obLinkedSales(p,o){
+  const ids=new Set(o.itens.map(it=>it.paymentSaleId||it.vid).filter(Boolean).map(String));
+  return db.vd.filter(v=>String(v.pid)===String(p.id)&&ids.has(String(v.id)));
+}
+function obFullPaymentHtml(o,amount,dateField){
+  const methods=nxPayMethods(nxPayPlan(o));
+  const additional=methods.find(method=>!OV_FEE_FORMS.includes(method));
+  return `<details>
+    <summary>Quitar saldo em uma única forma</summary>
+    <div class="row"><label>Forma realmente utilizada<select data-ob-full-method><option value="">Selecione</option>${ovFeeOptions()}${additional?`<option>${esc(additional)}</option>`:''}</select></label></div>
+    <p>Saldo a receber: <strong>${brl(amount)}</strong></p>
+    <button type="button" data-act="obfull" data-o="${esc(o.id)}" data-date-field="${dateField}" data-amount="${amount}">Confirmar quitação de ${brl(amount)}</button>
+  </details>`;
+}
+function obAllHtml(p,o){
   if(o.status!=='Aprovado')return '';
   const pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);
   if(!o.itens.length)return '';
@@ -364,6 +378,7 @@ function obAllHtml(o){
   const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
   if(view.obxAll!==o.id)return `<div class="ob-all"><button class="sm" style="width:100%" data-act="oball" data-o="${esc(o.id)}">Registrar pagamento do orçamento (${pend.length} ${pend.length===1?'item':'itens'} · ${brl(tot)})</button></div>`;
   const plan=nxPayPlan(o), [first,second]=nxPayMethods(plan);
+  const fullDue=r2(tot+obLinkedSales(p,o).reduce((sum,sale)=>sum+saldoV(sale),0));
   return `<div class="ob-all"><div class="ob-pay"><h4>Registrar pagamento do orçamento</h4>
   ${pend.map(it=>`<div class="ob-li"><span>${esc(it.proc||'Procedimento')}${it.dente?' · dente '+esc(it.dente):''}<br><span class="note" style="margin:0">${esc(dName(it.dt))}</span></span><strong>${brl(val(it))}</strong></div>`).join('')}
   <div class="tot" style="margin-top:6px"><span>Valor dos itens</span><span>${brl(tot)}</span></div>
@@ -375,17 +390,18 @@ function obAllHtml(o){
   </details>
   <p class="note" style="margin:6px 0 0">Preencha os valores conforme os comprovantes. O valor recebido será distribuído na ordem dos itens. O saldo restante ficará em aberto. Este registro não conclui procedimentos, não cria evolução e não libera comissão por execução.</p>
   <label for="oad">Data</label><input id="oad" type="date" value="${tdy()}">
+  ${obFullPaymentHtml(o,fullDue,'oad')}
   <div class="row" style="margin-top:10px"><button data-act="oballconf" data-o="${esc(o.id)}" style="flex:1">Confirmar recebimento</button><button class="ghost" data-act="obcancel" style="flex:none">Cancelar</button></div></div></div>`;
 }
-function obCollectHtml(o){
+function obCollectHtml(p,o){
   if(o.status!=='Aprovado')return '';
-  const linked=(o.itens||[]).map(it=>db.vd.find(v=>String(v.id)===String(it.paymentSaleId||it.vid))).filter(Boolean);
+  const linked=obLinkedSales(p,o);
   const outstanding=linked.filter(v=>saldoV(v)>0.005),totalDue=r2(outstanding.reduce((sum,v)=>sum+saldoV(v),0));
   if(!outstanding.length)return '';
   const plan=nxPayPlan(o),entry=num(plan.entrada),alreadyReceived=r2(linked.reduce((sum,v)=>sum+recebido(v),0)),[first,second]=nxPayMethods(plan);
   const defaultEntry=alreadyReceived<=0.005&&entry>0&&entry<=totalDue?entry:0;
   const defaultRemainder=0;
-  return `<div class="ob-all ob-pay" style="margin-top:12px"><h4>Receber pagamento do orçamento (conjunto)</h4><p class="note">O recebimento é registrado aqui, sem botões de receber dentro de cada procedimento. Os valores são distribuídos automaticamente entre os saldos em aberto.</p><div class="row"><div><label for="obc1">Valor da entrada / 1ª forma (R$)</label><input id="obc1" inputmode="decimal" value="${defaultEntry.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></div><div><label>Forma (planejamento)</label><strong style="display:block;padding:9px 0">${esc(first)}</strong></div></div><div class="row"><div><label for="obc2">2ª forma (R$)</label><input id="obc2" inputmode="decimal" value="${defaultRemainder.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></div><div><label>Forma (planejamento)</label><strong style="display:block;padding:9px 0">${esc(second)}</strong></div></div><label for="obcd">Data do recebimento</label><input id="obcd" type="date" value="${tdy()}"><p class="note">Saldo total em aberto: <strong>${brl(totalDue)}</strong></p><button data-act="obcollectconf" data-o="${esc(o.id)}" style="width:100%">Confirmar recebimento conjunto</button></div>`;
+  return `<div class="ob-all ob-pay" style="margin-top:12px"><h4>Receber pagamento do orçamento (conjunto)</h4><p class="note">O recebimento é registrado aqui, sem botões de receber dentro de cada procedimento. Os valores são distribuídos automaticamente entre os saldos em aberto.</p><div class="row"><div><label for="obc1">Valor da entrada / 1ª forma (R$)</label><input id="obc1" inputmode="decimal" value="${defaultEntry.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></div><div><label>Forma (planejamento)</label><strong style="display:block;padding:9px 0">${esc(first)}</strong></div></div><div class="row"><div><label for="obc2">2ª forma (R$)</label><input id="obc2" inputmode="decimal" value="${defaultRemainder.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></div><div><label>Forma (planejamento)</label><strong style="display:block;padding:9px 0">${esc(second)}</strong></div></div><label for="obcd">Data do recebimento</label><input id="obcd" type="date" value="${tdy()}"><p class="note">Saldo total em aberto: <strong>${brl(totalDue)}</strong></p>${o.itens.every(it=>it.paymentSaleId||it.vid)?obFullPaymentHtml(o,totalDue,'obcd'):''}<button data-act="obcollectconf" data-o="${esc(o.id)}" style="width:100%">Confirmar recebimento conjunto</button></div>`;
 }
 function obCalc(it,v){return it.dt&&v>0?comCalc(it.dt,it.proc||'',v,qOf(it)).rep:0}
 function obPanel(o,it,i){
@@ -473,11 +489,11 @@ function nxPayHtml(o){
  const a=nxPayPlan(o),opts=(v)=>['PIX','Dinheiro','Cartão de crédito','Cartão de débito','Transferência','Boleto','Outro'].map(x=>`<option${x===v?' selected':''}>${x}</option>`).join('');
  return `<div class="nx-payplan" data-nxplan="${esc(o.id)}" style="border:1px solid #ddd;border-radius:10px;padding:14px;margin:12px 0;background:#fff"><strong>Planejamento de pagamento</strong><p class="note" style="margin:4px 0 10px">Defina a entrada e como será pago o restante. Isto não registra recebimento no caixa.</p><div class="row" style="flex-wrap:wrap;gap:10px"><div><label>Entrada (R$)</label><input data-nxp="entrada" inputmode="decimal" placeholder="0,00" value="${esc(a.entrada)}"></div><div><label>Forma da entrada</label><select data-nxp="formaEntrada">${opts(a.formaEntrada)}</select></div></div><div class="row" style="flex-wrap:wrap;gap:10px"><div><label>Pagamento do restante</label><select data-nxp="formaSaldo">${opts(a.formaSaldo)}</select></div><div><label>Quantidade de parcelas</label><input data-nxp="parcelas" type="number" min="1" max="60" value="${esc(a.parcelas)}"></div></div><div data-nxres style="font-weight:600;margin-top:10px" aria-live="polite"></div></div>`;
 }
-function orcHtml(o){
+function orcHtml(o,p){
   const open=!!(view.orcOpen&&view.orcOpen[o.id]),nIt=o.itens.length,stc=o.status==='Aprovado'?'stt-ok':o.status==='Pendente'?'stt-wr':'';
   const head=`<button type="button" class="orc-h" data-act="otoggle" data-o="${esc(o.id)}" aria-expanded="${open}"><span class="orc-chev" aria-hidden="true">${open?'▾':'▸'}</span><span class="orc-t"><strong>${esc(o.data)}</strong><small>${nIt} ${nIt===1?'item':'itens'} · toque para ${open?'recolher':'abrir'}</small></span><span class="badge ${stc}" style="flex:none">${esc(o.status==='Pendente'?'Proposta':o.status==='Recusado'?'Perdida':o.status)}</span><strong class="orc-tot" data-ototal>${brl(total(o))}</strong></button>`;
   return `<div class="card orc-card" data-oid="${esc(o.id)}">${head}${open?`<div class="orc-body"><div class="row" style="margin-bottom:10px"><span style="flex:1"><strong>${esc(o.data)}</strong><br><span class="note" style="margin:0">Criado em</span></span><select data-o="${esc(o.id)}" data-f="status" aria-label="Situação do orçamento">${[['Pendente','Proposta'],['Aprovado','Aprovado'],['Recusado','Perdida']].map(([s,label])=>`<option value="${s}"${o.status===s?' selected':''}>${label}</option>`).join('')}</select></div>
-  ${obUndoHtml(o)}${obAllHtml(o)}${o.itens.map((it,i)=>itemHtml(o,it,i)).join('')}${obCollectHtml(o)}
+  ${obUndoHtml(o)}${obAllHtml(p,o)}${o.itens.map((it,i)=>itemHtml(o,it,i)).join('')}${obCollectHtml(p,o)}
   <div class="row" style="margin-top:8px"><button class="ghost sm" data-act="addi" data-o="${esc(o.id)}">Adicionar item</button></div>
   <div class="row" style="align-items:flex-start"><div><label>Desconto (R$)</label><input data-o="${esc(o.id)}" data-f="desc" inputmode="decimal" value="${esc(o.desc)}"></div><div><label>Válido até</label><input type="date" data-o="${esc(o.id)}" data-f="val" value="${esc(o.val)}"></div></div>
   ${nxPayHtml(o)}${budgetBillingHtml(o)}<label>Condições de pagamento (editável)</label><input data-o="${esc(o.id)}" data-f="cond" placeholder="Ex.: entrada + 3x no cartão" value="${esc(o.cond)}">

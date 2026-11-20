@@ -324,6 +324,41 @@ const receiptReport=page.locator('#ov-fin-detail-dialog');
 assert.match(await receiptReport.locator('tbody > tr').filter({hasText:'Orçamento · total por forma'}).allTextContents().then(rows=>rows.join(' ')),/Pix.*400,00.*Crédito 2x.*1\.000,00/);
 assert.equal(await receiptReport.locator('details').count(),2);
 await receiptReport.getByRole('button',{name:'Fechar'}).click();
+await page.evaluate(()=>{
+ const patient=db.p.find(p=>p.nome==='Novo paciente sintético');
+ patient.orcs.push({id:'full-budget',data:'19/11/2026',status:'Aprovado',desc:'',val:'',
+  cond:'Entrada: R$ 100,00 (PIX); Restante: R$ 200,00 (Cartão de crédito) em 2x de R$ 100,00',
+  itens:[{id:'full-a',proc:'Quitação A',valor:'120',dt:'staff-dentist'},{id:'full-b',proc:'Quitação B',valor:'180',dt:'staff-dentist'}]});
+ view.h='pac';view.id=patient.id;view.tab='orc';view.orcOpen={'full-budget':true};
+ save();render();
+});
+const fullBudget=page.locator('[data-oid="full-budget"]');
+await fullBudget.locator('[data-act="oball"]').click();
+await fullBudget.locator('#oad').fill('2025-10-20');
+await fullBudget.getByText('Quitar saldo em uma única forma').click();
+await fullBudget.locator('[data-ob-full-method]').selectOption('Débito');
+await fullBudget.getByRole('button',{name:'Confirmar quitação de'}).click();
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+const fullPaid=await db.query("select dados from receipts where kind='object' and dados->>'data'='2025-10-20' order by (dados->>'valor')::numeric");
+assert.deepEqual(fullPaid.rows.map(({dados})=>[dados.forma,dados.valor,dados.taxaValor]),[['Débito',120,2.4],['Débito',180,3.6]]);
+assert.equal(await fullBudget.getByText('Quitar saldo em uma única forma').count(),0);
+await menu.locator('[data-t="vd"]').first().click();
+await page.locator('#sales-month').fill('2025-10');
+await page.getByText('Taxas da operadora no mês: R$ 60,80').waitFor();
+await page.getByRole('button',{name:'Conferir taxas dos recebimentos'}).click();
+await receiptReport.getByText('2 lançamentos por procedimento').last().click();
+await receiptReport.getByRole('table',{name:'Lançamentos por procedimento'}).getByRole('row')
+ .filter({has:page.getByRole('cell',{name:'Quitação A',exact:true})}).getByRole('button',{name:'Corrigir forma'}).click();
+await methodCorrection.locator('select[name=first]').selectOption('Crédito 2x');
+assert.match(await methodCorrection.locator('[data-fee-preview]').innerText(),/2,40.*4,96.*115,04/);
+await methodCorrection.getByRole('button',{name:'Salvar correção'}).click();
+await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
+await receiptReport.getByRole('button',{name:'Fechar'}).click();
+await page.getByText('Taxas da operadora no mês: R$ 63,36').waitFor();
+await page.getByText('Recebimento líquido do mês: R$ 1.936,64').waitFor();
+const corrected=(await db.query("select dados from receipts where kind='object' and dados->>'data'='2025-10-20' and dados->>'forma'='Crédito 2x'")).rows[0].dados;
+assert.deepEqual([corrected.valor,corrected.taxaValor,corrected.liquido,corrected.taxaAjustes[0].anterior.forma],[120,4.96,115.04,'Débito']);
+console.log('Quitação em uma forma e correção histórica atualizam taxas e líquido do mês.');
 console.log('Pagamento misto no orçamento e divisão de recebimento antigo conservam o bruto e as formas.');
 await page.locator('[data-act="logout"]').first().click();await page.locator('#cloudEmail').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>window.OralCloud.session),null);assert.equal(await page.locator('.ov-sidebar').count(),0);assert.deepEqual(errors,[]);console.log('Aplicação real: entrada, cadastro e persistência de paciente, agendamento, navegação de módulos, central interna e saída sem dados clínicos visíveis.');
 }finally{if(browser)await browser.close();await db.close();}})().catch(error=>{console.error(error);process.exit(1)});

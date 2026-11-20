@@ -272,7 +272,7 @@ function tratHtml(p){
   return `${trResumoHtml(p)}${trLabResumoHtml(p)}${trMargemDetalhadaHtml(p)}${trAuditoriaHtml(p)}${trConciliacaoHtml(p)}<div class="card">${flt}<h2 style="margin-top:16px">Odontograma</h2>${seg}${odxHtml(p,tr)}${lg}<div id="trchips" style="margin-top:10px">${trChips()}</div><div id="trbasket">${ttBasketHtml(p)}</div><div id="trteeth">${ttPanelHtml(p)}</div><div id="trshared">${ttSharedHtml(p)}</div></div>${form}<h2>Tratamentos (${tr.length})</h2>${lista}${bar}`;
 }
 function tabOrc(p){
-  return `<button data-act="addo" style="width:100%;margin-bottom:12px">Novo orçamento</button>`+(p.orcs.length?p.orcs.map(orcHtml).join(''):'<div class="empty">Nenhum orçamento para este paciente.</div>');
+  return `<button data-act="addo" style="width:100%;margin-bottom:12px">Novo orçamento</button>`+(p.orcs.length?p.orcs.map(o=>orcHtml(o,p)).join(''):'<div class="empty">Nenhum orçamento para este paciente.</div>');
 }
 
 // NexoDent 254 — carregamento sob demanda do laboratório no prontuário.

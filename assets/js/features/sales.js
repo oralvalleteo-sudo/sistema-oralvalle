@@ -103,31 +103,55 @@ function ovEditReceiptMethod(saleId,receiptId){
       <label>Valor na segunda forma (R$)<input name="split" inputmode="decimal" placeholder="0,00"></label>
       <label>Segunda forma<select name="second">${ovFeeOptions('Crédito à vista')}</select></label>
     </details>`}
-    <p class="note">A correção conserva a data e o total pago. A nova forma usa a taxa configurada, que pode ser conferida em seguida.</p>
-    <p role="alert" class="note"></p><button type="submit">Salvar correção</button> <button type="button" class="ghost" data-cancel>Cancelar</button></form>`;
+    <p class="note">A correção mantém a data e o total pago. Ao trocar a forma, a taxa configurada é aplicada ao recebimento e ao total do mês.</p>
+    <p data-fee-preview aria-live="polite"></p><p role="alert" class="note"></p><button type="submit">Salvar correção</button> <button type="button" class="ghost" data-cancel>Cancelar</button></form>`;
   const form=dialog.querySelector('form'), feedback=form.querySelector('[role="alert"]');
   form.querySelector('[data-cancel]').onclick=()=>dialog.close();
   dialog.addEventListener('close',()=>dialog.remove(),{once:true});
-  form.addEventListener('submit',event=>{
-    event.preventDefault();
-    if(LOCKED||!ME?.admin||!db.vd.includes(sale)||!sale.pg.includes(receipt))return;
+  const preview=form.querySelector('[data-fee-preview]');
+  function calculate(){
     const secondValue=r2(num(form.elements.split?.value));
     const first=form.elements.first.value, second=form.elements.second?.value;
-    if(secondValue<0||secondValue>=gross){feedback.textContent='Informe um valor menor que o total na segunda forma.';return}
-    if(secondValue>0&&first===second){feedback.textContent='Selecione duas formas diferentes.';return}
-    if(!secondValue&&first===receipt.forma){dialog.close();return}
+    if(secondValue<0||secondValue>=gross)return {error:'Informe um valor menor que o total na segunda forma.'};
+    if(secondValue>0&&first===second)return {error:'Selecione duas formas diferentes.'};
     const firstReceipt=ovFeeMake(r2(gross-secondValue),first,receipt.data,receipt.id);
-    if(first===ovFeeMethod(receipt.forma)&&!ovFeeNeedsReview(receipt)){
+    if(first===ovFeeMethod(receipt.forma)&&(!secondValue||!ovFeeNeedsReview(receipt))){
       const fee=r2(ovFeeTax(receipt)*firstReceipt.valor/gross);
       Object.assign(firstReceipt,{taxaPct:ovFeeReadRate(receipt.taxaPct)??0,taxaValor:fee,
         taxaOrigem:receipt.taxaOrigem||'manual',liquido:r2(firstReceipt.valor-fee)});
     }
-    const secondReceipt=secondValue>0?ovFeeMake(secondValue,second,receipt.data):null;
+    const secondReceipt=secondValue>0?ovFeeMake(secondValue,second,receipt.data,receipt.id):null;
+    return {firstReceipt,secondReceipt};
+  }
+  function showFeePreview(){
+    const {error,firstReceipt,secondReceipt}=calculate();
+    feedback.textContent=error||'';
+    if(error){preview.textContent='';return}
+    const fee=r2(firstReceipt.taxaValor+(secondReceipt?.taxaValor||0));
+    const missingRate=[firstReceipt,secondReceipt].some(part=>part&&ovFeeNeedsReview(part));
+    preview.textContent='Taxa: '+brl(ovFeeTax(receipt))+' → '+brl(fee)+' · Líquido após correção: '+brl(r2(gross-fee))
+      +(missingRate?' · Confira a taxa da operadora para a forma selecionada.':'');
+  }
+  form.addEventListener('input',showFeePreview);
+  showFeePreview();
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(LOCKED||!ME?.admin||!db.vd.includes(sale)||!sale.pg.includes(receipt))return;
+    const {error,firstReceipt,secondReceipt}=calculate();
+    if(error){feedback.textContent=error;return}
+    if(!secondReceipt&&firstReceipt.forma===receipt.forma){dialog.close();return}
+    if(secondReceipt)secondReceipt.id=uid();
     const before={forma:receipt.forma,valor:receipt.valor,taxaPct:receipt.taxaPct,taxaValor:receipt.taxaValor,taxaOrigem:receipt.taxaOrigem};
     (receipt.taxaAjustes??=[]).push({em:new Date().toISOString(),por:ME.id,anterior:before,divididoEm:secondReceipt?.id});
     Object.assign(receipt,firstReceipt);
     if(secondReceipt)sale.pg.splice(sale.pg.indexOf(receipt)+1,0,secondReceipt);
-    save();dialog.close();render();ovFinDetail('received');toast('Forma de recebimento corrigida.');
+    save();dialog.close();render();ovFinDetail('received');
+    try{
+      await window.OralCloudSync?.flush();
+      toast('Forma, taxa e valor líquido atualizados.');
+    }catch{
+      toast('A correção ainda está pendente de gravação. Confira o status de sincronização.');
+    }
   });
   document.body.append(dialog);
   dialog.showModal();
