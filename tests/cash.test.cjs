@@ -6,3 +6,25 @@ test('datas inválidas e pagamentos sem data não geram saldo fictício',()=>{fo
 test('SQL de despesas isola clínicas, restringe edição, protege registros e aceita reaplicação',async()=>{const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');const db=new PGlite();try{await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as 'select nullif(current_setting(''request.jwt.claim.sub'',true),'''')::uuid';`);await db.exec(fs.readFileSync('supabase/migrations/202610140001_relational_clinics.sql','utf8'));const sql=fs.readFileSync('supabase/migrations/202611170019_general_expenses.sql','utf8');await db.exec(sql);await db.exec(sql);const c='11111111-1111-1111-1111-111111111111',other='22222222-2222-2222-2222-222222222222',u='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',v='bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',row='cccccccc-cccc-cccc-cccc-cccccccccccc';await db.query("insert into clinics(id,nome)values($1,'A'),($2,'B')",[c,other]);await db.query('insert into auth.users(id)values($1),($2)',[u,v]);await db.query(`insert into clinic_members(clinic_id,user_id,perms)values($1,$2,'{"vd":"edit"}'),($1,$3,'{"vd":"view"}')`,[c,u,v]);await db.query("select set_config('request.jwt.claim.sub',$1,false)",[u]);await db.exec('set role authenticated');await db.query("insert into nexodent_general_expenses(id,clinic_id,description,amount,due_date)values($1,$2,'Aluguel',100,'2026-11-10')",[row,c]);await assert.rejects(db.query("insert into nexodent_general_expenses(clinic_id,description,amount,due_date)values($1,'Outra',100,'2026-11-10')",[other]),e=>e.code==='42501');await assert.rejects(db.query("insert into nexodent_general_expenses(id,clinic_id,description,amount,due_date)values($1,$2,'Repetida',100,'2026-11-10')",[row,c]),e=>e.code==='23505');await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[v]);await db.exec('set role authenticated');assert.equal((await db.query('select * from nexodent_general_expenses')).rows.length,1);assert.equal((await db.query("update nexodent_general_expenses set paid_at='2026-11-10' returning id")).rows.length,0);await assert.rejects(db.query('delete from nexodent_general_expenses'),e=>e.code==='42501');await db.exec('reset role');await db.query("update clinic_members set active=false where user_id=$1",[v]);await db.exec('set role authenticated');assert.equal((await db.query('select * from nexodent_general_expenses')).rows.length,0);}finally{await db.close()}});
 
 test('valores legados com vírgula são apurados e valores inválidos exigem conferência',()=>{const r=calculate({from,to,sales:[{id:'s',pg:[{id:'a',valor:'1.234,56',data:'2026-11-01'},{id:'b',valor:'inválido',data:'2026-11-02'}]}]});assert.equal(r.income,123456);assert.equal(r.warnings.length,1)});
+
+test('categorias e detalhamento usam os mesmos lançamentos pagos e a pagar',()=>{
+ const r=calculate({from,to,
+  lab:[{id:'p',source_order_id:'work',kind:'payment',paid_at:'2026-11-10',amount:40}],
+  labAccounts:[
+   {id:'work',laboratory:'Studio',work_description:'Coroa',reference_date:'2026-11-08',balance:6000},
+   {id:'old',reference_date:'2026-10-08',balance:5500}
+  ],
+  expenses:[
+   {id:'linked',external_reference:'LABPAY-p',category:'Laboratório',paid_at:'2026-11-10',amount:40},
+   {id:'manual-lab',category:'laboratorios',description:'Reparo',reference_month:'2026-11-01',amount:25},
+   {id:'salary-one',category:'Salário',reference_month:'2026-11-01',amount:10},
+   {id:'salary-two',category:'Salários',reference_month:'2026-11-01',amount:15}
+  ]
+ });
+ const lab=r.categories.find(c=>c.key==='laboratorio');
+ assert.deepEqual(lab.entries.map(e=>e.id),['LABPAY-p','LAB-work','manual-lab']);
+ assert.deepEqual([lab.paid,lab.pending,lab.total],[4000,8500,12500]);
+ assert.equal(r.categories.find(c=>c.key==='salarios').total,2500);
+ assert.equal(r.registered,r.entries.reduce((sum,row)=>sum+row.cents,0));
+ assert.equal(r.outcome,4000);
+});

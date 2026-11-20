@@ -12,6 +12,7 @@
  const core={calculate,group};
  if(typeof module==='object'&&module.exports)module.exports=core;
  if(!root.document)return;
+ root.NexoLabBalance=calculate;
  const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const money=v=>(v/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
  function moneyTotal(cents){
