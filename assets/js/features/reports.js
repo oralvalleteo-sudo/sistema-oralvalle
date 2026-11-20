@@ -286,31 +286,40 @@
    const expenseState=window.NexoGeneralExpenses?.snapshot?.();
    const expensesReady=!!expenseState?.ready;
    const labReady=labEventsClinic===window.OralCloud?.clinicId;
+   const ledgerReady=expensesReady&&labReady&&!!window.NexoCashModel;
+   const yearPattern=/^\\d{4}-\\d{2}-\\d{2}$/;
    const years=new Set();
-   for(const v of sales){if(/^\\d{4}-/.test(String(v.data||'')))years.add(String(v.data).slice(0,4));for(const p of (v.pg||[]))if(/^\\d{4}-/.test(String(p.data||'')))years.add(String(p.data).slice(0,4));}
-   for(const e of expensesReady?expenseState.rows:[])if(/^\\d{4}-/.test(String(e.paid_at||'')))years.add(String(e.paid_at).slice(0,4));
-   for(const e of labReady?labEvents:[])if(/^\\d{4}-/.test(String(e.paid_at||'')))years.add(String(e.paid_at).slice(0,4));
-   for(const p of (db.cp||[]))if(/^\\d{4}-/.test(String(p.data||'')))years.add(String(p.data).slice(0,4));
-   const periods=[...years].sort().filter(y=>a<=y+'-12-31'&&b>=y+'-01-01');
-   const output=[];
-   for(const y of periods){
-    const from=a>y+'-01-01'?a:y+'-01-01',to=b<y+'-12-31'?b:y+'-12-31';
-    const inPeriod=s=>dateOK(s,from,to);
+   const includeYear=value=>{const d=String(value||'').slice(0,10);if(yearPattern.test(d)&&validDate(d))years.add(d.slice(0,4));};
+   for(const v of sales){includeYear(v.data);for(const p of (v.pg||[]))includeYear(p.data);}
+   for(const e of expensesReady?expenseState.rows:[]){includeYear(e.paid_at);includeYear(e.due_date);}
+   for(const e of labReady?labEvents:[])includeYear(e.paid_at);
+   for(const p of (db.cp||[]))includeYear(p.data);
+   // Sem movimentações, mostrar os doze meses do ano corrente com zero.
+   if(!years.size)years.add(today().slice(0,4));
+   const first=Math.min(...[...years].map(Number)),last=Math.max(...[...years].map(Number));
+   const output=[],totals={sold:0,received:0,fees:0,commission:0,outcome:0,result:0};
+   for(let y=first;y<=last;y++)for(let m=1;m<=12;m++){
+    const month=String(y)+'-'+String(m).padStart(2,'0');
+    const from=month+'-01',to=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);
+    if(to<a||from>b)continue;
+    const inPeriod=s=>dateOK(s,from<a?a:from,to>b?b:to);
     const sold=sales.filter(v=>inPeriod(v.data)).reduce((t,v)=>t+n(v.valor),0);
     const commission=sales.filter(v=>inPeriod(v.data)).reduce((t,v)=>t+n(v.rep),0);
-    const payments=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+n(p.valor),0),0);
-    const fee=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+(typeof ovFeeTax==='function'?n(ovFeeTax(p)):n(p.taxaValor)),0),0);
-    let result='Indisponível',out='Não carregado',warnings='';
-    if(expensesReady&&labReady&&window.NexoCashModel){
-     const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:labEvents,expenses:expenseState.rows,from,to});
-     out=cash(ledger.outcome/100);
-     // A taxa da transação não é lançada no caixa operacional. Subtrair uma vez.
-     result=cash((ledger.balance/100)-fee)+' (operacional)';
-     warnings=ledger.warnings.length?' · Conferir '+ledger.warnings.length+' alerta(s) de conciliação.':'';
+    const received=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+n(p.valor),0),0);
+    const fees=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+(typeof ovFeeTax==='function'?n(ovFeeTax(p)):n(p.taxaValor)),0),0);
+    let outcome=null,result=null,warning='';
+    if(ledgerReady){
+     const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:labEvents,expenses:expenseState.rows,from:from<a?a:from,to:to>b?b:to});
+     outcome=ledger.outcome/100;
+     result=ledger.balance/100-fees;
+     if(ledger.warnings.length)warning=' · Conferir '+ledger.warnings.length+' alerta(s)';
     }
-    output.push([y,cash(sold),cash(payments),cash(fee),cash(commission),out,result+warnings]);
+    totals.sold+=sold;totals.received+=received;totals.fees+=fees;totals.commission+=commission;
+    if(ledgerReady){totals.outcome+=outcome;totals.result+=result;}
+    output.push([month,cash(sold),cash(received),cash(fees),cash(commission),ledgerReady?cash(outcome):'Indisponível',ledgerReady?cash(result)+warning:'Indisponível']);
    }
-   return {heads:['Ano','Vendas','Recebimentos brutos','Taxas dos recebimentos','Comissões geradas','Saídas conciliadas','Resultado operacional'],items:output,summary:'O resultado operacional usa pagamentos efetivos, repasses, laboratório e despesas gerais conciliados pelo modelo do Caixa, subtraindo taxas de recebimento uma vez. '+(!expensesReady||!labReady?'CARREGAMENTO INCOMPLETO: clique em Carregar dados financeiros. Nenhum resultado é exibido sem as fontes necessárias. ':'')+'Não representa lucro contábil nem inclui custos não lançados. Datas de recebimento e saída são diferentes das datas de venda. Vínculos inconsistentes exigem conferência.'};
+   output.push(['TOTAL',cash(totals.sold),cash(totals.received),cash(totals.fees),cash(totals.commission),ledgerReady?cash(totals.outcome):'Indisponível',ledgerReady?cash(totals.result):'Indisponível']);
+   return {heads:['Mês / ano','Vendas','Recebimentos','Taxas','Comissões geradas','Saídas efetivas conciliadas','Resultado operacional'],items:output,summary:'Valores derivados exclusivamente dos lançamentos cadastrados. Meses sem movimentação exibem R$ 0,00. '+(ledgerReady?'Despesas e laboratório carregados. ':'Despesas ou laboratório não carregados: resultado e saídas indisponíveis; clique em Carregar dados financeiros. ')+'Resultado operacional = recebimentos menos saídas conciliadas e taxas registradas; não é lucro líquido contábil. Não duplicar taxas ou repasses já lançados como despesas. Período exibido: todos os meses entre o primeiro e o último ano com dados, respeitando os filtros.'};
   }
   if(type==='finance')return {heads:['Data da venda','Paciente','Procedimento','Venda','Recebido até hoje','Saldo atual'],items:sales.map(v=>[v.data,patient(v.pid),v.proc||'',cash(v.valor),cash(typeof recebido==='function'?recebido(v):0),cash(typeof saldoV==='function'?saldoV(v):0)]),summary:`Vendas realizadas no período: ${cash(salesTotal)} · Recebimentos registrados no período (inclusive de vendas anteriores): ${cash(receivedPeriod)} · Saldo atual das vendas realizadas no período: ${cash(balance)}. As colunas Recebido até hoje e Saldo atual refletem a situação atual de cada venda, não somente os pagamentos do período.`};
   if(type==='dentists')return {heads:['Data','Dentista','Procedimento','Produção','Comissão'],items:sales.map(v=>[v.data,dentist(v.dt),v.proc||'',cash(v.valor),cash(v.rep)]),summary:`Produção: ${cash(sales.reduce((t,v)=>t+n(v.valor),0))} · Comissões geradas: ${cash(sales.reduce((t,v)=>t+n(v.rep),0))}`};
