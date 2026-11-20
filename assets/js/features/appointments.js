@@ -155,5 +155,5 @@ function agHtml(){
     }
     return `<section class="card" style="margin:0"><div class="ag"><span><strong>${label}</strong></span><span class="badge">${rows.length} atendimento${rows.length===1?'':'s'}</span></div><div class="ag-flow-list">${html.join('')}</div></section>`;
   };
-  return `<div class="nexo-page-shell nexo-agenda-page">${dateNav}<div class="nexo-agenda-tools">${form}${rentalPanel}</div><div class="nexo-section-title"><h2>Horários dos consultórios</h2><p>Selecione um horário livre para agendar ou abra um atendimento existente.</p></div><div class="ov-agenda-chairs">${chairCard('1','Consultório 1')}${chairCard('2','Consultório 2')}</div></div>`;
+  return `<div class="nexo-page-shell nexo-agenda-page">${dateNav}<div class="nexo-agenda-tools">${form}${rentalPanel}</div><div class="ov-agenda-chairs">${chairCard('1','Consultório 1')}${chairCard('2','Consultório 2')}</div></div>`;
 }
