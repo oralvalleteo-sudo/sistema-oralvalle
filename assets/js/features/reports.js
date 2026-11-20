@@ -276,9 +276,10 @@
     const produced=own.reduce((t,v)=>t+n(v.valor),0);
     const commission=own.reduce((t,v)=>t+n(v.rep),0);
     const received=own.reduce((t,v)=>t+(typeof recebido==='function'?n(recebido(v)):0),0);
-    return [dentist(id),String(own.length),cash(produced),cash(received),cash(commission),cash(paid),'Não apurado'];
+    const fees=own.reduce((t,v)=>t+(v.pg||[]).reduce((s,p)=>s+(typeof ovFeeTax==='function'?n(ovFeeTax(p)):n(p.taxaValor)),0),0);
+    return [dentist(id),String(own.length),cash(produced),cash(received),cash(fees),cash(commission),cash(paid),'Não apurado'];
    });
-   return {heads:['Dentista','Procedimentos','Produção no período','Recebido até hoje dessas vendas','Comissão gerada','Repasses pagos no período','Lucro por dentista'],items:result,summary:'Conferência por dentista, somente leitura. Recebido até hoje não é recebimento exclusivamente do período. Repasses pagos no período podem quitar produções antigas. Lucro não apurado: custos, taxas e despesas compartilhadas ainda não estão atribuídos com segurança a cada profissional. Não subtraia novamente repasses registrados como despesas.'};
+   return {heads:['Dentista','Procedimentos','Produção no período','Recebido até hoje dessas vendas','Taxas até hoje dessas vendas','Comissão gerada','Repasses pagos no período','Lucro líquido'],items:result,summary:'Relatório de produção por dentista, somente leitura. Recebido e taxas até hoje incluem pagamentos posteriores ao período; repasses pagos podem corresponder a produções antigas. Lucro líquido não apurado: despesas e custos laboratoriais compartilhados ou sem vínculo não podem ser atribuídos com segurança. Confira possíveis taxas já lançadas como despesas antes de qualquer fechamento.'};
   }
   if(type==='balanceannual'){
    const sales=salesForAccounting();
