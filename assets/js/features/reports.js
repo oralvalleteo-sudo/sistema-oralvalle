@@ -33,6 +33,37 @@
   // já foram carregados; não redefinir o contexto de dados aqui.
  });
  const moduleAllowed = key => window.NexoModules?.isAllowed(key) !== false;
+ const isBalance=type=>type==='balanceannual'||type==='balancemonthly';
+ let balanceSources=null;
+ function balanceState(){
+  const clinic=window.OralCloud?.clinicId;
+  if(!balanceSources||balanceSources.clinic!==clinic)balanceSources={clinic,expenses:null,lab:null,errors:[],loading:false,attempted:false};
+  return balanceSources;
+ }
+ function loadBalance(force=false){
+  const state=balanceState();
+  if(!clinicReady()||!allowed('balanceannual')||state.loading||state.attempted&&!force)return;
+  state.loading=true;state.attempted=true;state.errors=[];
+  const filter='&clinic_id=eq.'+encodeURIComponent(state.clinic)+'&order=id.asc';
+  const read=(key,label,url)=>fetchAllFinancial(url+filter,state.clinic).then(rows=>{
+   if(balanceSources===state)state[key]=rows;
+  },error=>{
+   if(balanceSources===state){state[key]=null;state.errors.push(label+': '+error.message);}
+  });
+  Promise.all([
+   read('expenses','Despesas gerais','/rest/v1/nexodent_general_expenses?select=id,description,category,amount,reference_month,created_at,due_date,paid_at,voided_at,external_reference'),
+   read('lab','Laboratório','/rest/v1/nexodent_lab_payment_events?select=id,source_order_id,amount,paid_at,kind')
+  ]).then(()=>{
+   if(balanceSources!==state)return;
+   state.loading=false;
+   if(view.h==='reports'&&isBalance(view.reportType))render();
+  });
+ }
+ function ledgerStatus(state){
+  if(state.loading)return 'Carregando dados financeiros…';
+  if(state.errors.length)return 'Falha na consulta: '+state.errors.join(' · ')+'. Use Atualizar dados financeiros para tentar novamente.';
+  return '';
+ }
  const dateOK=(s,a,b)=>!!s && String(s).slice(0,10)>=a && String(s).slice(0,10)<=b;
  const validDate=s=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const d=new Date(s+'T12:00:00Z');return !Number.isNaN(d.getTime()) && d.toISOString().slice(0,10)===s;};
  const n=v=>typeof num==='function'?num(v):(Number(v)||0);
@@ -282,20 +313,20 @@
    return {heads:['Dentista','Procedimentos','Produção no período','Recebido até hoje dessas vendas','Taxas até hoje dessas vendas','Comissão gerada','Repasses pagos no período','Lucro líquido'],items:result,summary:'Relatório de produção por dentista, somente leitura. Recebido e taxas até hoje incluem pagamentos posteriores ao período; repasses pagos podem corresponder a produções antigas. Lucro líquido não apurado: despesas e custos laboratoriais compartilhados ou sem vínculo não podem ser atribuídos com segurança. Confira possíveis taxas já lançadas como despesas antes de qualquer fechamento.'};
   }
   if(type==='balanceannual'){
-   const sales=salesForAccounting(),expenseState=window.NexoGeneralExpenses?.snapshot?.();
-   const ready=!!expenseState?.ready&&labEventsClinic===window.OralCloud?.clinicId&&!!window.NexoCashModel;
+   const sales=salesForAccounting(),sources=balanceState();
+   const ready=sources.expenses!==null&&sources.lab!==null&&!!window.NexoCashModel;
    const total=(arr,fn)=>arr.reduce((s,x)=>s+fn(x),0);
    const sold=total(sales.filter(v=>dateOK(v.data,a,b)),v=>n(v.valor));
    const receipts=sales.flatMap(v=>(v.pg||[]).filter(p=>dateOK(p.data,a,b)));
    const received=total(receipts,p=>n(p.valor));
    const fees=total(receipts,p=>typeof ovFeeTax==='function'?n(ovFeeTax(p)):n(p.taxaValor));
    let general=null,lab=null,dentists=null,result=null,warnings=0;
-   if(ready){
-    const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:labEvents,expenses:expenseState.rows,from:a,to:b});
-    general=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Despesa manual'),x=>x.cents)/100;
-    lab=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Laboratório'),x=>x.cents)/100;
+   if(window.NexoCashModel){
+    const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:sources.lab||[],expenses:sources.expenses||[],from:a,to:b});
+    if(sources.expenses!==null)general=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Despesa manual'),x=>x.cents)/100;
+    if(sources.lab!==null)lab=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Laboratório'),x=>x.cents)/100;
     dentists=total(ledger.rows.filter(x=>x.direction<0&&x.source==='Dentista'),x=>x.cents)/100;
-    result=received-general-lab-dentists-fees;
+    if(ready)result=received-general-lab-dentists-fees;
     warnings=ledger.warnings.length;
    }
    const year=a.slice(0,4);
@@ -306,20 +337,20 @@
     ['Dentistas pagos',display(dentists)],['Taxas de recebimento',cash(fees)],
     ['Resultado financeiro operacional',display(result)]
    ],dashboard:{year,sold,received,general,lab,dentists,fees,result},
-   summary:'Consolidado de '+year+'. Vendas são registradas pela data da venda; pagamentos e repasses pela data do pagamento. '+(ready?'Fontes financeiras carregadas. ':'Despesas gerais e laboratório ainda não carregados: os totais de saídas e o resultado ficam indisponíveis. Clique em Atualizar dados financeiros. ')+(warnings?'Existem '+warnings+' alerta(s) de conciliação a conferir. ':'')+'As despesas gerais seguem a competência de referência do módulo de caixa. Valores já vinculados a repasses e laboratório não são somados novamente. O resultado é operacional, não lucro contábil.'};
+   summary:'Consolidado de '+year+'. Vendas são registradas pela data da venda; pagamentos e repasses pela data do pagamento. '+(ready?'Fontes financeiras carregadas. ':'O resultado será exibido quando as duas fontes de saídas forem carregadas. ')+(warnings?'Existem '+warnings+' alerta(s) de conciliação a conferir. ':'')+'As despesas gerais seguem a competência de referência do módulo de caixa. Valores já vinculados a repasses e laboratório não são somados novamente. O resultado é operacional, não lucro contábil.'};
   }
   if(type==='balancemonthly'){
    const sales=salesForAccounting();
-   const expenseState=window.NexoGeneralExpenses?.snapshot?.();
-   const expensesReady=!!expenseState?.ready;
-   const labReady=labEventsClinic===window.OralCloud?.clinicId;
+   const sources=balanceState();
+   const expensesReady=sources.expenses!==null;
+   const labReady=sources.lab!==null;
    const ledgerReady=expensesReady&&labReady&&!!window.NexoCashModel;
    const yearPattern=/^\\d{4}-\\d{2}-\\d{2}$/;
    const years=new Set();
    const includeYear=value=>{const d=String(value||'').slice(0,10);if(yearPattern.test(d)&&validDate(d))years.add(d.slice(0,4));};
    for(const v of sales){includeYear(v.data);for(const p of (v.pg||[]))includeYear(p.data);}
-   for(const e of expensesReady?expenseState.rows:[]){includeYear(e.paid_at);includeYear(e.due_date);}
-   for(const e of labReady?labEvents:[])includeYear(e.paid_at);
+   for(const e of sources.expenses||[]){includeYear(e.paid_at);includeYear(e.due_date);}
+   for(const e of sources.lab||[])includeYear(e.paid_at);
    for(const p of (db.cp||[]))includeYear(p.data);
    // Sem movimentações, mostrar os doze meses do ano corrente com zero.
    if(!years.size)years.add(today().slice(0,4));
@@ -337,7 +368,7 @@
     const fees=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+(typeof ovFeeTax==='function'?n(ovFeeTax(p)):n(p.taxaValor)),0),0);
     let outcome=null,result=null,warning='';
     if(ledgerReady){
-     const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:labEvents,expenses:expenseState.rows,from:from<a?a:from,to:to>b?b:to});
+     const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:sources.lab,expenses:sources.expenses,from:from<a?a:from,to:to>b?b:to});
      outcome=ledger.outcome/100;
      result=ledger.balance/100-fees;
      if(ledger.warnings.length)warning=' · Conferir '+ledger.warnings.length+' alerta(s)';
@@ -549,6 +580,7 @@
   if(!commercial())return '<div class="card"><h2>Relatórios indisponíveis</h2><p>Este módulo não está incluído no plano da clínica.</p></div>';
   const type=current();if(!type)return '<div class="card"><h2>Sem acesso aos relatórios</h2><p>Solicite ao administrador as permissões necessárias.</p></div>';
   view.reportType=type;
+  if(isBalance(type))loadBalance();
   const chosenYear=view.balanceYear&&view.balanceYear!=='all'?view.balanceYear:today().slice(0,4);
   const [a,b]=(type==='balanceannual'||type==='balancemonthly')?[chosenYear+'-01-01',chosenYear+'-12-31']:[view.reportFrom||today().slice(0,7)+'-01',view.reportTo||today()];
   const currentYear=Number(today().slice(0,4));
@@ -556,8 +588,9 @@
   if(type==='balanceannual'||type==='balancemonthly'){
    for(const v of salesForAccounting()){yearSet.add(Number(String(v.data||'').slice(0,4)));for(const p of v.pg||[])yearSet.add(Number(String(p.data||'').slice(0,4)));}
    for(const p of db.cp||[])yearSet.add(Number(String(p.data||'').slice(0,4)));
-   const exp=window.NexoGeneralExpenses?.snapshot?.();if(exp?.ready)for(const e of exp.rows)yearSet.add(Number(String(e.paid_at||e.due_date||'').slice(0,4)));
-   if(labEventsClinic===window.OralCloud?.clinicId)for(const e of labEvents)yearSet.add(Number(String(e.paid_at||'').slice(0,4)));
+   const sources=balanceState();
+   for(const e of sources.expenses||[])yearSet.add(Number(String(e.reference_month||e.paid_at||e.due_date||'').slice(0,4)));
+   for(const e of sources.lab||[])yearSet.add(Number(String(e.paid_at||'').slice(0,4)));
   }
   const yearOptions=[...yearSet].filter(y=>Number.isInteger(y)&&y>=1900&&y<=2099).sort((x,y)=>y-x);
   const report=type==='generalexpenses'?{heads:[],items:[],summary:''}:rows(type,a,b);
@@ -579,10 +612,10 @@
      <button type="button" id="nx-r-apply">Consultar</button>
     </div>`}
    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-    ${(type==='balanceannual'||type==='laboratory'||type==='labledger'||type==='labpayments'||type==='labcash'||type==='labhistory'||type==='labreconcile'||type==='labexpenses'||type==='cashflow'||type==='labmatching'||type==='labposting'||type==='cashverified'||type==='cashcomplete')?'<button type="button" class="ghost" id="nx-r-load-lab" style="flex:1 1 180px;min-height:44px;border-radius:10px">Atualizar dados financeiros</button>':''}
+    ${(isBalance(type)||type==='laboratory'||type==='labledger'||type==='labpayments'||type==='labcash'||type==='labhistory'||type==='labreconcile'||type==='labexpenses'||type==='cashflow'||type==='labmatching'||type==='labposting'||type==='cashverified'||type==='cashcomplete')?'<button type="button" class="ghost" id="nx-r-load-lab" style="flex:1 1 180px;min-height:44px;border-radius:10px">Atualizar dados financeiros</button>':''}
     <button type="button" class="ghost" id="nx-r-pdf" style="flex:1 1 180px;min-height:44px;border-radius:10px">Imprimir / salvar PDF</button>
    </div>
-  </div>${type==='labposting'&&labPostedError?`<p class="note">${safe(labPostedError)}</p>`:''}${type==='labmatching'&&labMatchesError?`<p class="note">Erro: ${safe(labMatchesError)}</p>`:''}${type==='labexpenses'&&labExpenseError?`<p class="note">${safe(labExpenseError)}</p>`:''}${type==='labcash'&&labCashError?`<p class="note">${safe(labCashError)}</p>`:''}${type==='generalexpenses'?(window.NexoGeneralExpenses?.html()||'<div class="card">Carregando módulo de despesas.</div>'):type==='labpayments'?labPaymentHtml(a,b):`<div class="card"><h2>${safe(kinds[type])}</h2>${type==='balanceannual'&&report.dashboard?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px;margin:16px 0">${[['Vendas do ano','sold'],['Recebimentos','received'],['Despesas gerais pagas','general'],['Laboratórios pagos','lab'],['Dentistas pagos','dentists'],['Taxas','fees'],['Resultado operacional','result']].map(([label,key])=>`<div style="border:1px solid #e7eaf0;border-radius:14px;padding:16px;background:${key==='result'?'#fff6ed':'#fff'}"><div style="font-size:.85rem;color:#667085;margin-bottom:8px">${label}</div><strong style="font-size:clamp(1.15rem,3vw,1.55rem);overflow-wrap:anywhere;color:${key==='result'?'#b85c13':'#182230'}">${report.dashboard[key]===null?'Indisponível':cash(report.dashboard[key])}</strong></div>`).join('')}</div>`:''}${type==='cashcomplete'&&report.dashboard?financeDashboard(report.dashboard):''}<p class="note">${safe(report.summary)}</p>${type==='balanceannual'?'':`<p class="note">${report.items.length} registro(s) · ${safe(a)} a ${safe(b)}</p>`}
+  </div>${isBalance(type)&&ledgerStatus(balanceState())?`<p class="note" role="status">${safe(ledgerStatus(balanceState()))}</p>`:''}${type==='labposting'&&labPostedError?`<p class="note">${safe(labPostedError)}</p>`:''}${type==='labmatching'&&labMatchesError?`<p class="note">Erro: ${safe(labMatchesError)}</p>`:''}${type==='labexpenses'&&labExpenseError?`<p class="note">${safe(labExpenseError)}</p>`:''}${type==='labcash'&&labCashError?`<p class="note">${safe(labCashError)}</p>`:''}${type==='generalexpenses'?(window.NexoGeneralExpenses?.html()||'<div class="card">Carregando módulo de despesas.</div>'):type==='labpayments'?labPaymentHtml(a,b):`<div class="card"><h2>${safe(kinds[type])}</h2>${type==='balanceannual'&&report.dashboard?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px;margin:16px 0">${[['Vendas do ano','sold'],['Recebimentos','received'],['Despesas gerais pagas','general'],['Laboratórios pagos','lab'],['Dentistas pagos','dentists'],['Taxas','fees'],['Resultado operacional','result']].map(([label,key])=>`<div style="border:1px solid #e7eaf0;border-radius:14px;padding:16px;background:${key==='result'?'#fff6ed':'#fff'}"><div style="font-size:.85rem;color:#667085;margin-bottom:8px">${label}</div><strong style="font-size:clamp(1.15rem,3vw,1.55rem);overflow-wrap:anywhere;color:${key==='result'?'#b85c13':'#182230'}">${report.dashboard[key]===null?(balanceState().loading?'Carregando…':'Indisponível'):cash(report.dashboard[key])}</strong></div>`).join('')}</div>`:''}${type==='cashcomplete'&&report.dashboard?financeDashboard(report.dashboard):''}<p class="note">${safe(report.summary)}</p>${type==='balanceannual'?'':`<p class="note">${report.items.length} registro(s) · ${safe(a)} a ${safe(b)}</p>`}
   ${type==='balanceannual'?'':`<div style="overflow:auto"><table class="nx-report-table" style="width:100%;border-collapse:collapse"><thead><tr>${report.heads.map(x=>`<th style="text-align:left;padding:10px;border-bottom:1px solid #ddd">${safe(x)}</th>`).join('')}</tr></thead><tbody>${report.items.map(r=>`<tr>${r.map(x=>`<td style="padding:9px;border-bottom:1px solid #eee">${safe(x)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${report.heads.length}" style="padding:14px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div>`}${type==='labposting'&&labEventsClinic===window.OralCloud?.clinicId&&labMatchesClinic===window.OralCloud?.clinicId&&labPostedClinic===window.OralCloud?.clinicId?`<p class="note">Confira despesas manuais antes de registrar. O lançamento é somente no livro auxiliar; não altera o caixa geral.</p>${labEvents.filter(x=>x.kind!=='opening'&&dateOK(x.paid_at,a,b)&&!labPosted.some(z=>String(z.event_id)===String(x.id))&&labMatches[String(x.id)]?.status!=='manual').map(x=>`<button type="button" data-nx-post="${safe(x.id)}" style="margin:4px">Registrar ${safe(String(x.id).slice(0,8))} · ${safe(cash(x.amount))}</button>`).join('')}`:''}${type==='labmatching'&&labMatchesClinic===window.OralCloud?.clinicId?`<p class="note">Para vincular uma parcela a uma despesa manual existente, use o botão correspondente. Referências repetidas são bloqueadas no Supabase.</p>${labEvents.filter(x=>x.kind!=='opening'&&dateOK(x.paid_at,a,b)).map(x=>`<button type="button" data-nx-match="${safe(x.id)}" style="margin:4px">Conciliar ${safe(String(x.id).slice(0,8))} · ${safe(cash(x.amount))}</button>`).join('')}`:''}</div>`}`;
  };
  // Reavaliar relatórios já exibidos quando o administrador alterar o plano ou
@@ -615,18 +648,27 @@
   e.preventDefault();e.stopImmediatePropagation();
   if(!clinicReady() || !commercial())return;
   const type=document.getElementById('nx-r-type')?.value;
-  if(load){if(!allowed(type))return;load.disabled=true;Promise.resolve(((type==='balanceannual'||type==='balancemonthly'))?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents()]):(type==='cashcomplete')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents(),loadLabMatches(),loadLabPosted()]):(type==='labposting'||type==='cashverified'||type==='cashcontrol')?Promise.all([loadLabEvents(),loadLabMatches(),loadLabPosted()]):type==='labmatching'?Promise.all([loadLabEvents(),loadLabMatches()]):(type==='labexpenses'||type==='cashflow')?loadLabExpenses():type==='labcash'?loadLabCash():type==='labhistory'?loadLabEvents():window.NexoLabLoad(true)).then(()=>(type==='labpayments'||type==='labreconcile')?Promise.all([loadLabSettlements(),loadLabEvents()]):null).then(()=>render()).catch(err=>{alert('Falha ao carregar laboratório: '+(err.message||err));load.disabled=false});return;}
+  if(load){if(!allowed(type))return;if(isBalance(type)){loadBalance(true);render();return;}load.disabled=true;Promise.resolve((type==='cashcomplete')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents(),loadLabMatches(),loadLabPosted()]):(type==='labposting'||type==='cashverified'||type==='cashcontrol')?Promise.all([loadLabEvents(),loadLabMatches(),loadLabPosted()]):type==='labmatching'?Promise.all([loadLabEvents(),loadLabMatches()]):(type==='labexpenses'||type==='cashflow')?loadLabExpenses():type==='labcash'?loadLabCash():type==='labhistory'?loadLabEvents():window.NexoLabLoad(true)).then(()=>(type==='labpayments'||type==='labreconcile')?Promise.all([loadLabSettlements(),loadLabEvents()]):null).then(()=>render()).catch(err=>{alert('Falha ao carregar laboratório: '+(err.message||err));load.disabled=false});return;}
   if(!allowed(type))return;
   const year=document.getElementById('nx-r-year')?.value;
   if((type==='balanceannual'||type==='balancemonthly')&&year){if(!/^(19|20)\d{2}$/.test(year))return;view.balanceYear=year;view.reportFrom=year+'-01-01';view.reportTo=year+'-12-31';}
   const [a,b]=(type==='balanceannual'||type==='balancemonthly')?[view.reportFrom,view.reportTo]:dates();if(!validDate(a)||!validDate(b)||a>b){alert('Informe um período válido, com a data inicial anterior ou igual à final.');return}
   view.reportType=type;view.reportFrom=a;view.reportTo=b;
-  if(apply){render();return}
+  if(apply){if(isBalance(type)&&balanceState().errors.length)loadBalance(true);render();return}
   // Revalidar contexto e permissões imediatamente antes de exportar.
   if(!clinicReady() || !allowed(type))return;
   const r=rows(type,a,b);
   const html=`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>${safe(kinds[type])}</title><style>body{font:12px Arial;margin:24px;color:#222}h1{color:#bd6000}table{border-collapse:collapse;width:100%}th,td{padding:7px;text-align:left;border-bottom:1px solid #ddd}th{background:#f2eee9}@page{size:A4 landscape;margin:12mm}</style><h1>NexoDent — ${safe(kinds[type])}</h1><p>Período: ${safe(a)} a ${safe(b)} · Dados carregados no navegador; podem estar incompletos.</p><p>${safe(r.summary)}</p><table><thead><tr>${r.heads.map(h=>`<th>${safe(h)}</th>`).join('')}</tr></thead><tbody>${r.items.map(row=>`<tr>${row.map(v=>`<td>${safe(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></html>`;
   const w=window.open('','_blank');if(!w){alert('Permita janelas pop-up para imprimir o relatório.');return}w.document.write(html);w.document.close();w.focus();setTimeout(()=>w.print(),400);
  },true);
- window.addEventListener('nexodent:lab-payments-updated',()=>{labEvents=[];labEventsClinic=null;labSettlements={};labSettlementClinic=null;labCashRows=[];labCashClinic=null;labExpenseRows=[];labExpenseClinic=null;});
+ window.addEventListener('nexodent:signed-out',()=>{balanceSources=null;reportClinic=null;});
+ window.addEventListener('nexodent:clinic-data-loaded',()=>{
+  const id=window.OralCloud?.clinicId;
+  if(reportClinic!==id){reportClinic=id;balanceSources=null;}
+ });
+ window.addEventListener('nexodent:expenses-updated',()=>{
+  balanceSources=null;
+  if(view.h==='reports'&&isBalance(view.reportType))render();
+ });
+ window.addEventListener('nexodent:lab-payments-updated',()=>{balanceSources=null;if(view.h==='reports'&&isBalance(view.reportType))render();labEvents=[];labEventsClinic=null;labSettlements={};labSettlementClinic=null;labCashRows=[];labCashClinic=null;labExpenseRows=[];labExpenseClinic=null;});
 })();
