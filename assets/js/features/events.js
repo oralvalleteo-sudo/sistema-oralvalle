@@ -129,7 +129,10 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
         }
       }
       if(it.tid)syncItemToTrat(p,it);
-    }else{o[f]=f==='desc'?t.value.replace(',','.'):t.value}
+    }else{
+      o[f]=f==='desc'?t.value.replace(',','.'):t.value;
+      if(f==='cond'&&e.detail?.paymentPlan)o.paymentPlan=nxPayPlan({cond:o.cond});
+    }
     refreshOrc(t.closest('[data-oid]'),o);
     // Após editar desconto/valor, atualizar os atendimentos já vinculados.
     // Não transformar entrada planejada em pagamento efetivo.

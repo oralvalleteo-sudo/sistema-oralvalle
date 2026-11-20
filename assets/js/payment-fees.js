@@ -11,7 +11,7 @@ function ovFeeMethod(forma){
   if(/debito/.test(key))return 'Débito';
   if(/credito/.test(key)){
     const parcels=key.match(/\b(\d{1,2})\s*(?:x|parcelas?)\b/);
-    if(parcels&&Number(parcels[1])>=2&&Number(parcels[1])<=12)return 'Crédito '+Number(parcels[1])+'x';
+    if(parcels&&Number(parcels[1])>=2&&Number(parcels[1])<=60)return 'Crédito '+Number(parcels[1])+'x';
     if(parcels&&Number(parcels[1])===1)return 'Crédito à vista';
     return /parcelad/.test(key)||parcels?'Crédito parcelado':'Crédito à vista';
   }
@@ -24,7 +24,7 @@ function ovFeeReadRate(raw){
 }
 function ovFeeConfiguredRate(forma){
   const key=ovFeeMethod(forma),rates=ovFeeRates();
-  return ovFeeReadRate(rates[key]??(key==='Crédito à vista'?rates['Crédito']:null));
+  return ovFeeReadRate(rates[key]??(key==='Crédito à vista'?rates['Crédito']:/^Crédito (?:1[3-9]|[2-5][0-9]|60)x$/.test(key)?rates['Crédito parcelado']:null));
 }
 function ovFeePct(forma){return ovFeeConfiguredRate(forma)??0}
 function ovFeeApplies(forma){return /^(Pix|Débito|Crédito)/.test(ovFeeMethod(forma)||'')}
@@ -46,7 +46,7 @@ function ovFeeTax(p){
 }
 function ovFeeNet(p){return r2(num(p.valor)-ovFeeTax(p))}
 function ovFeeSummary(p){return `<small class="note" style="display:block;margin:3px 0">Taxa ${brl(ovFeeTax(p))} (${ovFeeReadRate(p.taxaPct)??0}%) · <b>Líquido ${brl(ovFeeNet(p))}</b></small>`}
-function ovFeeOptions(sel){return OV_FEE_FORMS.map(f=>`<option${f===sel?' selected':''}>${f}</option>`).join('')}
+function ovFeeOptions(sel){const forms=/^Crédito (?:1[3-9]|[2-5][0-9]|60)x$/.test(sel)?[...OV_FEE_FORMS,sel]:OV_FEE_FORMS;return forms.map(f=>`<option${f===sel?' selected':''}>${f}</option>`).join('')}
 function ovFeeSettings(){
  const rows=OV_FEE_FORMS.filter(f=>f!=='Crédito'&&f!=='Outro').map(f=>`<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0"><span>${esc(f)}</span><span style="display:flex;align-items:center;gap:5px"><input type="number" min="0" max="100" step="0.01" inputmode="decimal" data-fee-rate="${esc(f)}" value="${ovFeePct(f)}" style="max-width:100px">%</span></label>`).join('');
  return `<details class="card" style="margin-bottom:12px"><summary style="cursor:pointer;font-weight:700">⚙️ Configurar taxas das formas de pagamento</summary><p class="note">Taxas padrão em %. Edite e salve. Cada recebimento mantém a taxa aplicada na data, mesmo após alterações.</p><div style="max-width:500px">${rows}</div><button class="sm" data-act="ovFeeSave" type="button" style="margin-top:10px">Salvar taxas</button></details>`;

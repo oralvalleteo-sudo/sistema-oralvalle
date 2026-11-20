@@ -19,6 +19,30 @@ function salesPeriod() {
   });
   return {today,month,monthly,todaySales,payments,pending,historical};
 }
+function ovBudgetReceiptGroups(payments){
+  const budgets=new Map();
+  for(const patient of db.p||[]){
+    for(const budget of patient.orcs||[]){
+      for(const item of budget.itens||[]){
+        for(const id of [item.paymentSaleId,item.vid]){
+          if(id)budgets.set(JSON.stringify([String(patient.id),String(id)]),String(budget.id));
+        }
+      }
+    }
+  }
+  const groups=new Map();
+  payments.forEach(({v,p},index)=>{
+    const budget=budgets.get(JSON.stringify([String(v.pid),String(v.id)]));
+    const method=ovFeeMethod(p.forma)||'—';
+    const key=budget?JSON.stringify([v.pid,budget,p.data,method]):index;
+    if(!groups.has(key))groups.set(key,{method,indices:[],gross:0,fee:0});
+    const group=groups.get(key);
+    group.indices.push(index);
+    group.gross=r2(group.gross+num(p.valor));
+    group.fee=r2(group.fee+ovFeeTax(p));
+  });
+  return [...groups.values()];
+}
 function ovFinDetail(type){
   const {month,monthly,todaySales,payments,pending,historical}=salesPeriod();
   const types={today:['Vendas de hoje',todaySales,'sale'],month:['Vendas do mês',monthly,'sale'],received:['Recebido no mês',payments,'payment'],pending:[historical?'A receber no fim do mês':'A receber de pacientes',pending,'pending'],commission:['Comissões do mês',monthly,'commission'],net:['Sobra após comissões (mês)',monthly,'net']};
@@ -40,10 +64,27 @@ function ovFinDetail(type){
     const payment=canEditFees?payments[index]:null;
     const action=payment&&ovFeeApplies(payment.p.forma)?`<button type="button" class="ghost sm" data-act="ovFeeEdit" data-id="${esc(payment.v.id)}" data-pg="${esc(payment.p.id)}">Corrigir taxa</button>`:'';
     return `<tr>${row.map(value=>`<td>${esc(value)}</td>`).join('')}${canEditFees?`<td>${payment?`<button type="button" class="ghost sm" data-act="ovPaymentMethodEdit" data-id="${esc(payment.v.id)}" data-pg="${esc(payment.p.id)}">Corrigir forma</button> `:''}${action}</td>`:''}</tr>`;
-  }).join('');
-  window.ovFinCurrentReport={title,headers,rows:reportRows,total:brl(amount),count:items.length,period:type==='today'?tdy():month};
+  });
+  let exportRows=reportRows;
+  let visibleRows=rows;
+  if(kind==='payment'){
+    const groups=ovBudgetReceiptGroups(payments);
+    exportRows=groups.map(group=>{
+      const original=reportRows[group.indices[0]];
+      return group.indices.length===1?original:[original[0],original[1],'Orçamento · total por forma',group.method,brl(group.gross),brl(group.fee),brl(r2(group.gross-group.fee))];
+    });
+    visibleRows=groups.map((group,index)=>{
+      if(group.indices.length===1)return rows[group.indices[0]];
+      const summary=exportRows[index].map(value=>'<strong>'+esc(value)+'</strong>');
+      const columns=headers.length+Number(Boolean(canEditFees));
+      const parts=group.indices.map(i=>rows[i]).join('');
+      return `<tr>${summary.map(value=>`<td>${value}</td>`).join('')}${canEditFees?'<td></td>':''}</tr>
+        <tr><td colspan="${columns}"><details><summary>${group.indices.length} lançamentos por procedimento</summary><table class="ov-fin-detail-table" aria-label="Lançamentos por procedimento"><tbody>${parts}</tbody></table></details></td></tr>`;
+    });
+  }
+  window.ovFinCurrentReport={title,headers,rows:exportRows,total:brl(amount),count:exportRows.length,period:type==='today'?tdy():month};
   const dialog=document.getElementById('ov-fin-detail-dialog');if(!dialog)return;
-  dialog.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="ov-fin-detail-title" style="margin:0">${esc(title)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="sm" data-act="ovFinPdf">⬇ Gerar PDF</button><form method="dialog"><button type="submit" class="ghost sm">✕ Fechar</button></form></div></div><p class="note" style="margin:12px 0">${items.length} registro(s) · Total: <strong>${brl(amount)}</strong></p><div class="ov-fin-detail-scroll"><table class="ov-fin-detail-table"><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}${canEditFees?'<th scope="col">Ação</th>':''}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length+Number(Boolean(canEditFees))}" style="padding:16px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div><p style="text-align:right"><strong>Total: ${brl(amount)}</strong></p>`;
+  dialog.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="ov-fin-detail-title" style="margin:0">${esc(title)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="sm" data-act="ovFinPdf">⬇ Gerar PDF</button><form method="dialog"><button type="submit" class="ghost sm">✕ Fechar</button></form></div></div><p class="note" style="margin:12px 0">${exportRows.length} registro(s) · Total: <strong>${brl(amount)}</strong></p><div class="ov-fin-detail-scroll"><table class="ov-fin-detail-table"><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}${canEditFees?'<th scope="col">Ação</th>':''}</tr></thead><tbody>${visibleRows.join('')||`<tr><td colspan="${headers.length+Number(Boolean(canEditFees))}" style="padding:16px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div><p style="text-align:right"><strong>Total: ${brl(amount)}</strong></p>`;
   if(!dialog.open)dialog.showModal();
 }
 function ovEditReceiptMethod(saleId,receiptId){

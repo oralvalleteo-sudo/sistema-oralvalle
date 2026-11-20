@@ -519,11 +519,10 @@ const A={
   oballconf:(b,d,p)=>{
     const o=getO(p,d.o),pend=o.itens.filter(it=>!it.vid&&!it.paymentSaleId);if(!pend.length)return;
     const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
-    if(pend.some(it=>!it.dt)){toast('Há item sem dentista definido');return}
-    const pm=String(o.cond||'').match(/^Entrada: R\$ [\d.,]+ \(([^)]+)\); Restante: R\$ [\d.,]+ \(([^)]+)\)(?: em (\d+)x de R\$ [\d.,]+)?$/);
-    const forms=[ovFeeMethod(pm?.[1]||'PIX'),ovFeeMethod(pm?.[2]?(pm[2]+(pm[3]&&pm[2]==='Cartão de crédito'?' '+pm[3]+'x':'')):'Cartão de crédito')];
-    const inputs=[['oab','oab2']];
-    const amounts=inputs[0].map(field=>r2(num($(field)?.value)));
+    if(pend.some(it=>!it.dt||!(val(it)>0))){toast('Confira o dentista e o valor de cada item.');return}
+    const forms=nxPayMethods(nxPayPlan(o));
+
+    const amounts=['oab','oab2'].map(field=>r2(num($(field)?.value)));
     const received=r2(amounts.reduce((sum,amount)=>sum+amount,0));
     if(amounts.some(amount=>amount<0)||!(received>0)){toast('Informe os valores efetivamente recebidos.');return}
     if(received>tot){toast('O valor recebido é maior que o total da baixa ('+brl(tot)+')',3500);return}
@@ -551,8 +550,8 @@ const A={
     const outstanding=sales.filter(v=>saldoV(v)>0.005);
     const totalDue=r2(outstanding.reduce((sum,v)=>sum+saldoV(v),0));
     if(!outstanding.length){toast('Este orçamento não tem saldo em aberto.');return}
-    const pm=String(o.cond||'').match(/^Entrada: R\$ [\d.,]+ \(([^)]+)\); Restante: R\$ [\d.,]+ \(([^)]+)\)(?: em (\d+)x de R\$ [\d.,]+)?$/);
-    const forms=[ovFeeMethod(pm?.[1]||'PIX'),ovFeeMethod(pm?.[2]?(pm[2]+(pm[3]&&pm[2]==='Cartão de crédito'?' '+pm[3]+'x':'')):'Cartão de crédito')];
+    const forms=nxPayMethods(nxPayPlan(o));
+
     const fields=['obc1','obc2'];
     const amounts=fields.map(field=>r2(num($(field)?.value)));
     if(amounts.some(a=>a<0)||amounts.some(a=>!Number.isFinite(a))){toast('Confira os valores informados.');return}

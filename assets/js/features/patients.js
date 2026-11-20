@@ -363,16 +363,15 @@ function obAllHtml(o){
   if(!pend.length)return '<div class="ob-st ob-all"><span class="badge stt-ok">Financeiro lançado</span> <span class="note" style="margin:0">Todos os itens já possuem lançamento financeiro. Consulte o saldo em Pagamentos.</span></div>';
   const val=it=>r2(num(it.valor)*fac(o)),tot=r2(pend.reduce((a,it)=>a+val(it),0));
   if(view.obxAll!==o.id)return `<div class="ob-all"><button class="sm" style="width:100%" data-act="oball" data-o="${esc(o.id)}">Registrar pagamento do orçamento (${pend.length} ${pend.length===1?'item':'itens'} · ${brl(tot)})</button></div>`;
-  const plan=nxPayPlan(o), first=ovFeeMethod(plan.formaEntrada);
-  const second=ovFeeMethod(plan.formaSaldo==='Cartão de crédito'?plan.formaSaldo+' '+plan.parcelas+'x':plan.formaSaldo);
+  const plan=nxPayPlan(o), [first,second]=nxPayMethods(plan);
   return `<div class="ob-all"><div class="ob-pay"><h4>Registrar pagamento do orçamento</h4>
   ${pend.map(it=>`<div class="ob-li"><span>${esc(it.proc||'Procedimento')}${it.dente?' · dente '+esc(it.dente):''}<br><span class="note" style="margin:0">${esc(dName(it.dt))}</span></span><strong>${brl(val(it))}</strong></div>`).join('')}
   <div class="tot" style="margin-top:6px"><span>Valor dos itens</span><span>${brl(tot)}</span></div>
   <div class="row" style="align-items:flex-start"><div><label for="oab">Entrada planejada (R$)</label><input id="oab" inputmode="decimal" value="${plan.entrada&&num(plan.entrada)>0&&num(plan.entrada)<=tot?esc(plan.entrada):''}" placeholder="Valor da entrada"></div><div><label>Forma da entrada (do planejamento)</label><strong style="display:block;padding:9px 0">${esc(first)}</strong></div></div>
-  <details${plan.entrada&&num(plan.entrada)>0&&num(plan.entrada)<tot?' open':''}>
+  <details${num(plan.entrada)<tot?' open':''}>
     <summary>Pagamento do restante / outra forma</summary>
-    <div class="row"><div><label for="oab2">Restante planejado (R$)</label><input id="oab2" inputmode="decimal" value="" placeholder="Valor realmente recebido agora"></div><div><label>Forma do restante (do planejamento)</label><strong style="display:block;padding:9px 0">${esc(second)}</strong></div></div>
-    
+    <div class="row"><div><label for="oab2">Valor recebido na segunda forma (R$)</label><input id="oab2" inputmode="decimal" value="" placeholder="0,00"></div><div><label>Forma do restante (do planejamento)</label><strong style="display:block;padding:9px 0">${esc(second)}</strong></div></div>
+    <p class="note">Restante planejado: ${brl(num(plan.restante))}</p>
   </details>
   <p class="note" style="margin:6px 0 0">Preencha os valores conforme os comprovantes. O valor recebido será distribuído na ordem dos itens. O saldo restante ficará em aberto. Este registro não conclui procedimentos, não cria evolução e não libera comissão por execução.</p>
   <label for="oad">Data</label><input id="oad" type="date" value="${tdy()}">
@@ -383,7 +382,7 @@ function obCollectHtml(o){
   const linked=(o.itens||[]).map(it=>db.vd.find(v=>String(v.id)===String(it.paymentSaleId||it.vid))).filter(Boolean);
   const outstanding=linked.filter(v=>saldoV(v)>0.005),totalDue=r2(outstanding.reduce((sum,v)=>sum+saldoV(v),0));
   if(!outstanding.length)return '';
-  const plan=nxPayPlan(o),entry=num(plan.entrada),alreadyReceived=r2(linked.reduce((sum,v)=>sum+recebido(v),0)),first=ovFeeMethod(plan.formaEntrada),second=ovFeeMethod(plan.formaSaldo==='Cartão de crédito'?plan.formaSaldo+' '+plan.parcelas+'x':plan.formaSaldo);
+  const plan=nxPayPlan(o),entry=num(plan.entrada),alreadyReceived=r2(linked.reduce((sum,v)=>sum+recebido(v),0)),[first,second]=nxPayMethods(plan);
   const defaultEntry=alreadyReceived<=0.005&&entry>0&&entry<=totalDue?entry:0;
   const defaultRemainder=0;
   return `<div class="ob-all ob-pay" style="margin-top:12px"><h4>Receber pagamento do orçamento (conjunto)</h4><p class="note">O recebimento é registrado aqui, sem botões de receber dentro de cada procedimento. Os valores são distribuídos automaticamente entre os saldos em aberto.</p><div class="row"><div><label for="obc1">Valor da entrada / 1ª forma (R$)</label><input id="obc1" inputmode="decimal" value="${defaultEntry.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></div><div><label>Forma (planejamento)</label><strong style="display:block;padding:9px 0">${esc(first)}</strong></div></div><div class="row"><div><label for="obc2">2ª forma (R$)</label><input id="obc2" inputmode="decimal" value="${defaultRemainder.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></div><div><label>Forma (planejamento)</label><strong style="display:block;padding:9px 0">${esc(second)}</strong></div></div><label for="obcd">Data do recebimento</label><input id="obcd" type="date" value="${tdy()}"><p class="note">Saldo total em aberto: <strong>${brl(totalDue)}</strong></p><button data-act="obcollectconf" data-o="${esc(o.id)}" style="width:100%">Confirmar recebimento conjunto</button></div>`;
@@ -462,8 +461,13 @@ document.addEventListener('keydown',event=>{
   }
 });
 function nxPayPlan(o){
+ if(o.paymentPlan)return {...o.paymentPlan,restante:Math.max(0,r2(total(o)-num(o.paymentPlan.entrada)))};
  const raw=String(o.cond||'');const m=raw.match(/^Entrada: R\$ ([\d.,]+) \(([^)]+)\); Restante: R\$ ([\d.,]+) \(([^)]+)\)(?: em (\d+)x de R\$ ([\d.,]+))?$/);
- return m?{entrada:m[1],formaEntrada:m[2],formaSaldo:m[4],parcelas:m[5]||'1'}:{entrada:'',formaEntrada:'PIX',formaSaldo:'Cartão de crédito',parcelas:'1'};
+ return m?{entrada:m[1],formaEntrada:m[2],restante:m[3],formaSaldo:m[4],parcelas:m[5]||'1'}:{entrada:'',formaEntrada:'PIX',formaSaldo:'Cartão de crédito',parcelas:'1'};
+}
+function nxPayMethods(plan){
+  const remainder=plan.formaSaldo==='Cartão de crédito'?plan.formaSaldo+' '+plan.parcelas+'x':plan.formaSaldo;
+  return [ovFeeMethod(plan.formaEntrada),ovFeeMethod(remainder)];
 }
 function nxPayHtml(o){
  const a=nxPayPlan(o),opts=(v)=>['PIX','Dinheiro','Cartão de crédito','Cartão de débito','Transferência','Boleto','Outro'].map(x=>`<option${x===v?' selected':''}>${x}</option>`).join('');
