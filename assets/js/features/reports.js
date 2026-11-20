@@ -296,6 +296,7 @@
    for(const p of (db.cp||[]))includeYear(p.data);
    // Sem movimentações, mostrar os doze meses do ano corrente com zero.
    if(!years.size)years.add(today().slice(0,4));
+   if(view.balanceYear&&view.balanceYear!=='all')years.add(String(view.balanceYear));
    const first=Math.min(...[...years].map(Number)),last=Math.max(...[...years].map(Number));
    const output=[],totals={sold:0,received:0,fees:0,commission:0,outcome:0,result:0};
    for(let y=first;y<=last;y++)for(let m=1;m<=12;m++){
