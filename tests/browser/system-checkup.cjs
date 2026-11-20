@@ -383,16 +383,29 @@ await page.evaluate(()=>{
 });
 const budgetHistory=page.locator('[data-oid="mixed-budget"] section').filter({hasText:'Recebimentos registrados'});
 assert.match(await budgetHistory.innerText(),/Débito.*1\.000,00.*33,30.*966,70/);
+const octoberAccounting=()=>page.evaluate(()=>{
+ view.salesMonth='2025-10';
+ const {monthly,payments}=salesPeriod();
+ return {
+  sales:monthly.reduce((sum,sale)=>sum+sale.valor,0),
+  received:payments.reduce((sum,{p})=>sum+p.valor,0),
+  fees:payments.reduce((sum,{p})=>sum+Math.round(ovFeeTax(p)*100),0)
+ };
+});
+const beforeArchive=await octoberAccounting();
 const removeBudget=mixedBudget.locator('[data-act="rmorc"]');
 await removeBudget.click();
 page.once('dialog',async dialog=>{
- assert.match(dialog.message(),/Recebimentos, taxas, comissões e histórico clínico serão preservados/);
+ assert.match(dialog.message(),/Vendas, recebimentos, taxas, comissões e saldos vinculados sairão dos totais/);
  await dialog.accept();
 });
 await removeBudget.click();
 await mixedBudget.waitFor({state:'detached'});
 await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
 assert.equal(await page.evaluate(()=>pfAll().some(x=>x.o.id==='mixed-budget')),false);
+assert.deepEqual(await octoberAccounting(),{
+ sales:beforeArchive.sales-1400,received:beforeArchive.received-1400,fees:beforeArchive.fees-3930
+});
 const archivedMixedBudget=(await db.query("select dados from budgets where dados->>'id'='mixed-budget'")).rows[0].dados;
 assert.ok(archivedMixedBudget.archivedAt);
 const paymentAfterArchive=(await db.query("select dados from receipts where kind='object' and dados->>'data'='2025-10-19' and dados->>'forma'='Débito'")).rows;
@@ -402,6 +415,7 @@ await page.locator('[data-act="restoreorc"][data-o="mixed-budget"]').click();
 await mixedBudget.waitFor();
 await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);
 assert.equal(await page.evaluate(()=>pfAll().some(x=>x.o.id==='mixed-budget')),true);
+assert.deepEqual(await octoberAccounting(),beforeArchive);
 console.log('Excluir orçamento com baixa arquiva a proposta e preserva os recebimentos no banco.');
 console.log('Recebimentos cabem no relatório móvel e a edição agrupada reflete no orçamento e no mês.');
 console.log('Quitação em uma forma e correção histórica atualizam taxas e líquido do mês.');

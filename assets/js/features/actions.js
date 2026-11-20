@@ -493,7 +493,7 @@ const A={
       const vinculados=(p.trat||[]).filter(t=>String(t.oid)===String(o.id));
       const hasFinancial=(o.itens||[]).some(i=>i.vid||i.paymentSaleId)||vinculados.some(t=>t.vid);
       const message=hasFinancial
-        ? 'Retirar este orçamento da lista? O orçamento ficará em Arquivados. Recebimentos, taxas, comissões e histórico clínico serão preservados.'
+        ? 'Retirar este orçamento da lista? Vendas, recebimentos, taxas, comissões e saldos vinculados sairão dos totais. O histórico ficará em Arquivados e poderá ser restaurado.'
         : 'Excluir definitivamente este orçamento e sua proposta financeira? Os tratamentos vinculados serão mantidos, mas sem vínculo com a proposta.';
       if(!confirm(message))return;
       if(hasFinancial){

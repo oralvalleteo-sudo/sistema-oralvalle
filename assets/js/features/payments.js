@@ -31,7 +31,7 @@ function pgCard(v,i){
   ${pgPlanoHtml(v)}${form}</div>`;
 }
 function tabPag(p){
-  const vs=db.vd.filter(v=>v.pid===p.id).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+  const vs=salesForAccounting().filter(v=>v.pid===p.id).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
   const tot=vs.reduce((s,v)=>s+num(v.valor),0),rec=vs.reduce((s,v)=>s+recebido(v),0),sd=vs.reduce((s,v)=>s+saldoV(v),0);
   const all=[];vs.forEach(v=>v.pg.forEach(x=>all.push({v,x})));all.sort((a,b)=>String(b.x.data).localeCompare(String(a.x.data)));
   const resumo=`<h3 style="margin:8px 0 10px">Resumo financeiro do paciente</h3><div class="pg-top"><div><small>Valor total a pagar</small><b>${brl(tot)}</b></div><div><small>Valor já pago</small><b class="ok">${brl(rec)}</b></div><div><small>Valor que falta pagar</small><b class="${sd>0?'wr':''}">${brl(sd)}</b></div></div>`;
@@ -56,7 +56,7 @@ Object.assign(A,{
   pgall:(b,d,p)=>{
     let val=num($('pgGV').value);const data=$('pgGD').value||tdy(),forma=$('pgGF').value;
     if(!(val>0)){toast('Informe o valor recebido');return}
-    const vs=db.vd.filter(v=>v.pid===p.id&&saldoV(v)>0).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
+    const vs=salesForAccounting().filter(v=>v.pid===p.id&&saldoV(v)>0).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
     const max=vs.reduce((s,v)=>s+saldoV(v),0);
     if(val>max+0.005){toast('Valor maior que o total a receber ('+brl(max)+')',3000);return}
     vs.forEach(v=>{if(val<=0.004)return;const u=Math.min(val,saldoV(v));v.pg.push(ovFeeMake(u,forma,data));val=r2(val-u)});

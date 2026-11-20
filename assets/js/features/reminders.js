@@ -204,7 +204,7 @@ function nexoTratamentoPendente(p){
 function homePac(){
   const archivedMode=Boolean(view.arq);
   const active=db.p.filter(p=>Boolean(p.arq)===archivedMode);
-  const pending=(db.vd||[]).filter(v=>saldoV(v)>0.005);
+  const pending=salesForAccounting().filter(v=>saldoV(v)>0.005);
   const pendingIds=new Set(pending.map(v=>v.pid));
   const treatmentIds=new Set(active.filter(nexoTratamentoPendente).map(p=>String(p.id)));
   const filtered=active.filter(p=>{

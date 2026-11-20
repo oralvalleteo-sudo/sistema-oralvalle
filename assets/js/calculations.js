@@ -38,6 +38,31 @@ const fac=o=>{const s=sub(o);return s>0?total(o)/s:1};
 const dName=id=>{const d=db.dt.find(x=>x.id===id);return d?d.nome:(id?'Dentista removido':'Sem dentista')};
 const pName=id=>{const p=db.p.find(x=>x.id===id);return p?p.nome:'Paciente removido'};
 const recebido=v=>v.pg.reduce((s,p)=>s+num(p.valor),0);
+// O orçamento arquivado mantém os vínculos para auditoria e restauração.
+function salesForAccounting(data=db){
+  const excluded=new Map(), active=new Map();
+  for(const patient of data.p||[]){
+    const budgets=new Map((patient.orcs||[]).map(budget=>[String(budget.id),budget]));
+    for(const budget of budgets.values()){
+      const index=budget.archivedAt?excluded:active;
+      const key=String(patient.id);
+      if(!index.has(key))index.set(key,new Set());
+      const sales=index.get(key);
+      for(const item of budget.itens||[]){
+        if(item.vid)sales.add(String(item.vid));
+        if(item.paymentSaleId)sales.add(String(item.paymentSaleId));
+      }
+    }
+    for(const treatment of patient.trat||[]){
+      const budget=budgets.get(String(treatment.oid));
+      if(budget&&treatment.vid)(budget.archivedAt?excluded:active).get(String(patient.id)).add(String(treatment.vid));
+    }
+  }
+  return (data.vd||[]).filter(sale=>{
+    const patient=String(sale.pid), id=String(sale.id);
+    return !excluded.get(patient)?.has(id)||active.get(patient)?.has(id);
+  });
+}
 const saldoV=v=>Math.max(0,r2(num(v.valor)-recebido(v)));
 const liberada=v=>{const val=num(v.valor);return val>0?num(v.rep)*Math.min(1,recebido(v)/val):0};
 function defDt(){const a=db.dt.filter(d=>d.ativo!==false);return a.length===1?a[0].id:''}
@@ -57,8 +82,8 @@ function comCalc(dtId,procNome,valor,q){
   }
   return {rep:r2(rep),mat:mat*q,lab:lab*q,procCusto:r2(procCusto*q),horaClinica:r2(horaClinica*q),custoTotal:r2(custoTotal),baseLiquida:r2(baseLiquida)};
 }
-function dtTot(id){
-  const s=db.vd.filter(x=>x.dt===id),g=sum(s,'rep'),l=s.reduce((a,x)=>a+liberada(x),0),p=sum(db.cp.filter(c=>c.dt===id),'valor');
+function dtTot(id,accounting=salesForAccounting()){
+  const s=accounting.filter(x=>x.dt===id),g=sum(s,'rep'),l=s.reduce((a,x)=>a+liberada(x),0),p=sum(db.cp.filter(c=>c.dt===id),'valor');
   return {g,l,p,apagar:Math.max(0,r2(l-p)),prev:Math.max(0,r2(g-l)),exc:Math.max(0,r2(p-l))};
 }
 function dtMoves(id){return db.vd.some(v=>v.dt===id)||db.cp.some(c=>c.dt===id)||db.ag.some(a=>a.dt===id)||db.p.some(p=>p.orcs.some(o=>o.itens.some(i=>i.dt===id)))}

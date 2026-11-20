@@ -43,10 +43,11 @@
  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
  function dates(){const a=document.getElementById('nx-r-from')?.value||view.reportFrom||today().slice(0,7)+'-01';const b=document.getElementById('nx-r-to')?.value||view.reportTo||today();return [a,b]}
  function rows(type,a,b){
-  const sales=(db.vd||[]).filter(v=>dateOK(v.data,a,b));
+  const accounting=salesForAccounting();
+  const sales=accounting.filter(v=>dateOK(v.data,a,b));
   // Recebimentos do período devem considerar TODAS as vendas carregadas,
   // inclusive as realizadas antes do início do filtro.
-  const pay=(db.vd||[]).flatMap(v=>(Array.isArray(v.pg)?v.pg:[]).filter(x=>dateOK(x.data,a,b)).map(x=>({v,x})));
+  const pay=accounting.flatMap(v=>(Array.isArray(v.pg)?v.pg:[]).filter(x=>dateOK(x.data,a,b)).map(x=>({v,x})));
   const receivedPeriod=pay.reduce((t,z)=>t+n(z.x.valor),0);
   const salesTotal=sales.reduce((t,v)=>t+n(v.valor),0);
   const balance=sales.reduce((t,v)=>t+(typeof saldoV==='function'?saldoV(v):0),0);

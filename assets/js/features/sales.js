@@ -6,7 +6,7 @@ function ovFinCard(label,value,sub,type){
 }
 function salesPeriod() {
   const today=tdy(), current=today.slice(0,7), month=view.salesMonth||current;
-  const all=db.vd||[];
+  const all=salesForAccounting();
   const monthly=all.filter(v=>String(v.data||'').slice(0,7)===month);
   const todaySales=all.filter(v=>v.data===today);
   const payments=all.flatMap(v=>(v.pg||[]).filter(p=>String(p.data||'').slice(0,7)===month).map(p=>({v,p})));

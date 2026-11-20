@@ -5,25 +5,27 @@ function comHtml(){
   let h=`<div class="tabs" style="margin-bottom:16px">${pmSee('dt')?'<button type="button" data-act="nav" data-t="dt">Dentistas</button>':''}<button type="button" class="on" data-act="nav" data-t="cm">Comissões</button></div><div class="card"><label for="cmm" style="margin:0 0 4px">Mês</label><input id="cmm" type="month" value="${m}"></div>`;
   if(!ds.length)return h+'<div class="empty">Cadastre um dentista na aba Dentistas para acompanhar comissões.</div>';
 
-  h+=commissionReview(m,db.vd.filter(v=>String(v.data||'').slice(0,7)===m));
+  const accounting=salesForAccounting();
+  const monthly=accounting.filter(v=>String(v.data||'').slice(0,7)===m);
+  h+=commissionReview(m,monthly);
   const selected=view.cmDent||'';
   if(!selected){
     h+=`<div class="card"><h2 style="margin-top:0">Comissões por dentista</h2><p class="note">Clique no nome do dentista para visualizar todos os comissionamentos registrados para ele.</p>`;
     h+=ds.map(d=>{
-      const vm=db.vd.filter(v=>v.dt===d.id&&v.data.slice(0,7)===m);
+      const vm=monthly.filter(v=>v.dt===d.id);
       const total=sum(vm,'rep');
       const production=sum(vm,'valor');
       const patients=new Set(vm.map(v=>v.pid)).size;
       return `<button class="card" data-act="cmdent" data-id="${esc(d.id)}" type="button" style="width:100%;text-align:left;margin:0 0 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px"><span><strong>${esc(d.nome)}</strong>${d.ativo===false?' <span class="badge">arquivado</span>':''}<br><span class="note" style="margin:2px 0 0">${vm.length} procedimento(s) · ${patients} paciente(s) · produção ${brl(production)}</span></span><span style="text-align:right"><strong style="color:var(--ac)">${brl(total)}</strong><br><span class="note" style="margin:2px 0 0">Comissão gerada</span></span></button>`;
     }).join('');
     h+=`</div>`;
-    return h+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">${stat('A pagar agora (todos)',ds.reduce((a,d)=>a+dtTot(d.id).apagar,0))}${stat('Prevista, aguardando pacientes',ds.reduce((a,d)=>a+dtTot(d.id).prev,0))}</div>`;
+    return h+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">${stat('A pagar agora (todos)',ds.reduce((a,d)=>a+dtTot(d.id,accounting).apagar,0))}${stat('Prevista, aguardando pacientes',ds.reduce((a,d)=>a+dtTot(d.id,accounting).prev,0))}</div>`;
   }
 
   const d=ds.find(x=>x.id===selected);
   if(!d){view.cmDent='';return comHtml()}
-  const t=dtTot(d.id);
-  const vm=db.vd.filter(v=>v.dt===d.id&&v.data.slice(0,7)===m);
+  const t=dtTot(d.id,accounting);
+  const vm=monthly.filter(v=>v.dt===d.id);
   const pm=db.cp.filter(c=>c.dt===d.id&&c.data.slice(0,7)===m);
   const liberado=vm.reduce((a,x)=>a+liberada(x),0);
   h+=`<div class="card"><div class="row" style="justify-content:space-between;align-items:center"><div><h2 style="margin:0">${esc(d.nome)}</h2>${d.ativo===false?' <span class="badge">arquivado</span>':''}</div><button class="ghost sm" data-act="cmback">Voltar aos dentistas</button></div>

@@ -182,7 +182,7 @@ function trResumoHtml(p){
 function trConciliacaoHtml(p){
   const feitos=(p.trat||[]).filter(t=>t.vid&&t.status!=='Cancelado');
   const ids=new Set(feitos.map(t=>String(t.vid)));
-  const vendas=(db.vd||[]).filter(v=>v.pid===p.id);
+  const vendas=salesForAccounting().filter(v=>v.pid===p.id);
   const ligadas=vendas.filter(v=>ids.has(String(v.id)));
   const faltantes=feitos.filter(t=>!vendas.some(v=>String(v.id)===String(t.vid)));
   const repetidas=feitos.filter((t,i)=>feitos.findIndex(z=>String(z.vid)===String(t.vid))!==i);
