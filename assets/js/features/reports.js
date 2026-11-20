@@ -281,26 +281,35 @@
    return {heads:['Dentista','Procedimentos','Produção no período','Recebido até hoje dessas vendas','Comissão gerada','Repasses pagos no período','Lucro por dentista'],items:result,summary:'Conferência por dentista, somente leitura. Recebido até hoje não é recebimento exclusivamente do período. Repasses pagos no período podem quitar produções antigas. Lucro não apurado: custos, taxas e despesas compartilhadas ainda não estão atribuídos com segurança a cada profissional. Não subtraia novamente repasses registrados como despesas.'};
   }
   if(type==='balanceannual'){
-   const all=salesForAccounting();
+   const sales=salesForAccounting();
    const expenseState=window.NexoGeneralExpenses?.snapshot?.();
    const expensesReady=!!expenseState?.ready;
-   const paidExpenses=expensesReady?expenseState.rows.filter(x=>!!x.paid_at):[];
+   const labReady=labEventsClinic===window.OralCloud?.clinicId;
    const years=new Set();
-   for(const v of all){if(/^\\d{4}-/.test(String(v.data||'')))years.add(String(v.data).slice(0,4));for(const p of (v.pg||[]))if(/^\\d{4}-/.test(String(p.data||'')))years.add(String(p.data).slice(0,4));}
-   for(const e of paidExpenses)if(/^\\d{4}-/.test(String(e.paid_at||'')))years.add(String(e.paid_at).slice(0,4));
+   for(const v of sales){if(/^\\d{4}-/.test(String(v.data||'')))years.add(String(v.data).slice(0,4));for(const p of (v.pg||[]))if(/^\\d{4}-/.test(String(p.data||'')))years.add(String(p.data).slice(0,4));}
+   for(const e of expensesReady?expenseState.rows:[])if(/^\\d{4}-/.test(String(e.paid_at||'')))years.add(String(e.paid_at).slice(0,4));
+   for(const e of labReady?labEvents:[])if(/^\\d{4}-/.test(String(e.paid_at||'')))years.add(String(e.paid_at).slice(0,4));
    for(const p of (db.cp||[]))if(/^\\d{4}-/.test(String(p.data||'')))years.add(String(p.data).slice(0,4));
-   const selected=[...years].sort().filter(y=>dateOK(y+'-12-31',a,b)||dateOK(y+'-01-01',a,b)||(a<=y+'-01-01'&&b>=y+'-12-31'));
+   const periods=[...years].sort().filter(y=>a<=y+'-12-31'&&b>=y+'-01-01');
    const output=[];
-   for(const y of selected){
-    const within=s=>dateOK(s,a,b)&&String(s).startsWith(y);
-    const sold=all.filter(v=>within(v.data)).reduce((t,v)=>t+n(v.valor),0);
-    const received=all.reduce((t,v)=>t+(v.pg||[]).filter(p=>within(p.data)).reduce((s,p)=>s+n(p.valor),0),0);
-    const generated=all.filter(v=>within(v.data)).reduce((t,v)=>t+n(v.rep),0);
-    const paidRep=(db.cp||[]).filter(p=>within(p.data)).reduce((t,p)=>t+n(p.valor),0);
-    const paidCost=paidExpenses.filter(e=>within(e.paid_at)).reduce((t,e)=>t+n(e.amount),0);
-    output.push([y,cash(sold),cash(received),cash(generated),cash(paidRep),expensesReady?cash(paidCost):'Não carregado',expensesReady?cash(received-paidRep-paidCost)+' (parcial)':'Indisponível']);
+   for(const y of periods){
+    const from=a>y+'-01-01'?a:y+'-01-01',to=b<y+'-12-31'?b:y+'-12-31';
+    const inPeriod=s=>dateOK(s,from,to);
+    const sold=sales.filter(v=>inPeriod(v.data)).reduce((t,v)=>t+n(v.valor),0);
+    const commission=sales.filter(v=>inPeriod(v.data)).reduce((t,v)=>t+n(v.rep),0);
+    const payments=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+n(p.valor),0),0);
+    const fee=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+(typeof ovFeeTax==='function'?n(ovFeeTax(p)):n(p.taxaValor)),0),0);
+    let result='Indisponível',out='Não carregado',warnings='';
+    if(expensesReady&&labReady&&window.NexoCashModel){
+     const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:labEvents,expenses:expenseState.rows,from,to});
+     out=cash(ledger.outcome/100);
+     // A taxa da transação não é lançada no caixa operacional. Subtrair uma vez.
+     result=cash((ledger.balance/100)-fee)+' (operacional)';
+     warnings=ledger.warnings.length?' · Conferir '+ledger.warnings.length+' alerta(s) de conciliação.':'';
+    }
+    output.push([y,cash(sold),cash(payments),cash(fee),cash(commission),out,result+warnings]);
    }
-   return {heads:['Ano','Vendas','Recebimentos','Comissões geradas','Repasses pagos','Despesas gerais pagas','Saldo parcial'],items:output,summary:'Balanço por ano e período selecionado. '+(expensesReady?'Despesas gerais carregadas. Saldo parcial = recebimentos − repasses pagos − despesas gerais pagas. NÃO inclui custos/taxas de outras fontes não conciliadas; não representa lucro líquido.':'Clique em Carregar despesas para incluir despesas pagas. Sem esses dados o saldo fica indisponível.')+' Vendas e comissões seguem data de produção; recebimentos, repasses e despesas seguem data de pagamento. Confira a integridade dos dados carregados.'};
+   return {heads:['Ano','Vendas','Recebimentos brutos','Taxas dos recebimentos','Comissões geradas','Saídas conciliadas','Resultado operacional'],items:output,summary:'O resultado operacional usa pagamentos efetivos, repasses, laboratório e despesas gerais conciliados pelo modelo do Caixa, subtraindo taxas de recebimento uma vez. '+(!expensesReady||!labReady?'CARREGAMENTO INCOMPLETO: clique em Carregar dados financeiros. Nenhum resultado é exibido sem as fontes necessárias. ':'')+'Não representa lucro contábil nem inclui custos não lançados. Datas de recebimento e saída são diferentes das datas de venda. Vínculos inconsistentes exigem conferência.'};
   }
   if(type==='finance')return {heads:['Data da venda','Paciente','Procedimento','Venda','Recebido até hoje','Saldo atual'],items:sales.map(v=>[v.data,patient(v.pid),v.proc||'',cash(v.valor),cash(typeof recebido==='function'?recebido(v):0),cash(typeof saldoV==='function'?saldoV(v):0)]),summary:`Vendas realizadas no período: ${cash(salesTotal)} · Recebimentos registrados no período (inclusive de vendas anteriores): ${cash(receivedPeriod)} · Saldo atual das vendas realizadas no período: ${cash(balance)}. As colunas Recebido até hoje e Saldo atual refletem a situação atual de cada venda, não somente os pagamentos do período.`};
   if(type==='dentists')return {heads:['Data','Dentista','Procedimento','Produção','Comissão'],items:sales.map(v=>[v.data,dentist(v.dt),v.proc||'',cash(v.valor),cash(v.rep)]),summary:`Produção: ${cash(sales.reduce((t,v)=>t+n(v.valor),0))} · Comissões geradas: ${cash(sales.reduce((t,v)=>t+n(v.rep),0))}`};
@@ -532,7 +541,7 @@
   e.preventDefault();e.stopImmediatePropagation();
   if(!clinicReady() || !commercial())return;
   const type=document.getElementById('nx-r-type')?.value;
-  if(load){if(!allowed(type))return;load.disabled=true;Promise.resolve((type==='balanceannual')?window.NexoGeneralExpenses.load():(type==='cashcomplete')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents(),loadLabMatches(),loadLabPosted()]):(type==='labposting'||type==='cashverified'||type==='cashcontrol')?Promise.all([loadLabEvents(),loadLabMatches(),loadLabPosted()]):type==='labmatching'?Promise.all([loadLabEvents(),loadLabMatches()]):(type==='labexpenses'||type==='cashflow')?loadLabExpenses():type==='labcash'?loadLabCash():type==='labhistory'?loadLabEvents():window.NexoLabLoad(true)).then(()=>(type==='labpayments'||type==='labreconcile')?Promise.all([loadLabSettlements(),loadLabEvents()]):null).then(()=>render()).catch(err=>{alert('Falha ao carregar laboratório: '+(err.message||err));load.disabled=false});return;}
+  if(load){if(!allowed(type))return;load.disabled=true;Promise.resolve((type==='balanceannual')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents()]):(type==='cashcomplete')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents(),loadLabMatches(),loadLabPosted()]):(type==='labposting'||type==='cashverified'||type==='cashcontrol')?Promise.all([loadLabEvents(),loadLabMatches(),loadLabPosted()]):type==='labmatching'?Promise.all([loadLabEvents(),loadLabMatches()]):(type==='labexpenses'||type==='cashflow')?loadLabExpenses():type==='labcash'?loadLabCash():type==='labhistory'?loadLabEvents():window.NexoLabLoad(true)).then(()=>(type==='labpayments'||type==='labreconcile')?Promise.all([loadLabSettlements(),loadLabEvents()]):null).then(()=>render()).catch(err=>{alert('Falha ao carregar laboratório: '+(err.message||err));load.disabled=false});return;}
   if(!allowed(type))return;
   const [a,b]=dates();if(!validDate(a)||!validDate(b)||a>b){alert('Informe um período válido, com a data inicial anterior ou igual à final.');return}
   view.reportType=type;view.reportFrom=a;view.reportTo=b;
