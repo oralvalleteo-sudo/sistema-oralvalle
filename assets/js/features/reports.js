@@ -266,6 +266,62 @@
    const entradas=income.reduce((t,x)=>t+x.amount,0),saidas=expense.reduce((t,x)=>t-x.amount,0);
    return {heads:['Data','Tipo','Referência','Descrição','Entrada','Saída'],items:combined.map(x=>[x.date,x.kind,x.ref,x.description,x.amount>0?cash(x.amount):'—',x.amount<0?cash(-x.amount):'—']),summary:loaded?`Entradas registradas: ${cash(entradas)} · Pagamentos laboratoriais individuais: ${cash(saidas)} · Diferença parcial: ${cash(entradas-saidas)}. NÃO representa saldo bancário ou lucro: outras despesas, taxas e repasses não estão incluídos. Pagamentos antigos (opening) são excluídos. Nenhum lançamento é criado ou duplicado.`:'Carregue as parcelas do laboratório para incluir saídas. Entradas dos pacientes já carregadas: '+cash(entradas)+'. Resultado incompleto até carregar o laboratório.'};
   }
+  if(type==='balancedentists'){
+   const sales=salesForAccounting().filter(v=>dateOK(v.data,a,b));
+   const payments=(db.cp||[]).filter(p=>dateOK(p.data,a,b));
+   const ids=new Set([...sales.map(v=>String(v.dt||'')),...payments.map(p=>String(p.dt||''))].filter(Boolean));
+   const result=[...ids].sort((x,y)=>dentist(x).localeCompare(dentist(y),'pt-BR')).map(id=>{
+    const own=sales.filter(v=>String(v.dt||'')===id);
+    const paid=payments.filter(p=>String(p.dt||'')===id).reduce((t,p)=>t+n(p.valor),0);
+    const produced=own.reduce((t,v)=>t+n(v.valor),0);
+    const commission=own.reduce((t,v)=>t+n(v.rep),0);
+    const received=own.reduce((t,v)=>t+(typeof recebido==='function'?n(recebido(v)):0),0);
+    const fees=own.reduce((t,v)=>t+(v.pg||[]).reduce((s,p)=>s+(typeof ovFeeTax==='function'?n(ovFeeTax(p)):n(p.taxaValor)),0),0);
+    return [dentist(id),String(own.length),cash(produced),cash(received),cash(fees),cash(commission),cash(paid),'Não apurado'];
+   });
+   return {heads:['Dentista','Procedimentos','Produção no período','Recebido até hoje dessas vendas','Taxas até hoje dessas vendas','Comissão gerada','Repasses pagos no período','Lucro líquido'],items:result,summary:'Relatório de produção por dentista, somente leitura. Recebido e taxas até hoje incluem pagamentos posteriores ao período; repasses pagos podem corresponder a produções antigas. Lucro líquido não apurado: despesas e custos laboratoriais compartilhados ou sem vínculo não podem ser atribuídos com segurança. Confira possíveis taxas já lançadas como despesas antes de qualquer fechamento.'};
+  }
+  if(type==='balanceannual'){
+   const sales=salesForAccounting();
+   const expenseState=window.NexoGeneralExpenses?.snapshot?.();
+   const expensesReady=!!expenseState?.ready;
+   const labReady=labEventsClinic===window.OralCloud?.clinicId;
+   const ledgerReady=expensesReady&&labReady&&!!window.NexoCashModel;
+   const yearPattern=/^\\d{4}-\\d{2}-\\d{2}$/;
+   const years=new Set();
+   const includeYear=value=>{const d=String(value||'').slice(0,10);if(yearPattern.test(d)&&validDate(d))years.add(d.slice(0,4));};
+   for(const v of sales){includeYear(v.data);for(const p of (v.pg||[]))includeYear(p.data);}
+   for(const e of expensesReady?expenseState.rows:[]){includeYear(e.paid_at);includeYear(e.due_date);}
+   for(const e of labReady?labEvents:[])includeYear(e.paid_at);
+   for(const p of (db.cp||[]))includeYear(p.data);
+   // Sem movimentações, mostrar os doze meses do ano corrente com zero.
+   if(!years.size)years.add(today().slice(0,4));
+   if(view.balanceYear&&view.balanceYear!=='all')years.add(String(view.balanceYear));
+   const first=Math.min(...[...years].map(Number)),last=Math.max(...[...years].map(Number));
+   const output=[],totals={sold:0,received:0,fees:0,commission:0,outcome:0,result:0};
+   for(let y=first;y<=last;y++)for(let m=1;m<=12;m++){
+    const month=String(y)+'-'+String(m).padStart(2,'0');
+    const from=month+'-01',to=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);
+    if(to<a||from>b)continue;
+    const inPeriod=s=>dateOK(s,from<a?a:from,to>b?b:to);
+    const sold=sales.filter(v=>inPeriod(v.data)).reduce((t,v)=>t+n(v.valor),0);
+    const commission=sales.filter(v=>inPeriod(v.data)).reduce((t,v)=>t+n(v.rep),0);
+    const received=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+n(p.valor),0),0);
+    const fees=sales.reduce((t,v)=>t+(v.pg||[]).filter(p=>inPeriod(p.data)).reduce((s,p)=>s+(typeof ovFeeTax==='function'?n(ovFeeTax(p)):n(p.taxaValor)),0),0);
+    let outcome=null,result=null,warning='';
+    if(ledgerReady){
+     const ledger=window.NexoCashModel.calculate({sales,commissions:db.cp||[],lab:labEvents,expenses:expenseState.rows,from:from<a?a:from,to:to>b?b:to});
+     outcome=ledger.outcome/100;
+     result=ledger.balance/100-fees;
+     if(ledger.warnings.length)warning=' · Conferir '+ledger.warnings.length+' alerta(s)';
+    }
+    totals.sold+=sold;totals.received+=received;totals.fees+=fees;totals.commission+=commission;
+    if(ledgerReady){totals.outcome+=outcome;totals.result+=result;}
+    output.push([month,cash(sold),cash(received),cash(fees),cash(commission),ledgerReady?cash(outcome):'Indisponível',ledgerReady?cash(result)+warning:'Indisponível']);
+   }
+   output.push(['TOTAL',cash(totals.sold),cash(totals.received),cash(totals.fees),cash(totals.commission),ledgerReady?cash(totals.outcome):'Indisponível',ledgerReady?cash(totals.result):'Indisponível']);
+   return {heads:['Mês / ano','Vendas','Recebimentos','Taxas','Comissões geradas','Saídas efetivas conciliadas','Resultado operacional'],items:output,summary:'Valores derivados exclusivamente dos lançamentos cadastrados. Meses sem movimentação exibem R$ 0,00. '+(ledgerReady?'Despesas e laboratório carregados. ':'Despesas ou laboratório não carregados: resultado e saídas indisponíveis; clique em Carregar dados financeiros. ')+'Resultado operacional = recebimentos menos saídas conciliadas e taxas registradas; não é lucro líquido contábil. Não duplicar taxas ou repasses já lançados como despesas. Período exibido: todos os meses entre o primeiro e o último ano com dados, respeitando os filtros.'};
+  }
   if(type==='finance')return {heads:['Data da venda','Paciente','Procedimento','Venda','Recebido até hoje','Saldo atual'],items:sales.map(v=>[v.data,patient(v.pid),v.proc||'',cash(v.valor),cash(typeof recebido==='function'?recebido(v):0),cash(typeof saldoV==='function'?saldoV(v):0)]),summary:`Vendas realizadas no período: ${cash(salesTotal)} · Recebimentos registrados no período (inclusive de vendas anteriores): ${cash(receivedPeriod)} · Saldo atual das vendas realizadas no período: ${cash(balance)}. As colunas Recebido até hoje e Saldo atual refletem a situação atual de cada venda, não somente os pagamentos do período.`};
   if(type==='dentists')return {heads:['Data','Dentista','Procedimento','Produção','Comissão'],items:sales.map(v=>[v.data,dentist(v.dt),v.proc||'',cash(v.valor),cash(v.rep)]),summary:`Produção: ${cash(sales.reduce((t,v)=>t+n(v.valor),0))} · Comissões geradas: ${cash(sales.reduce((t,v)=>t+n(v.rep),0))}`};
   if(type==='procedures')return {heads:['Procedimento','Quantidade','Valor de vendas'],items:Object.values(sales.reduce((acc,v)=>{const key=v.proc||'Não informado';const x=acc[key]||(acc[key]={name:key,count:0,total:0});x.count++;x.total+=n(v.valor);return acc},{})).sort((x,y)=>y.total-x.total).map(x=>[x.name,x.count,cash(x.total)]),summary:`${sales.length} venda(s) no período`};
@@ -428,10 +484,12 @@
   const metrics=[['Entradas recebidas',d.entries],['Despesas gerais pagas',d.other],['Laboratório no livro auxiliar',d.labor],['Repasses não vinculados',d.repasses],['Resultado operacional estimado',d.result],['Contas a pagar até o fim do período',d.unpaidAmount],['Vencidas hoje',d.overdueAmount]];
   return `<section aria-label="Painel financeiro" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin:14px 0">${metrics.map(([label,value])=>`<div style="padding:13px;border:1px solid #f1d5bd;border-radius:10px;background:#fff8f1"><div style="font-size:12px">${safe(label)}</div><strong style="font-size:20px;color:#a34e00">${safe(cash(value))}</strong></div>`).join('')}</section><p class="note" role="status"><strong>Conferência:</strong> ${d.pendingLab} parcela(s) laboratoriais sem conciliação · ${d.conflicts} alerta(s) de divergência/sobreposição · ${d.overdueCount} conta(s) vencida(s). ${d.limited?'Atenção: limite de consulta de despesas atingido; totais podem estar incompletos. ':''}Resultado estimado, não saldo bancário. Revise os vínculos antes de tomar decisões.</p>`;
  }
- const kinds={cashcomplete:'Fluxo de caixa consolidado — despesas gerais e laboratório',generalexpenses:'Despesas gerais — contas a pagar',cashcontrol:'Caixa operacional — entradas e saídas conciliadas',cashverified:'Conciliação integrada de saídas (sem duplicidades)',labposting:'Livro auxiliar de despesas laboratoriais',labmatching:'Conciliação de parcelas com despesas manuais',cashflow:'Fluxo financeiro integrado (parcial)',labexpenses:'Razão auxiliar de saídas laboratoriais',labreconcile:'Conferência de custos e parcelas laboratoriais',labhistory:'Histórico individual de pagamentos laboratoriais',labcash:'Conciliação de saídas laboratoriais',labpayments:'Pagamentos aos laboratórios',finance:'Financeiro',dentists:'Dentistas e comissões',procedures:'Procedimentos',patients:'Novos pacientes',laboratory:'Custos do laboratório',labledger:'Obrigações laboratoriais'};
+ const kinds={balancedentists:'Balanço por dentista — conferência',balanceannual:'Balanço Geral — todos os anos',cashcomplete:'Fluxo de caixa consolidado — despesas gerais e laboratório',generalexpenses:'Despesas gerais — contas a pagar',cashcontrol:'Caixa operacional — entradas e saídas conciliadas',cashverified:'Conciliação integrada de saídas (sem duplicidades)',labposting:'Livro auxiliar de despesas laboratoriais',labmatching:'Conciliação de parcelas com despesas manuais',cashflow:'Fluxo financeiro integrado (parcial)',labexpenses:'Razão auxiliar de saídas laboratoriais',labreconcile:'Conferência de custos e parcelas laboratoriais',labhistory:'Histórico individual de pagamentos laboratoriais',labcash:'Conciliação de saídas laboratoriais',labpayments:'Pagamentos aos laboratórios',finance:'Financeiro',dentists:'Dentistas e comissões',procedures:'Procedimentos',patients:'Novos pacientes',laboratory:'Custos do laboratório',labledger:'Obrigações laboratoriais'};
  function allowed(type){
   if(!can('reports') || !commercial() || !Object.prototype.hasOwnProperty.call(kinds,type))return false;
   if(type==='patients')return can('pac');
+  if(type==='balanceannual')return moduleAllowed('finance') && can('vd') && can('cm') && can('reports') && can('pac') && !!window.OralCloud?.enabled && typeof pmLvl==='function' && pmLvl('vd')>=2 && allowed('labhistory');
+  if(type==='balancedentists')return moduleAllowed('finance') && can('vd') && can('cm') && can('reports');
   if(type==='cashcomplete')return moduleAllowed('finance') && can('vd') && can('pac') && typeof pmLvl==='function' && pmLvl('vd')>=2 && !!window.OralCloud?.enabled;
   if(type==='generalexpenses')return moduleAllowed('finance') && can('vd') && typeof pmLvl==='function' && pmLvl('vd')>=2 && !!window.OralCloud?.enabled;
   if(type==='labreconcile')return moduleAllowed('finance') && can('vd') && can('pac') && !!window.OralCloud?.enabled;
@@ -453,7 +511,7 @@
    return {heads:['Trabalho','Paciente','Laboratório','Custo','Pago (sem duplicar abertura)','Pendente','Diferença a conferir'],items:items.map(x=>['LAB-'+x.o.id,patient(x.o.patient_id),x.o.laboratory||'',cash(x.cost),cash(x.p.paid),cash(x.balance),x.excess>0.009?cash(x.excess):'—']),summary:ready?`Conciliação por trabalho: custo ${cash(total)} · pago ${cash(paid)} · pendente ${cash(pending)} · ${excess} trabalho(s) com pagamento acima do custo. O saldo de abertura do histórico e o pagamento legado são a MESMA origem e contam uma única vez. Valores de controle: NÃO geram despesas no caixa.`:'Clique em Carregar laboratório para consultar os dados. Nenhum lançamento financeiro foi criado.'};
   }
   if(type==='labpayments')return moduleAllowed('finance') && can('vd') && can('pac') && !!window.OralCloud?.enabled && typeof window.NexoLabLoad==='function';
-  if(type==='laboratory'||type==='labledger')return moduleAllowed('finance') && can('vd') && can('pac') && typeof window.NexoLabLoad==='function';
+  if(type==='balanceannual'||type==='laboratory'||type==='labledger')return moduleAllowed('finance') && can('vd') && can('pac') && typeof window.NexoLabLoad==='function';
   if(type==='dentists')return moduleAllowed('finance') && moduleAllowed('commissions') && can('vd') && can('cm');
   return moduleAllowed('finance') && can('vd');
  }
@@ -463,13 +521,22 @@
   if(!commercial())return '<div class="card"><h2>Relatórios indisponíveis</h2><p>Este módulo não está incluído no plano da clínica.</p></div>';
   const type=current();if(!type)return '<div class="card"><h2>Sem acesso aos relatórios</h2><p>Solicite ao administrador as permissões necessárias.</p></div>';
   view.reportType=type;
-  const [a,b]=[view.reportFrom||today().slice(0,7)+'-01',view.reportTo||today()];
+  const chosenYear=view.balanceYear||'all';
+  const [a,b]=type==='balanceannual'?(chosenYear==='all'?['1900-01-01','2099-12-31']:[chosenYear+'-01-01',chosenYear+'-12-31']):[view.reportFrom||today().slice(0,7)+'-01',view.reportTo||today()];
+  const yearSet=new Set([Number(today().slice(0,4))]);
+  if(type==='balanceannual'){
+   for(const v of salesForAccounting()){yearSet.add(Number(String(v.data||'').slice(0,4)));for(const p of v.pg||[])yearSet.add(Number(String(p.data||'').slice(0,4)));}
+   for(const p of db.cp||[])yearSet.add(Number(String(p.data||'').slice(0,4)));
+   const exp=window.NexoGeneralExpenses?.snapshot?.();if(exp?.ready)for(const e of exp.rows)yearSet.add(Number(String(e.paid_at||e.due_date||'').slice(0,4)));
+   if(labEventsClinic===window.OralCloud?.clinicId)for(const e of labEvents)yearSet.add(Number(String(e.paid_at||'').slice(0,4)));
+  }
+  const yearOptions=[...yearSet].filter(y=>Number.isInteger(y)&&y>=1900&&y<=2099).sort((x,y)=>y-x);
   const report=type==='generalexpenses'?{heads:[],items:[],summary:''}:rows(type,a,b);
   return `<div class="ov-page-head"><div><h1>Relatórios</h1><p class="sub">Dados carregados da clínica · somente leitura. Totais podem estar incompletos se o carregamento for parcial.</p></div></div>
   <div class="card" style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
    <label>Relatório<select id="nx-r-type">${Object.entries(kinds).filter(([k])=>allowed(k)).map(([k,v])=>`<option value="${k}" ${k===type?'selected':''}>${safe(v)}</option>`).join('')}</select></label>
-   <label>De<input id="nx-r-from" type="date" value="${safe(a)}"></label><label>Até<input id="nx-r-to" type="date" value="${safe(b)}"></label>
-   <button type="button" id="nx-r-apply">Consultar</button>${(type==='laboratory'||type==='labledger'||type==='labpayments'||type==='labcash'||type==='labhistory'||type==='labreconcile'||type==='labexpenses'||type==='cashflow'||type==='labmatching'||type==='labposting'||type==='cashverified'||type==='cashcomplete')?'<button type="button" class="ghost" id="nx-r-load-lab">Carregar dados financeiros</button>':''}<button type="button" class="ghost" id="nx-r-pdf">Imprimir / salvar PDF</button>
+   ${type==='balanceannual'?`<label>Ano<select id="nx-r-year"><option value="all" ${chosenYear==='all'?'selected':''}>Todos os anos</option>${yearOptions.map(y=>`<option value="${y}" ${String(y)===chosenYear?'selected':''}>${y}</option>`).join('')}${chosenYear!=='all'&&!yearOptions.includes(Number(chosenYear))?`<option value="${safe(chosenYear)}" selected>${safe(chosenYear)}</option>`:''}</select></label>`:`<label>De<input id="nx-r-from" type="date" value="${safe(a)}"></label><label>Até<input id="nx-r-to" type="date" value="${safe(b)}"></label>`}
+   <button type="button" id="nx-r-apply">Consultar</button>${(type==='balanceannual'||type==='laboratory'||type==='labledger'||type==='labpayments'||type==='labcash'||type==='labhistory'||type==='labreconcile'||type==='labexpenses'||type==='cashflow'||type==='labmatching'||type==='labposting'||type==='cashverified'||type==='cashcomplete')?'<button type="button" class="ghost" id="nx-r-load-lab">Carregar despesas / dados financeiros</button>':''}<button type="button" class="ghost" id="nx-r-pdf">Imprimir / salvar PDF</button>
   </div>${type==='labposting'&&labPostedError?`<p class="note">${safe(labPostedError)}</p>`:''}${type==='labmatching'&&labMatchesError?`<p class="note">Erro: ${safe(labMatchesError)}</p>`:''}${type==='labexpenses'&&labExpenseError?`<p class="note">${safe(labExpenseError)}</p>`:''}${type==='labcash'&&labCashError?`<p class="note">${safe(labCashError)}</p>`:''}${type==='generalexpenses'?(window.NexoGeneralExpenses?.html()||'<div class="card">Carregando módulo de despesas.</div>'):type==='labpayments'?labPaymentHtml(a,b):`<div class="card"><h2>${safe(kinds[type])}</h2>${type==='cashcomplete'&&report.dashboard?financeDashboard(report.dashboard):''}<p class="note">${safe(report.summary)}</p><p class="note">${report.items.length} registro(s) · ${safe(a)} a ${safe(b)} · Os valores de comissões representam valores associados às vendas, não necessariamente pagamentos efetuados.</p>
   <div style="overflow:auto"><table class="nx-report-table" style="width:100%;border-collapse:collapse"><thead><tr>${report.heads.map(x=>`<th style="text-align:left;padding:10px;border-bottom:1px solid #ddd">${safe(x)}</th>`).join('')}</tr></thead><tbody>${report.items.map(r=>`<tr>${r.map(x=>`<td style="padding:9px;border-bottom:1px solid #eee">${safe(x)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${report.heads.length}" style="padding:14px">Nenhum registro encontrado.</td></tr>`}</tbody></table></div>${type==='labposting'&&labEventsClinic===window.OralCloud?.clinicId&&labMatchesClinic===window.OralCloud?.clinicId&&labPostedClinic===window.OralCloud?.clinicId?`<p class="note">Confira despesas manuais antes de registrar. O lançamento é somente no livro auxiliar; não altera o caixa geral.</p>${labEvents.filter(x=>x.kind!=='opening'&&dateOK(x.paid_at,a,b)&&!labPosted.some(z=>String(z.event_id)===String(x.id))&&labMatches[String(x.id)]?.status!=='manual').map(x=>`<button type="button" data-nx-post="${safe(x.id)}" style="margin:4px">Registrar ${safe(String(x.id).slice(0,8))} · ${safe(cash(x.amount))}</button>`).join('')}`:''}${type==='labmatching'&&labMatchesClinic===window.OralCloud?.clinicId?`<p class="note">Para vincular uma parcela a uma despesa manual existente, use o botão correspondente. Referências repetidas são bloqueadas no Supabase.</p>${labEvents.filter(x=>x.kind!=='opening'&&dateOK(x.paid_at,a,b)).map(x=>`<button type="button" data-nx-match="${safe(x.id)}" style="margin:4px">Conciliar ${safe(String(x.id).slice(0,8))} · ${safe(cash(x.amount))}</button>`).join('')}`:''}</div>`}`;
  };
@@ -495,9 +562,11 @@
   e.preventDefault();e.stopImmediatePropagation();
   if(!clinicReady() || !commercial())return;
   const type=document.getElementById('nx-r-type')?.value;
-  if(load){if(!allowed(type))return;load.disabled=true;Promise.resolve((type==='cashcomplete')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents(),loadLabMatches(),loadLabPosted()]):(type==='labposting'||type==='cashverified'||type==='cashcontrol')?Promise.all([loadLabEvents(),loadLabMatches(),loadLabPosted()]):type==='labmatching'?Promise.all([loadLabEvents(),loadLabMatches()]):(type==='labexpenses'||type==='cashflow')?loadLabExpenses():type==='labcash'?loadLabCash():type==='labhistory'?loadLabEvents():window.NexoLabLoad(true)).then(()=>(type==='labpayments'||type==='labreconcile')?Promise.all([loadLabSettlements(),loadLabEvents()]):null).then(()=>render()).catch(err=>{alert('Falha ao carregar laboratório: '+(err.message||err));load.disabled=false});return;}
+  if(load){if(!allowed(type))return;load.disabled=true;Promise.resolve((type==='balanceannual')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents()]):(type==='cashcomplete')?Promise.all([window.NexoGeneralExpenses.load(),loadLabEvents(),loadLabMatches(),loadLabPosted()]):(type==='labposting'||type==='cashverified'||type==='cashcontrol')?Promise.all([loadLabEvents(),loadLabMatches(),loadLabPosted()]):type==='labmatching'?Promise.all([loadLabEvents(),loadLabMatches()]):(type==='labexpenses'||type==='cashflow')?loadLabExpenses():type==='labcash'?loadLabCash():type==='labhistory'?loadLabEvents():window.NexoLabLoad(true)).then(()=>(type==='labpayments'||type==='labreconcile')?Promise.all([loadLabSettlements(),loadLabEvents()]):null).then(()=>render()).catch(err=>{alert('Falha ao carregar laboratório: '+(err.message||err));load.disabled=false});return;}
   if(!allowed(type))return;
-  const [a,b]=dates();if(!validDate(a)||!validDate(b)||a>b){alert('Informe um período válido, com a data inicial anterior ou igual à final.');return}
+  const year=document.getElementById('nx-r-year')?.value;
+  if(type==='balanceannual'&&year){if(year!=='all'&&!/^(19|20)\\d{2}$/.test(year))return;view.balanceYear=year;view.reportFrom=year==='all'?'1900-01-01':year+'-01-01';view.reportTo=year==='all'?'2099-12-31':year+'-12-31';}
+  const [a,b]=type==='balanceannual'?[view.reportFrom,view.reportTo]:dates();if(!validDate(a)||!validDate(b)||a>b){alert('Informe um período válido, com a data inicial anterior ou igual à final.');return}
   view.reportType=type;view.reportFrom=a;view.reportTo=b;
   if(apply){render();return}
   // Revalidar contexto e permissões imediatamente antes de exportar.
