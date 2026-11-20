@@ -95,7 +95,7 @@
    const values=lines.map(row=>cents(row.dados?.valor));
    const discount=budget.dados?.desc==null||String(budget.dados.desc).trim()===''?0:cents(budget.dados.desc);
    const total=lines.length&&values.every(value=>value!==null)&&discount!==null?Math.max(0,values.reduce((sum,value)=>sum+value,0)-discount):null;
-   const contract={lead,day,origin:lead?.origin||'orcamento',patient:budget.parent_id,total};
+   const contract={id,lead,day,origin:lead?.origin||'orcamento',patient:budget.parent_id,total};
    contracts.push(contract);
    for(const line of lines){
     for(const ref of new Set([line.dados?.vid,line.dados?.paymentSaleId].filter(Boolean).map(String))){
@@ -113,12 +113,22 @@
   return {leads:leadRows,contracts,saleOwners,receiptRows,spending,available:{expenses:expenses!==null,contracts:budgets!==null&&budget_items!==null,
    receipts:budgets!==null&&budget_items!==null&&sales!==null&&receipts!==null}};
  }
- function calculate(model,{year,month='',source=''}){
+ function calculate(model,{year,month='',source=''},entries){
   const prefix=String(year)+(month?'-'+month:'');
   const inPeriod=day=>day.startsWith(prefix);
   const selected=key=>!source||key===origin(source);
   const leads=model.leads.filter(lead=>inPeriod(lead.day)&&selected(lead.origin));
   const contracts=model.contracts.filter(contract=>inPeriod(contract.day)&&selected(contract.origin));
+  const rows=new Map();
+  const entry=(lead,contract)=>{
+   const key=lead?'lead:'+lead.id:'budget:'+contract.id;
+   if(!rows.has(key))rows.set(key,{lead,contracted:[],received:[],budget:contract});
+   return rows.get(key);
+  };
+  if(entries){
+   for(const lead of leads)entry(lead).counted=true;
+   for(const contract of contracts)entry(contract.lead,contract).contracted.push(contract.total);
+  }
   const patients=new Set(contracts.map(contract=>contract.patient).filter(Boolean));
   const expenses=model.spending.filter(expense=>inPeriod(expense.day)&&selected(expense.origin));
   const completed=new Set(model.contracts.map(contract=>contract.lead).filter(Boolean));
@@ -132,9 +142,15 @@
     if(!inPeriod(date(receipt.dados?.data)))continue;
     const amount=cents(receipt.dados?.valor);
     actual.push(amount);
+    if(entries)entry(contract.lead,contract).received.push(amount);
     if(!['orcamento','sem origem','outros'].includes(contract.origin))attributed.push(amount);
    }
   }
+  if(entries)for(const row of rows.values())entries.push({
+   lead:row.lead,budget:row.budget,counted:!!row.counted,
+   contracted:model.available.contracts?moneyTotal(row.contracted):null,
+   received:model.available.receipts?moneyTotal(row.received):null
+  });
   const received=model.available.receipts?moneyTotal(actual):null;
   const converted=model.available.contracts?patients.size:null;
   const attributedReceived=model.available.receipts&&origin(source)!=='orcamento'?moneyTotal(attributed):null;

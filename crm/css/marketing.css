@@ -12,3 +12,7 @@
 .crm-marketing p{color:#435967;line-height:1.5;font-size:.86rem}
 .crm-marketing p:empty{display:none}
 @media(max-width:700px){.crm-marketing-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.crm-marketing-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.crm-marketing-cards dd{font-size:1.1rem}}
+#crm-marketing-list{list-style:none;margin:0 0 10px;padding:0}
+#crm-marketing-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #d9e2e7}
+#crm-marketing-list li small{display:block;color:#435967;overflow-wrap:anywhere}
+@media(max-width:480px){#crm-marketing-list li{grid-template-columns:1fr;align-items:start}#crm-marketing-list li button{justify-self:start}}

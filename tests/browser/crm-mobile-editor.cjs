@@ -71,17 +71,29 @@ const { chromium } = require('playwright');
       document.getElementById('clinic').replaceChildren(new Option('Clínica de teste','test-clinic'));
       const object=(id,parent_id,dados)=>({id,parent_id,dados,kind:'object'});
       const tables={
-        budgets:[object('budget','patient',{status:'Aprovado'})],
-        budget_items:[object('item','budget',{valor:800,paymentSaleId:'legacy-sale'})],
-        sales:[object('sale',null,{id:'legacy-sale'})],
-        receipts:[object('receipt','sale',{data:'2026-11-12',valor:400})]
+        budgets:[object('budget','patient',{status:'Aprovado'}),object('budget-2','p2',{status:'Aprovado',data:'06/11/2026'})],
+        budget_items:[object('item','budget',{valor:800,paymentSaleId:'legacy-sale'}),object('item-2','budget-2',{valor:120,paymentSaleId:'second-sale'})],
+        sales:[object('sale',null,{id:'legacy-sale'}),object('sale-2',null,{id:'second-sale'})],
+        receipts:[object('receipt','sale',{data:'2026-11-12',valor:400}),object('receipt-2','sale-2',{data:'2026-11-12',valor:120})]
       };
+      const leads=[
+        {id:'google',name:'Lead Google',source:'Google Ads',stage:'Contatado',created_at:'2026-11-01',budget_id:'budget'},
+        {id:'instagram',name:'Lead Meta',source:'Instagram',stage:'Novo lead',created_at:'2026-10-01'}
+      ];
       window.OralCloud.enabled=true;
       window.OralCloud.request=async(path,options)=>{
-        if(path.includes('nexodent_crm_leads'))return [
-          {id:'google',source:'Google Ads',created_at:'2026-11-01',budget_id:'budget'},
-          {id:'instagram',source:'Instagram',created_at:'2026-10-01'}
-        ];
+        if(path.includes('nexodent_crm_leads')){
+          const id=new URLSearchParams(path.split('?')[1]).get('id')?.slice(3);
+          if(options?.method==='POST'){
+            const lead={...options.body,id:'new-budget-lead',created_at:'2026-11-20'};
+            leads.push(lead);
+            return [lead];
+          }
+          if(options?.method==='PATCH')Object.assign(leads.find(lead=>lead.id===id),options.body);
+          if(path.includes('budget_id=eq.'))return [];
+          return id?leads.filter(lead=>lead.id===id):structuredClone(leads);
+        }
+        if(path.includes('/patients?'))return [{id:'p2',nome:'Paciente de orçamento'}];
         if(path.includes('nexodent_general_expenses'))return [
           {category:'Marketing — Google Ads',paid_at:'2026-11-06',amount:100}
         ];
@@ -90,6 +102,7 @@ const { chromium } = require('playwright');
         return [];
       };
     });
+    await frame.locator('#clinic').dispatchEvent('change');
     const marketing=frame.getByRole('tab',{name:'Análise de Marketing'});
     await marketing.click();
     const report=frame.locator('#crm-marketing');
@@ -106,6 +119,23 @@ const { chromium } = require('playwright');
     assert.match(await metric('Valores contratados').innerText(),/800,00/);
     assert.match(await metric('Pagamentos recebidos').innerText(),/400,00/);
     assert.equal(await metric('Retorno sobre anúncios').innerText(),'4×');
+    await report.getByText('Lead Google',{exact:true}).waitFor();
+    await report.getByRole('button',{name:'Editar origem e etapa'}).click();
+    await frame.locator('#editor select[name=source]').selectOption('Instagram');
+    await frame.locator('#editor select[name=stage]').selectOption('Agendado');
+    await frame.locator('#save').click();
+    await report.getByText('Lead Google',{exact:true}).waitFor({state:'hidden'});
+    await report.getByLabel('Origem').selectOption('instagram');
+    await report.getByText(/Agendado.*400,00/).waitFor();
+    await report.getByLabel('Origem').selectOption('orcamento');
+    await report.getByText('Paciente de orçamento',{exact:true}).waitFor();
+    await report.getByRole('button',{name:'Classificar origem'}).click();
+    await frame.locator('#editor select[name=source]').selectOption('Google Ads');
+    await frame.locator('#save').click();
+    await report.getByText('Paciente de orçamento',{exact:true}).waitFor({state:'hidden'});
+    await report.getByLabel('Origem').selectOption('google ads');
+    await report.getByText(/Recebido.*120,00/).waitFor();
+    assert.match(await metric('Pagamentos recebidos').innerText(),/120,00/);
     await frame.getByRole('tab',{name:'Oportunidades'}).click();
     await report.waitFor({state:'hidden'});
     console.log('Análise de Marketing: visão geral, filtros, pagamentos reais vinculados e navegação do CRM.');
