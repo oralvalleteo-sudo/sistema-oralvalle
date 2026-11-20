@@ -565,12 +565,12 @@
    <label style="display:flex;flex-direction:column;gap:7px;font-weight:650">Tipo de relatório<select id="nx-r-type" style="width:100%;max-width:100%;min-height:46px;border-radius:12px">${Object.entries(kinds).filter(([k])=>allowed(k)).map(([k,v])=>`<option value="${k}" ${k===type?'selected':''}>${safe(v)}</option>`).join('')}</select></label>
    ${(type==='balanceannual'||type==='balancemonthly')?`
     <div style="background:#fff8f2;border:1px solid #f2dccb;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px">
-     <div style="font-weight:750;font-size:1.05rem;color:#703e20">Balanço anual</div>
-     <p style="margin:0;color:#755f50;font-size:.9rem;line-height:1.5">Escolha o ano para visualizar os valores de janeiro a dezembro e o total anual.</p>
+     <div style="font-weight:750;font-size:1.05rem;color:#703e20">${type==='balanceannual'?'Resumo financeiro do ano':'Balanço mês a mês'}</div>
+     <p style="margin:0;color:#755f50;font-size:.9rem;line-height:1.5">${type==='balanceannual'?'Veja os totais de vendas, despesas, laboratório e dentistas em um só lugar.':'Veja os valores de cada mês, de janeiro a dezembro.'}</p>
      <label style="display:flex;flex-direction:column;gap:6px;font-weight:650" for="nx-r-year">Ano de referência
       <select id="nx-r-year" style="width:100%;min-height:52px;border-radius:12px;font-size:1.12rem;font-weight:700">${yearOptions.map(y=>`<option value="${y}" ${String(y)===chosenYear?'selected':''}>${y}</option>`).join('')}${!yearOptions.includes(Number(chosenYear))?`<option value="${safe(chosenYear)}" selected>${safe(chosenYear)}</option>`:''}</select>
      </label>
-     <button type="button" id="nx-r-apply" style="min-height:48px;width:100%;border-radius:12px;background:#db762a;color:#fff;font-weight:750">Ver balanço do ano</button>
+     <button type="button" id="nx-r-apply" style="min-height:48px;width:100%;border-radius:12px;background:#db762a;color:#fff;font-weight:750">${type==='balanceannual'?'Ver resumo anual':'Ver meses do ano'}</button>
     </div>`:`
     <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
      <label>De<input id="nx-r-from" type="date" value="${safe(a)}"></label>
