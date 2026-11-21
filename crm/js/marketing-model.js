@@ -86,6 +86,14 @@
    const previous=attribution.get(linked[0].id);
    if(!previous||previous.origin==='orcamento'&&lead.origin!=='orcamento')attribution.set(linked[0].id,lead);
   }
+  // Explicit CRM attribution can connect an approved follow-up budget to an existing lead.
+  const explicit=new Map();
+  for(const lead of leadRows)for(const match of String(lead.notes||'').matchAll(/\[NEXODENT_MARKETING_BUDGET:([^\]]+)\]/g)){
+   let id;
+   try{id=decodeURIComponent(match[1]);}catch{continue}
+   if(activeBudgets.has(id))add(explicit,id,lead);
+  }
+  for(const [id,owners] of explicit)if(owners.length===1)attribution.set(id,owners[0]);
   const saleOwners=new Map();
   const contracts=[];
   for(const [id,budget] of activeBudgets){
@@ -151,7 +159,7 @@
   }
   if(entries)for(const row of rows.values())entries.push({
    lead:row.lead,budget:row.budget,counted:!!row.counted,
-   contracted:model.available.contracts?moneyTotal(row.contracted):null,
+   contracted:model.available.contracts&&row.contracted.length?moneyTotal(row.contracted):null,
    received:model.available.receipts?moneyTotal(row.received):null
   });
   if(receiptOrigins&&model.available.receipts)for(const [key,values] of byOrigin)receiptOrigins.push({key,received:moneyTotal(values)});

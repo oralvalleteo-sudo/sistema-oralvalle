@@ -43,13 +43,14 @@
   const more=$('#crm-marketing-more');
   more.hidden=rows.length<=visibleRows;
   feedback.textContent=state?.result?(rows.length?Math.min(rows.length,visibleRows)+' de '+rows.length+' registros.':'Nenhum lead ou orçamento neste recorte.'):'';
-  list.replaceChildren(...rows.slice(0,visibleRows).map(({lead,budget,counted,contracted,received})=>{
+  list.replaceChildren(...rows.sort((a,b)=>(b.received??0)-(a.received??0)).slice(0,visibleRows).map(({lead,budget,counted,contracted,received})=>{
    const item=document.createElement('li'), details=document.createElement('div');
    const title=document.createElement('strong'), meta=document.createElement('small'), action=document.createElement('button');
    title.textContent=lead?.name||state.patients?.get(String(budget?.patient))||'Orçamento '+(budget?.day?model.date(budget.day).split('-').reverse().join('/'):'sem data');
    const origin=lead?.origin||budget?.origin;
    meta.textContent=[names.get(origin)||lead?.source,lead?.stage||'Orçamento aprovado',lead&&!counted?'Lead de outro período':'',
-    'Contratado '+monetary(contracted),'Recebido '+monetary(received)].filter(Boolean).join(' · ');
+    contracted!==null?'Contratado '+monetary(contracted):'',lead?.estimated_value>0&&contracted===null?'Estimado '+monetary(Number(lead.estimated_value)*100):'',
+    received===0?'Sem recebimentos vinculados no período':'Recebido '+monetary(received)].filter(Boolean).join(' · ');
    details.append(title,meta);item.append(details,action);
    action.type='button';action.textContent=lead?'Editar origem e etapa':'Classificar origem';
    action.onclick=()=>{
@@ -156,7 +157,7 @@
   const next={clinic,result:state?.clinic===clinic?state.result:null,loading:true,warnings:[],error:''};
   state=next;draw();
   const [leads,expenses,financial]=await Promise.allSettled([
-   list('nexodent_crm_leads',clinic,'id,name,created_at,source,stage,budget_id,notes'),
+   list('nexodent_crm_leads',clinic,'id,name,created_at,source,stage,budget_id,notes,estimated_value'),
    list('nexodent_general_expenses',clinic,'id,category,description,supplier,amount,paid_at,voided_at','&paid_at=not.is.null'),
    ledger(clinic)
   ]);

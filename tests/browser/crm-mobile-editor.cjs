@@ -78,7 +78,7 @@ const { chromium } = require('playwright');
       };
       const leads=[
         {id:'google',name:'Lead Google',source:'Google Ads',stage:'Contatado',created_at:'2026-11-01',budget_id:'budget'},
-        {id:'instagram',name:'Lead Meta',source:'Instagram',stage:'Novo lead',created_at:'2026-10-01'}
+        {id:'instagram',name:'Paciente de orçamento',source:'Instagram',stage:'Novo lead',created_at:'2026-10-01',estimated_value:150}
       ];
       window.OralCloud.enabled=true;
       window.OralCloud.request=async(path,options)=>{
@@ -112,6 +112,7 @@ const { chromium } = require('playwright');
     assert.equal(await report.getByLabel('Mês').inputValue(),'');
     assert.equal(await report.getByRole('combobox',{name:'Origem',exact:true}).inputValue(),'');
     assert.equal(await metric('Leads').innerText(),'2');
+    await report.getByText(/Estimado.*150,00.*Sem recebimentos vinculados/).waitFor();
     await report.getByLabel('Mês').selectOption('11');
     const byOrigin=report.locator('#crm-marketing-receipts');
     await byOrigin.getByRole('button',{name:/Total recebido no período.*520,00/}).waitFor();
@@ -134,6 +135,7 @@ const { chromium } = require('playwright');
     await report.getByRole('combobox',{name:'Origem',exact:true}).selectOption('orcamento');
     await report.getByText('Paciente de orçamento',{exact:true}).waitFor();
     await report.getByRole('button',{name:'Classificar origem'}).click();
+    await frame.locator('#crm-marketing-link').selectOption('instagram');
     await frame.locator('#editor select[name=source]').selectOption('Google Ads');
     await frame.locator('#save').click();
     await report.getByText('Paciente de orçamento',{exact:true}).waitFor({state:'hidden'});

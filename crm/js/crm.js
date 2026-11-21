@@ -305,7 +305,7 @@ function renderProductivity(){
  $('productivity-wins').textContent=String(wins);
  $('productivity-recovered').textContent=String(recovered);
 }
-function render(){const term=$('search').value.trim().toLocaleLowerCase('pt-BR'),filtered=leads.filter(x=>(x.name+' '+(x.phone||'')).toLocaleLowerCase('pt-BR').includes(term));$('total').textContent=leads.length;$('open').textContent=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida').length;$('won').textContent=leads.filter(x=>x.stage==='Fechado').length;$('value').textContent=money(leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida').reduce((s,x)=>s+Number(x.estimated_value||0),0));$('board').replaceChildren();for(const stage of stages){const col=document.createElement('section');col.className='column';col.dataset.stage=stage;const items=filtered.filter(x=>x.stage===stage||(stage==='Orçamento'&&x.stage==='Avaliado'));const title=document.createElement('h3');title.append(document.createTextNode(stage));const count=document.createElement('span');count.className='stage-count';count.textContent=String(items.length);title.append(count);col.append(title);for(const x of items){const btn=document.createElement('button');btn.className='card';btn.innerHTML='<b>'+escape(x.name)+'</b><small>'+escape(x.phone||'Sem telefone')+'</small><small class="stage-value">'+money(x.estimated_value)+'</small><span class="stage-label">'+escape(stage)+'</span>';btn.onclick=()=>edit(x);col.append(btn)}$('board').append(col)}followup();renderDailyQueue();renderTasks();renderSales();renderRecovery();renderProductivity()}function edit(x){marketingBudget=null;if(x&&window.NexoCRMIntegracao)window.NexoCRMIntegracao.consultar(x,clinicId,cloud);editing=x?.id||null;window.dispatchEvent(new CustomEvent('nexocrm:editor-open',{detail:{leadId:editing,clinicId,commercialMembers}}));$('formtitle').textContent=x?'Editar lead':'Novo lead';$('form').reset();const sourceInput=$('form').elements.source;
+function render(){const term=$('search').value.trim().toLocaleLowerCase('pt-BR'),filtered=leads.filter(x=>(x.name+' '+(x.phone||'')).toLocaleLowerCase('pt-BR').includes(term));$('total').textContent=leads.length;$('open').textContent=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida').length;$('won').textContent=leads.filter(x=>x.stage==='Fechado').length;$('value').textContent=money(leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida').reduce((s,x)=>s+Number(x.estimated_value||0),0));$('board').replaceChildren();for(const stage of stages){const col=document.createElement('section');col.className='column';col.dataset.stage=stage;const items=filtered.filter(x=>x.stage===stage||(stage==='Orçamento'&&x.stage==='Avaliado'));const title=document.createElement('h3');title.append(document.createTextNode(stage));const count=document.createElement('span');count.className='stage-count';count.textContent=String(items.length);title.append(count);col.append(title);for(const x of items){const btn=document.createElement('button');btn.className='card';btn.innerHTML='<b>'+escape(x.name)+'</b><small>'+escape(x.phone||'Sem telefone')+'</small><small class="stage-value">'+money(x.estimated_value)+'</small><span class="stage-label">'+escape(stage)+'</span>';btn.onclick=()=>edit(x);col.append(btn)}$('board').append(col)}followup();renderDailyQueue();renderTasks();renderSales();renderRecovery();renderProductivity()}function edit(x){marketingBudget=null;$('crm-marketing-link-wrap').hidden=true;if(x&&window.NexoCRMIntegracao)window.NexoCRMIntegracao.consultar(x,clinicId,cloud);editing=x?.id||null;window.dispatchEvent(new CustomEvent('nexocrm:editor-open',{detail:{leadId:editing,clinicId,commercialMembers}}));$('formtitle').textContent=x?'Editar lead':'Novo lead';$('form').reset();const sourceInput=$('form').elements.source;
  sourceInput.querySelector('[data-legacy-source]')?.remove();
  if(x&&!x.source)sourceInput.value='';
  if(x?.source&&![...sourceInput.options].some(option=>option.value===x.source)){
@@ -317,7 +317,8 @@ $('clinic').value=clinicId;$('app').hidden=false;$('new').disabled=false;await P
 const budgetMarker=id=>'[NEXODENT_BUDGET:'+encodeURIComponent(id)+']';
 const markerPattern=/\[NEXODENT_BUDGET:[^\]\r\n]*\]/g;
 const getMarker=notes=>(String(notes||'').match(markerPattern)||[])[0]||'';
-const cleanNotes=notes=>String(notes||'').replace(markerPattern,'').replace(/\[NEXODENT_RESULT:[^\]\r\n]*\]/g,'').replaceAll(optoutMarker,'').replace(/\n{3,}/g,'\n\n').trim();
+const marketingMarkerPattern=/\[NEXODENT_MARKETING_BUDGET:[^\]\r\n]+\]/g;
+const cleanNotes=notes=>String(notes||'').replace(marketingMarkerPattern,'').replace(markerPattern,'').replace(/\[NEXODENT_RESULT:[^\]\r\n]*\]/g,'').replaceAll(optoutMarker,'').replace(/\n{3,}/g,'\n\n').trim();
 
 let importingBudget=false;
 window.addEventListener('nexocrm:import-budget',async event=>{
@@ -370,13 +371,32 @@ window.addEventListener('nexocrm:classify-marketing',async event=>{
    fields.estimated_value.value=budget.total===null?'':budget.total/100;
    fields.stage.value='Orçamento';
    fields.source.value='';
+   const selectedBudget=marketingBudget;
+   const canonical=name=>String(name||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
+   const digits=phone=>String(phone||'').replace(/\D/g,'');
+   const name=canonical(fields.name.value),phone=digits(fields.phone.value);
+   const candidates=leads.filter(lead=>canonical(lead.name)===name||(phone.length>=8&&digits(lead.phone)===phone));
+   if(candidates.length){
+    const picker=$('crm-marketing-link');
+    picker.replaceChildren(new Option('Criar lead vinculado',''),...candidates.map(lead=>new Option([lead.name,lead.source,lead.stage].filter(Boolean).join(' · '),lead.id)));
+    $('crm-marketing-link-wrap').hidden=false;
+    picker.onchange=()=>{
+     const lead=candidates.find(candidate=>String(candidate.id)===picker.value);
+     if(!lead||clinic!==clinicId)return;
+     $('editor').close();
+     edit(lead);
+     marketingBudget=selectedBudget;
+     $('formtitle').textContent='Vincular orçamento e editar origem';
+     $('form').elements.source.focus();
+    };
+   }
    toggleResult();
   }
   $('form').elements.source.focus();
   done();
  }catch(error){done(error.message||'Não foi possível abrir o registro.')}
 });
-$('editor').addEventListener('close',()=>{marketingBudget=null});
+$('editor').addEventListener('close',()=>{if(!$('editor').open)marketingBudget=null});
 $('stage').replaceChildren();for(const s of stages){const opt=document.createElement('option');opt.value=s;opt.textContent=s;$('stage').append(opt)}$('stage').addEventListener('change',toggleResult);$('sales-period').addEventListener('change',renderSales);$('productivity-period').addEventListener('change',renderProductivity);$('sales-all').addEventListener('click',()=>{$('sales-period').value='';renderSales()});$('delete-lead').onclick=async()=>{
  const lead=leads.find(x=>String(x.id)===String(editing));
  if(!lead||!clinicId)return;
@@ -399,12 +419,15 @@ $('new').onclick=()=>edit(null);$('cancel').onclick=()=>$('editor').close();$('r
  if(!payload.source){alert('Selecione a origem do lead.');return}
  const budgetToLink=marketingBudget;
  if(payload.commercial_owner_id&&!commercialMembers.some(m=>m.id===payload.commercial_owner_id)){status('Responsável inválido para esta clínica.',true);return}const original=editing?leads.find(x=>String(x.id)===String(editing)):null;
- const preservedMarker=getMarker(original?.notes);payload.notes=payload.notes.replaceAll(optoutMarker,'').trim();if(fd.get('contact_optout'))payload.notes=(payload.notes?payload.notes+'\n':'')+optoutMarker;const previousResult=resultData(original);const nextStage=payload.stage;const lossReason=String(fd.get('loss_reason')||'').trim();if(nextStage==='Perdida'&&!lossReason){status('Informe o motivo da oportunidade perdida.',true);return}
+ const preservedMarker=getMarker(original?.notes);payload.notes=payload.notes.replace(marketingMarkerPattern,'').replaceAll(optoutMarker,'').trim();if(fd.get('contact_optout'))payload.notes=(payload.notes?payload.notes+'\n':'')+optoutMarker;const previousResult=resultData(original);const nextStage=payload.stage;const lossReason=String(fd.get('loss_reason')||'').trim();if(nextStage==='Perdida'&&!lossReason){status('Informe o motivo da oportunidade perdida.',true);return}
  const log=String(fd.get('contact_log')||'').trim();
  if(log){const type=String(fd.get('contact_type')||'Contato');const stamp=new Date().toLocaleString('pt-BR');const entry='['+stamp+'] '+type+': '+log.replace(/[\r\n]+/g,' ');payload.notes=(payload.notes?payload.notes+'\n':'')+entry;if(payload.notes.length>3000){status('Histórico atingiu o limite de 3.000 caracteres. Salve uma cópia antes de continuar.',true);return}}
  if(nextStage==='Fechado'||nextStage==='Perdida'){const kind=nextStage==='Fechado'?'FECHADO':'PERDIDA';const day=previousResult?.type===kind?previousResult.day:today();const reason=kind==='PERDIDA'?'|'+encodeURIComponent(lossReason):'';payload.notes=(payload.notes?payload.notes+'\n':'')+'[NEXODENT_RESULT:'+kind+'|'+day+reason+']'}
  if(preservedMarker)payload.notes=(payload.notes?payload.notes+'\n':'')+preservedMarker;
- if(budgetToLink)payload.notes=[payload.notes,budgetMarker(budgetToLink.id)].filter(Boolean).join('\n');
+ const marketingMarkers=new Set(String(original?.notes||'').match(marketingMarkerPattern)||[]);
+ if(budgetToLink&&editing)marketingMarkers.add('[NEXODENT_MARKETING_BUDGET:'+encodeURIComponent(budgetToLink.id)+']');
+ if(budgetToLink&&!editing)payload.notes=[payload.notes,budgetMarker(budgetToLink.id)].filter(Boolean).join('\n');
+ if(marketingMarkers.size)payload.notes=[payload.notes,...marketingMarkers].filter(Boolean).join('\n');
  if(payload.notes.length>3000){status('Observações e histórico excedem 3.000 caracteres.',true);return}
  const btn=$('save');btn.disabled=true;try{
  if(editing){
