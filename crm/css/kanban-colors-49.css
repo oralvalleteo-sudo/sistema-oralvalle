@@ -7,9 +7,32 @@
 #board .column[data-stage="Orçamento"]{--stage:#c18b13;--stage-bg:#fff7db;--stage-text:#79540a}
 #board .column[data-stage="Fechado"]{--stage:#209765;--stage-bg:#e7f8ef;--stage-text:#126b45}
 #board .column[data-stage="Perdida"]{--stage:#d14949;--stage-bg:#fff0f0;--stage-text:#9a2929}
-#board .column h3{display:flex;align-items:center;gap:8px;margin:3px 2px 14px;font-size:13px;line-height:1.4;color:#202632;font-weight:700}
-#board .column h3::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--stage);flex:0 0 9px;box-shadow:0 0 0 3px var(--stage-bg)}
-#board .stage-count{margin-left:auto;border-radius:999px;background:white;color:#3d4654;border:1px solid #e1e4e8;padding:2px 8px;font-size:12px;font-weight:650}
+#board .column > h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  margin: 0 0 9px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: var(--stage-bg);
+  background: color-mix(in srgb, var(--stage-bg) 88%, var(--stage));
+  color: var(--stage-text);
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+#board .stage-count {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  border-radius: 999px;
+  background: white;
+  color: inherit;
+  padding: 2px 7px;
+  font-size: 12px;
+  font-weight: 650;
+}
 #board .card{display:block;width:100%;background:#fff!important;color:#242a34!important;border:1px solid #e1e4e8!important;border-left:3px solid var(--stage)!important;border-radius:10px!important;padding:13px!important;margin-bottom:9px;text-align:left;box-shadow:0 2px 7px #1018280a;transition:box-shadow .15s,border-color .15s}
 #board .card:hover{border-color:var(--stage)!important;box-shadow:0 4px 14px #10182816}
 #board .card:focus-visible{outline:3px solid var(--stage);outline-offset:2px}
