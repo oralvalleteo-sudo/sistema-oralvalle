@@ -115,6 +115,14 @@ function ovBudgetUndoRows(p,o){
   return rows;
 }
 
+function obReceiptDate(button,field){
+  const input=button.closest('.ob-pay')?.querySelector('input#'+field);
+  if(input?.value&&input.validity.valid)return input.value;
+  toast('Informe a data em que o pagamento foi recebido.');
+  input?.focus();
+  return '';
+}
+
 function obAllocateReceipts(sales,payments){
   const entries=payments.map(payment=>({payment,allocated:0}));
   for(const sale of sales){
@@ -556,7 +564,8 @@ const A={
     if(pending.some(it=>!it.dt||value(it)<=0)){toast('Confira o dentista e o valor de cada item.');return}
     const due=r2(linked.reduce((sum,sale)=>sum+saldoV(sale),0)+pending.reduce((sum,it)=>sum+value(it),0));
     if(due<=0||due!==Number(d.amount)){toast('O saldo mudou. Abra novamente o recebimento para conferir.');render();return}
-    const date=$(d.dateField)?.value||tdy();
+    const date=obReceiptDate(b,d.dateField);
+    if(!date)return;
     const sales=[...linked,...pending.map(it=>obLaunch(p,it,value(it),0,'',date,0))];
     obAllocateReceipts(sales,[ovFeeMake(due,method,date)]);
     view.obxAll=null;save();render();toast('Quitação registrada no orçamento.');
@@ -571,7 +580,8 @@ const A={
     const received=r2(amounts.reduce((sum,amount)=>sum+amount,0));
     if(amounts.some(amount=>amount<0)||!(received>0)){toast('Informe os valores efetivamente recebidos.');return}
     if(received>tot){toast('O valor recebido é maior que o total da baixa ('+brl(tot)+')',3500);return}
-    const data=$('oad').value||tdy();
+    const data=obReceiptDate(b,'oad');
+    if(!data)return;
     const receipts=forms.flatMap((method,index)=>amounts[index]>0?[ovFeeMake(amounts[index],method,data)]:[]);
     const sales=pend.map(it=>obLaunch(p,it,val(it),0,'',data,0));
     obAllocateReceipts(sales,receipts);
@@ -585,12 +595,14 @@ const A={
     const forms=nxPayMethods(nxPayPlan(o));
 
     const fields=['obc1','obc2'];
-    const amounts=fields.map(field=>r2(num($(field)?.value)));
+    const panel=b.closest('.ob-pay');
+    const amounts=fields.map(field=>r2(num(panel?.querySelector('input#'+field)?.value)));
     if(amounts.some(a=>a<0)||amounts.some(a=>!Number.isFinite(a))){toast('Confira os valores informados.');return}
     const totalReceived=r2(amounts.reduce((sum,a)=>sum+a,0));
     if(!(totalReceived>0)){toast('Informe pelo menos um valor recebido.');return}
     if(totalReceived>totalDue+0.005){toast('O recebimento supera o saldo em aberto ('+brl(totalDue)+').');return}
-    const date=$('obcd')?.value||tdy();
+    const date=obReceiptDate(b,'obcd');
+    if(!date)return;
     const receipts=forms.flatMap((method,index)=>amounts[index]>0?[ovFeeMake(amounts[index],method,date)]:[]);
     obAllocateReceipts(outstanding,receipts);
     save();render();toast('Recebimento registrado no orçamento e distribuído entre os saldos em aberto.');
