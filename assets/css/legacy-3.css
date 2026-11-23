@@ -1029,3 +1029,21 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
   color: var(--wr);
   font-size: 13px;
 }
+
+/* Pagamentos do dentista */
+.dt-card .dt-pay,
+.dt-card .dt-pay .tot,
+.dt-card .dt-pay .pg { border-top-color:#9baab9; }
+.dt-card .dt-pay .dt-pay-balance {
+  color:var(--ink);
+  background:var(--bg2);
+  padding:8px;
+}
+.dt-pay-history { margin-top:10px; }
+.dt-card .dt-pay-history > summary {
+  color:var(--ink);
+  gap:8px;
+}
+.dt-card .dt-pay-history > summary::before { content:'▸'; }
+.dt-card .dt-pay-history[open] > summary::before { content:'▾'; }
+.dt-card .dt-pay-history .pg { color:var(--ink); }

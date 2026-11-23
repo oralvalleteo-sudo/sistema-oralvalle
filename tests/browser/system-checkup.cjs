@@ -475,5 +475,12 @@ const retroRows=(await db.query("select dados from commission_payments where dad
 assert.equal(retroRows.length,1);
 assert.equal(retroRows[0].dados.valor,45);
 assert.equal(retroRows[0].dados.data,'2025-09-19');
+assert.equal(await dentistCard.evaluate(card=>card.open),true);
+const dentistHistory=dentistCard.locator('.dt-pay-history');
+await dentistHistory.locator('summary').click();
+assert.equal(await dentistHistory.getByText('19/09/2025',{exact:true}).isVisible(),true);
+await dentistCard.evaluate(()=>render());
+assert.equal(await dentistHistory.evaluate(history=>history.open),true);
+assert.equal(await dentistHistory.getByText('19/09/2025',{exact:true}).isVisible(),true);
 await page.locator('[data-act="logout"]').first().click();await page.locator('#cloudEmail').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>window.OralCloud.session),null);assert.equal(await page.locator('.ov-sidebar').count(),0);assert.deepEqual(errors,[]);console.log('Aplicação real: entrada, cadastro e persistência de paciente, agendamento, navegação de módulos, central interna e saída sem dados clínicos visíveis.');
 }finally{if(browser)await browser.close();await db.close();}})().catch(error=>{console.error(error);process.exit(1)});
