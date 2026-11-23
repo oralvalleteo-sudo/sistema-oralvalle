@@ -109,6 +109,35 @@ const { chromium } = require('playwright');
     await metaCard.locator('.crm-card-source').filter({hasText:/^Meta$/}).waitFor({state:'attached'});
     assert.equal(await googleCard.locator('.stage-label').textContent(),'Contatado');
     await frame.getByRole('tab',{name:'Atendimento',exact:true}).click();
+    await frame.locator('#ops-rows').evaluate(()=>{
+      const patient=JSON.stringify([null,'p',['id','patient']]);
+      const original=window.OralCloud.request;
+      window.OralCloud.request=(path,...args)=>{
+        if(path.includes('/budgets?')&&path.includes('id=in.'))return Promise.resolve([
+          {id:'approved',status:'Aprovado'},
+          {id:'sold',status:'Pendente'},
+          {id:'visited',parent_id:patient,status:'Pendente',dados:{data:'01/11/2026'}},
+        ]);
+        if(path.includes('/budget_items?')&&path.includes('parent_id=in.'))return Promise.resolve([{parent_id:'sold',sale_ref:'sale'}]);
+        if(path.includes('/appointments?')&&path.includes('patient_ref=in.')){
+          if(!decodeURIComponent(path).includes(JSON.stringify(patient)))throw Error('Vínculo do paciente incorreto');
+          return Promise.resolve([{patient_ref:patient,dados:{st:'Compareceu',data:'2026-11-05'}}]);
+        }
+        return original(path,...args);
+      };
+      const lead=(id,name)=>({id,name,stage:'Orçamento',budget_id:id});
+      window.dispatchEvent(new CustomEvent('nexocrm:leads-loaded',{detail:{clinicId:'test-clinic',leads:[
+        lead('approved','Orçamento aprovado'),
+        lead('sold','Orçamento vendido'),
+        lead('visited','Paciente atendido'),
+        lead('unverified','Orçamento sem confirmação'),
+      ]}}));
+    });
+    const ops=frame.locator('#ops-rows');
+    await ops.getByText('Atendido',{exact:true}).waitFor();
+    assert.equal(await ops.getByText('Orçamento aprovado',{exact:true}).count(),0);
+    assert.equal(await ops.getByText('Orçamento vendido',{exact:true}).count(),0);
+    assert.equal(await ops.getByText('Orçamento sem confirmação',{exact:true}).count(),1);
     const returns=frame.locator('#daily-list');
     await returns.getByText('Paciente de orçamento',{exact:true}).waitFor();
     assert.equal(await returns.getByText('Lead Google',{exact:true}).count(),0);
