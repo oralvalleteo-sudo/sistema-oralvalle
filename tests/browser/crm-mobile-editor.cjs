@@ -78,7 +78,7 @@ const { chromium } = require('playwright');
       };
       const leads=[
         {id:'google',name:'Lead Google',source:'Google Ads',stage:'Contatado',created_at:'2026-11-01',budget_id:'budget'},
-        {id:'instagram',name:'Paciente de orçamento',source:'Instagram',stage:'Novo lead',created_at:'2026-10-01',estimated_value:150}
+        {id:'instagram',name:'Paciente de orçamento',source:'Instagram',stage:'Novo lead',created_at:'2026-10-01',next_contact_at:'2099-01-01',estimated_value:150}
       ];
       window.OralCloud.enabled=true;
       window.OralCloud.request=async(path,options)=>{
@@ -108,6 +108,13 @@ const { chromium } = require('playwright');
     await googleCard.locator('.crm-card-source').filter({hasText:/^Google$/}).waitFor({state:'attached'});
     await metaCard.locator('.crm-card-source').filter({hasText:/^Meta$/}).waitFor({state:'attached'});
     assert.equal(await googleCard.locator('.stage-label').textContent(),'Contatado');
+    await frame.getByRole('tab',{name:'Atendimento',exact:true}).click();
+    const returns=frame.locator('#daily-list');
+    await returns.getByText('Paciente de orçamento',{exact:true}).waitFor();
+    assert.equal(await returns.getByText('Lead Google',{exact:true}).count(),0);
+    assert.equal(await frame.locator('#crm-extra-tools').isVisible(),false);
+    await frame.getByRole('tab',{name:'Oportunidades',exact:true}).click();
+    await frame.locator('#crm-extra-tools').waitFor();
     const marketing=frame.getByRole('tab',{name:'Análise de Marketing'});
     await marketing.click();
     const report=frame.locator('#crm-marketing');

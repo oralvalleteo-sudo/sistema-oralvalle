@@ -6,8 +6,8 @@ const groups=new Set(['overview','opportunities','followup','reports','marketing
 // Classify by stable section identity rather than fragile child indexes.
 const sectionGroups=[
  ['overview',['crm-goals','metrics']],
- ['opportunities',['board-heading','crm-funil-nav-266','board','crm-pending-compact']],
- ['followup',['followups','crm-daily','crm-operations','crm-tasks','crm-priorities','recovery','crm-recovery59','crm-budget-followup73','crm-extra-tools']],
+ ['opportunities',['board-heading','crm-funil-nav-266','board','crm-pending-compact','recovery','crm-recovery59','crm-budget-followup73','crm-extra-tools']],
+ ['followup',['crm-daily','crm-operations']],
  ['reports',['crm-management','crm-productivity','employee-performance','sales-report']]
 ];
 function classify(node){

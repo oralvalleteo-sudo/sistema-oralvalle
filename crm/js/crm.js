@@ -54,71 +54,7 @@ if(goalMonthEl){
   }catch(e){$('goal-feedback').textContent='Erro ao salvar meta: '+e.message;btn.disabled=false}
  });
 }
-let followupFilter='late';
-let showAllPriorities=false;
 function followupDate(day){if(!/^\d{4}-\d{2}-\d{2}$/.test(day||''))return day||'';const [y,m,d]=day.split('-');return d+'/'+m+'/'+y}
-function followup(){
- const box=$('followup-list');if(!box)return;
- const now=today(),limit=new Date(now+'T12:00:00');limit.setDate(limit.getDate()+7);
- const future=[limit.getFullYear(),String(limit.getMonth()+1).padStart(2,'0'),String(limit.getDate()).padStart(2,'0')].join('-');
- const active=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida');
- const dated=active.filter(x=>x.next_contact_at).map(x=>({...x,day:localDay(x.next_contact_at)}));
- const contactPattern=/\[(\d{2})\/(\d{2})\/(\d{4}),?[^\]]*\]\s*(?:WhatsApp|Ligação|Presencial|Proposta|Outro|Contato):/g;
- const lastContact=x=>{let latest=String(x.created_at||'').slice(0,10);for(const match of String(x.notes||'').matchAll(contactPattern)){const day=match[3]+'-'+match[2]+'-'+match[1];if(day>latest)latest=day}return latest};
- const weekAgo=new Date(now+'T12:00:00');weekAgo.setDate(weekAgo.getDate()-7);
- const threshold=[weekAgo.getFullYear(),String(weekAgo.getMonth()+1).padStart(2,'0'),String(weekAgo.getDate()).padStart(2,'0')].join('-');
- const groups={
-  late:dated.filter(x=>x.day<now),
-  today:dated.filter(x=>x.day===now),
-  upcoming:dated.filter(x=>x.day>now&&x.day<=future),
-  stale:active.filter(x=>{const last=lastContact(x);return last&&last<=threshold&&(!x.next_contact_at||localDay(x.next_contact_at)>now)})
- };
- for(const key of ['late','today','upcoming','stale']){
-  const count=$('followup-'+key);if(count)count.textContent=groups[key].length;
-  const button=document.querySelector('[data-followup="'+key+'"]');if(button)button.setAttribute('aria-pressed',String(followupFilter===key));
- }
- const selected=groups[followupFilter]||[];
- $('followup-count').textContent=selected.length+' oportunidade(s) nesta categoria';
- box.replaceChildren();
- if(!selected.length){box.textContent='Nenhuma oportunidade nesta categoria.';renderPriorities(groups,lastContact,now);return}
- selected.sort((a,b)=>String(a.day||a.created_at||'').localeCompare(String(b.day||b.created_at||'')));
- for(const x of selected){const btn=document.createElement('button');btn.type='button';btn.className='followup-item';const label=document.createElement('strong');label.textContent=x.name;const date=document.createElement('span');date.textContent=followupFilter==='stale'?'Último contato: '+followupDate(lastContact(x)):followupFilter==='late'?'Atrasado desde '+followupDate(x.day):followupFilter==='today'?'Hoje · '+followupDate(x.day):'Previsto para '+followupDate(x.day);btn.append(label,date);btn.onclick=()=>edit(x);box.append(btn)}
- renderPriorities(groups,lastContact,now);
-}
-
-function renderPriorities(groups,lastContact,now){
- const list=$('priority-list');if(!list)return;
- const active=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida');
- const late=new Set(groups.late.map(x=>String(x.id))),due=new Set(groups.today.map(x=>String(x.id))),stale=new Set(groups.stale.map(x=>String(x.id)));
- const ranked=active.map(x=>{
-  const id=String(x.id),value=Number(x.estimated_value)||0;
-  let rank=4,reason='Acompanhar negociação',tone='normal';
-  if(late.has(id)){rank=0;reason='Retorno atrasado desde '+followupDate(localDay(x.next_contact_at));tone='urgent'}
-  else if(due.has(id)){rank=1;reason='Retorno agendado para hoje';tone='high'}
-  else if(stale.has(id)){rank=2;reason='Sem contato há 7 dias';tone='attention'}
-  else if(value>0){rank=3;reason='Oportunidade em negociação';tone='value'}
-  return {x,rank,reason,tone,value};
- }).sort((a,b)=>a.rank-b.rank||(a.rank<2?String(a.x.next_contact_at||'').localeCompare(String(b.x.next_contact_at||'')):0)||b.value-a.value||String(a.x.name).localeCompare(String(b.x.name),'pt-BR'));
- const totalEl=$('priority-total');if(totalEl)totalEl.textContent=ranked.length+' oportunidade(s) aberta(s)';
- list.replaceChildren();
- if(!ranked.length){list.textContent='Nenhuma oportunidade aberta no momento.';return}
- for(const item of ranked.slice(0,showAllPriorities?ranked.length:5)){
-  const btn=document.createElement('button');btn.type='button';btn.className='priority-item priority-'+item.tone;
-  const info=document.createElement('span');info.className='priority-info';
-  const name=document.createElement('strong');name.textContent=item.x.name;
-  const detail=document.createElement('small');detail.textContent=item.reason+' · '+item.x.stage;
-  info.append(name,detail);
-  const val=document.createElement('span');val.className='priority-value';val.textContent=money(item.value);
-  btn.append(info,val);btn.addEventListener('click',()=>edit(item.x));list.append(btn);
- }
- if(ranked.length>5){
-  const toggle=document.createElement('button');toggle.type='button';toggle.className='priority-toggle';
-  toggle.textContent=showAllPriorities?'Mostrar somente 5 prioridades':'Ver todas as '+ranked.length+' oportunidades';
-  toggle.addEventListener('click',()=>{showAllPriorities=!showAllPriorities;renderPriorities(groups,lastContact,now)});
-  list.append(toggle);
- }
-}
-for(const button of document.querySelectorAll('[data-followup]'))button.addEventListener('click',()=>{followupFilter=button.dataset.followup;followup()});
 const resultMarker=/\[NEXODENT_RESULT:(?:FECHADO|PERDIDA)\|[^\]\r\n]*\]/g;
 const resultData=x=>{const m=String(x?.notes||'').match(/\[NEXODENT_RESULT:(FECHADO|PERDIDA)\|([0-9]{4}-[0-9]{2}-[0-9]{2})(?:\|([^\]\r\n]*))?\]/);return m?{type:m[1],day:m[2],reason:decodeURIComponent(m[3]||'')}:null};
 // Central de recuperação: somente orçamentos vinculados manualmente ao CRM.
@@ -211,25 +147,35 @@ function dailyLastContact(x){let last=String(x.created_at||'').slice(0,10);for(c
 function dailyAttempts(x){return [...String(x.notes||'').matchAll(dailyContactPattern)].length}
 function renderDailyQueue(){
  const box=$('daily-list');if(!box)return;
- const now=today(),thresholdDate=new Date(now+'T12:00:00');thresholdDate.setDate(thresholdDate.getDate()-7);
- const threshold=[thresholdDate.getFullYear(),String(thresholdDate.getMonth()+1).padStart(2,'0'),String(thresholdDate.getDate()).padStart(2,'0')].join('-');
- const rows=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida'&&!isOptedOut(x)).map(x=>{
-  const day=localDay(x.next_contact_at),last=dailyLastContact(x);
-  const category=day&&day<now?'late':day===now?'today':(!day||day>now)&&last&&last<=threshold?'stale':null;
-  return {x,day,last,category,attempts:dailyAttempts(x)};
- }).filter(row=>row.category);
- const counts={late:0,today:0,stale:0};for(const row of rows)counts[row.category]++;
- $('daily-late').textContent=counts.late;$('daily-today').textContent=counts.today;$('daily-stale').textContent=counts.stale;
- $('daily-total').textContent=rows.length+' para acompanhar';
+ const now=today();
+ const rows=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida'&&!isOptedOut(x)).flatMap(x=>{
+  const day=localDay(x.next_contact_at);
+  if(!day)return [];
+  const category=day<now?'late':day===now?'today':'upcoming';
+  return [{x,day,last:dailyLastContact(x),category,attempts:dailyAttempts(x)}];
+ });
+ const counts={late:0,today:0,upcoming:0};
+ for(const row of rows)counts[row.category]++;
+ for(const [category,count] of Object.entries(counts))$('daily-'+category).textContent=String(count);
+ $('daily-total').textContent=rows.length+' agendado(s)';
  document.querySelectorAll('[data-daily]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.daily===dailyFilter)));
- const selected=rows.filter(row=>(dailyFilter==='all'||row.category===dailyFilter)&&(dailyOwnerFilter==='all'||(dailyOwnerFilter==='mine'&&currentAuthUserId&&String(row.x.commercial_owner_id||'')===currentAuthUserId)||(dailyOwnerFilter==='unassigned'&&!row.x.commercial_owner_id)||String(row.x.commercial_owner_id||'')===dailyOwnerFilter)&&(!dailySearch||(row.x.name+' '+(row.x.phone||'')).toLocaleLowerCase('pt-BR').includes(dailySearch))).sort((a,b)=>({late:0,today:1,stale:2}[a.category]-{late:0,today:1,stale:2}[b.category])||(a.day||a.last).localeCompare(b.day||b.last)||Number(b.x.estimated_value||0)-Number(a.x.estimated_value||0));
+ const selected=rows.filter(row=>(dailyFilter==='all'||row.category===dailyFilter)&&(dailyOwnerFilter==='all'||(dailyOwnerFilter==='mine'&&currentAuthUserId&&String(row.x.commercial_owner_id||'')===currentAuthUserId)||(dailyOwnerFilter==='unassigned'&&!row.x.commercial_owner_id)||String(row.x.commercial_owner_id||'')===dailyOwnerFilter)&&(!dailySearch||(row.x.name+' '+(row.x.phone||'')).toLocaleLowerCase('pt-BR').includes(dailySearch))).sort((a,b)=>({late:0,today:1,upcoming:2}[a.category]-{late:0,today:1,upcoming:2}[b.category])||a.day.localeCompare(b.day)||Number(b.x.estimated_value||0)-Number(a.x.estimated_value||0));
  if(dailySort==='value')selected.sort((a,b)=>Number(b.x.estimated_value||0)-Number(a.x.estimated_value||0));
  else if(dailySort==='attempts')selected.sort((a,b)=>a.attempts-b.attempts);
  else if(dailySort==='name')selected.sort((a,b)=>String(a.x.name).localeCompare(String(b.x.name),'pt-BR'));
  dailyVisibleRows=selected;
  $('daily-visible').textContent=String(selected.length);$('daily-value').textContent=money(selected.reduce((sum,row)=>sum+(Number(row.x.estimated_value)||0),0));$('daily-attempts').textContent=String(selected.reduce((sum,row)=>sum+row.attempts,0));
- box.replaceChildren();if(!selected.length){box.textContent='Nenhuma oportunidade pendente neste filtro.';return}
- for(const row of selected){const item=document.createElement('div');item.className='daily-row';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=row.x.name;const detail=document.createElement('small');detail.textContent=(row.category==='late'?'Retorno atrasado desde '+followupDate(row.day):row.category==='today'?'Retorno marcado para hoje':'Sem contato desde '+followupDate(row.last))+' · '+row.attempts+' contato(s) registrado(s)';const suggestion=document.createElement('small');suggestion.textContent='Próxima ação: '+(row.category==='late'?'reagendar ou registrar retorno':row.category==='today'?'realizar o contato combinado':'verificar interesse e agendar retorno');info.append(name,detail,suggestion);const actions=document.createElement('div');actions.className='daily-row-actions';const button=document.createElement('button');button.type='button';button.textContent='Abrir ficha';button.onclick=()=>edit(row.x);actions.append(button);const attempt=document.createElement('button');attempt.type='button';attempt.textContent='Registrar contato';attempt.onclick=()=>{edit(row.x);$('contact_type').value='Ligação';$('contact_log').focus()};actions.append(attempt);const returnBtn=document.createElement('button');returnBtn.type='button';returnBtn.textContent='Agendar retorno';returnBtn.onclick=()=>{edit(row.x);$('form').elements.next_contact_at.focus()};actions.append(returnBtn);const owner=commercialMembers.find(m=>m.id===row.x.commercial_owner_id);const ownerLabel=document.createElement('small');ownerLabel.textContent='Responsável: '+(owner?.name||'Não atribuído')+' · '+money(row.x.estimated_value);info.append(ownerLabel);item.append(info,actions);box.append(item)}
+ box.replaceChildren();if(!selected.length){box.textContent='Nenhum retorno agendado neste filtro.';return}
+ for(const row of selected){const item=document.createElement('div');item.className='daily-row';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=row.x.name;const detail=document.createElement('small');detail.textContent=(row.category==='late'?'Retorno atrasado desde '+followupDate(row.day):row.category==='today'?'Retorno marcado para hoje':'Retorno marcado para '+followupDate(row.day))+' · '+row.attempts+' contato(s) registrado(s)';const suggestion=document.createElement('small');suggestion.textContent='Próxima ação: '+(row.category==='late'?'reagendar ou registrar retorno':row.category==='today'?'realizar o contato combinado':'acompanhar na data combinada');info.append(name,detail,suggestion);const actions=document.createElement('div');actions.className='daily-row-actions';const button=document.createElement('button');button.type='button';button.textContent='Abrir ficha';button.onclick=()=>edit(row.x);actions.append(button);const attempt=document.createElement('button');attempt.type='button';attempt.textContent='Registrar contato';attempt.onclick=()=>{edit(row.x);$('contact_type').value='Ligação';$('contact_log').focus()};actions.append(attempt);const returnBtn=document.createElement('button');returnBtn.type='button';returnBtn.textContent='Agendar retorno';returnBtn.onclick=()=>{edit(row.x);$('form').elements.next_contact_at.focus()};actions.append(returnBtn);
+ if(row.category!=='upcoming'){
+  const done=document.createElement('button');
+  done.type='button';
+  done.textContent='Concluir retorno';
+  done.disabled=completingTask;
+  done.onclick=()=>completeTask(row.x);
+  actions.append(done);
+ }
+ const owner=commercialMembers.find(m=>m.id===row.x.commercial_owner_id);const ownerLabel=document.createElement('small');ownerLabel.textContent='Responsável: '+(owner?.name||'Não atribuído')+' · '+money(row.x.estimated_value);info.append(ownerLabel);item.append(info,actions);box.append(item)}
 }
 document.querySelectorAll('[data-daily]').forEach(button=>button.addEventListener('click',()=>{dailyFilter=button.dataset.daily;renderDailyQueue()}));
 $('daily-owner')?.addEventListener('change',e=>{dailyOwnerFilter=e.target.value;renderDailyQueue()});
@@ -246,21 +192,14 @@ $('daily-export')?.addEventListener('click',()=>{
  if(!dailyVisibleRows.length){feedback.textContent='Nenhum paciente no filtro selecionado.';return}
  const cols=['Paciente','Telefone','Etapa','Prioridade','Próximo contato','Último contato','Tentativas','Responsável','Valor estimado'];
  const lines=[cols.map(csvSafe).join(';')];
- for(const row of dailyVisibleRows){const x=row.x,owner=commercialMembers.find(m=>m.id===x.commercial_owner_id);lines.push([x.name,x.phone||'',x.stage,row.category==='late'?'Atrasado':row.category==='today'?'Hoje':'Sem contato',row.day||'',row.last||'',row.attempts,owner?.name||'Não atribuído',Number(x.estimated_value)||0].map(csvSafe).join(';'))}
+ for(const row of dailyVisibleRows){const x=row.x,owner=commercialMembers.find(m=>m.id===x.commercial_owner_id);lines.push([x.name,x.phone||'',x.stage,row.category==='late'?'Atrasado':row.category==='today'?'Hoje':'Próximo',row.day||'',row.last||'',row.attempts,owner?.name||'Não atribuído',Number(x.estimated_value)||0].map(csvSafe).join(';'))}
  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='nexodent-fila-comercial-'+today()+'.csv';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);feedback.textContent=dailyVisibleRows.length+' registro(s) exportado(s). Proteja os dados dos pacientes.';
 });
 let completingTask=false;
-function renderTasks(){
- const list=$('tasks-list');if(!list)return;
- const day=today();const tasks=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida'&&!isOptedOut(x)&&x.next_contact_at&&localDay(x.next_contact_at)<=day).sort((a,b)=>localDay(a.next_contact_at).localeCompare(localDay(b.next_contact_at))||Number(b.estimated_value||0)-Number(a.estimated_value||0));
- $('tasks-total').textContent=tasks.length+' pendente(s)';list.replaceChildren();
- if(!tasks.length){list.textContent='Nenhum contato vencido ou programado para hoje.';return}
- for(const x of tasks){const row=document.createElement('div');row.className='tasks-row';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=x.name;const detail=document.createElement('small');detail.textContent=(localDay(x.next_contact_at)<day?'Atrasada desde ':'Programada para ')+followupDate(localDay(x.next_contact_at))+' · '+x.stage;info.append(name,detail);const actions=document.createElement('div');actions.className='tasks-actions';const open=document.createElement('button');open.type='button';open.textContent='Abrir / reagendar';open.onclick=()=>edit(x);const done=document.createElement('button');done.type='button';done.textContent='Concluir tarefa';done.disabled=completingTask;done.onclick=()=>completeTask(x);actions.append(open,done);row.append(info,actions);list.append(row)}
-}
 async function completeTask(x){
  if(completingTask||!clinicId||!x?.id)return;
  if(!confirm('Concluir o contato agendado de '+x.name+'? Isso registra somente a tarefa executada; não confirma que o paciente respondeu.'))return;
- completingTask=true;const feedback=$('tasks-feedback');feedback.textContent='Registrando conclusão…';renderTasks();
+ completingTask=true;const feedback=$('tasks-feedback');feedback.textContent='Registrando conclusão…';renderDailyQueue();
  try{
   const path='nexodent_crm_leads?id=eq.'+encodeURIComponent(x.id)+'&clinic_id=eq.'+encodeURIComponent(clinicId);
   const current=await api(path+'&select=id,notes,next_contact_at,stage&limit=1');
@@ -273,9 +212,9 @@ async function completeTask(x){
   await api(path,{method:'PATCH',body:{notes,next_contact_at:null}});
   const check=await api(path+'&select=id,source,stage,notes,next_contact_at,commercial_owner_id&limit=1');
   if(!Array.isArray(check)||check.length!==1||check[0].notes!==notes||check[0].next_contact_at)throw new Error('Não foi possível confirmar a gravação da tarefa.');
-  feedback.textContent='Tarefa concluída e registrada no histórico. Para novo contato, use Abrir / reagendar.';
+  feedback.textContent='Tarefa concluída e registrada no histórico. Para novo contato, use Agendar retorno na ficha.';
   await load();
- }catch(e){feedback.textContent='Erro: '+e.message;status('Falha ao concluir tarefa: '+e.message,true)}finally{completingTask=false;renderTasks()}
+ }catch(e){feedback.textContent='Erro: '+e.message;status('Falha ao concluir tarefa: '+e.message,true)}finally{completingTask=false;renderDailyQueue()}
 }
 
 // Painel somente leitura: calcula a produtividade a partir de registros persistidos.
@@ -316,7 +255,7 @@ function sourceLabel(source){
  const name=String(source??'').trim();
  return sourceLabels.get(window.NexoMarketingModel.origin(name)) || name || 'Sem origem';
 }
-function render(){const term=$('search').value.trim().toLocaleLowerCase('pt-BR'),filtered=leads.filter(x=>(x.name+' '+(x.phone||'')).toLocaleLowerCase('pt-BR').includes(term));$('total').textContent=leads.length;$('open').textContent=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida').length;$('won').textContent=leads.filter(x=>x.stage==='Fechado').length;$('value').textContent=money(leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida').reduce((s,x)=>s+Number(x.estimated_value||0),0));$('board').replaceChildren();for(const stage of stages){const col=document.createElement('section');col.className='column';col.dataset.stage=stage;const items=filtered.filter(x=>x.stage===stage||(stage==='Orçamento'&&x.stage==='Avaliado'));const title=document.createElement('h3');title.append(document.createTextNode(stage));const count=document.createElement('span');count.className='stage-count';count.textContent=String(items.length);title.append(count);col.append(title);for(const x of items){const btn=document.createElement('button');btn.className='card';btn.innerHTML='<b>'+escape(x.name)+'</b><small>'+escape(x.phone||'Sem telefone')+'</small><small class="stage-value">'+money(x.estimated_value)+'</small><span class="crm-card-labels"><span class="stage-label">'+escape(stage)+'</span><span class="crm-card-source">'+escape(sourceLabel(x.source))+'</span></span>';btn.onclick=()=>edit(x);col.append(btn)}$('board').append(col)}followup();renderDailyQueue();renderTasks();renderSales();renderRecovery();renderProductivity()}function edit(x){marketingBudget=null;$('crm-marketing-link-wrap').hidden=true;if(x&&window.NexoCRMIntegracao)window.NexoCRMIntegracao.consultar(x,clinicId,cloud);editing=x?.id||null;window.dispatchEvent(new CustomEvent('nexocrm:editor-open',{detail:{leadId:editing,clinicId,commercialMembers}}));$('formtitle').textContent=x?'Editar lead':'Novo lead';$('form').reset();const sourceInput=$('form').elements.source;
+function render(){const term=$('search').value.trim().toLocaleLowerCase('pt-BR'),filtered=leads.filter(x=>(x.name+' '+(x.phone||'')).toLocaleLowerCase('pt-BR').includes(term));$('total').textContent=leads.length;$('open').textContent=leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida').length;$('won').textContent=leads.filter(x=>x.stage==='Fechado').length;$('value').textContent=money(leads.filter(x=>x.stage!=='Fechado'&&x.stage!=='Perdida').reduce((s,x)=>s+Number(x.estimated_value||0),0));$('board').replaceChildren();for(const stage of stages){const col=document.createElement('section');col.className='column';col.dataset.stage=stage;const items=filtered.filter(x=>x.stage===stage||(stage==='Orçamento'&&x.stage==='Avaliado'));const title=document.createElement('h3');title.append(document.createTextNode(stage));const count=document.createElement('span');count.className='stage-count';count.textContent=String(items.length);title.append(count);col.append(title);for(const x of items){const btn=document.createElement('button');btn.className='card';btn.innerHTML='<b>'+escape(x.name)+'</b><small>'+escape(x.phone||'Sem telefone')+'</small><small class="stage-value">'+money(x.estimated_value)+'</small><span class="crm-card-labels"><span class="stage-label">'+escape(stage)+'</span><span class="crm-card-source">'+escape(sourceLabel(x.source))+'</span></span>';btn.onclick=()=>edit(x);col.append(btn)}$('board').append(col)}renderDailyQueue();renderSales();renderRecovery();renderProductivity()}function edit(x){marketingBudget=null;$('crm-marketing-link-wrap').hidden=true;if(x&&window.NexoCRMIntegracao)window.NexoCRMIntegracao.consultar(x,clinicId,cloud);editing=x?.id||null;window.dispatchEvent(new CustomEvent('nexocrm:editor-open',{detail:{leadId:editing,clinicId,commercialMembers}}));$('formtitle').textContent=x?'Editar lead':'Novo lead';$('form').reset();const sourceInput=$('form').elements.source;
  sourceInput.querySelector('[data-legacy-source]')?.remove();
  if(x&&!x.source)sourceInput.value='';
  if(x?.source&&![...sourceInput.options].some(option=>option.value===x.source)){
