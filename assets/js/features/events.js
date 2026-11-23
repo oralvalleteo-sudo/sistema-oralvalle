@@ -145,6 +145,21 @@ if(t.dataset&&t.dataset.cl!==undefined){db.cl=db.cl||{};db.cl[t.dataset.cl]=t.va
 });
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.matches('input[data-budget-date]')){
+    const p=cur(),o=p&&getO(p,t.dataset.budgetDate);
+    if(!o)return;
+    if(!pmAllowed('orcsave',t.dataset)||!t.value||!t.validity.valid){
+      t.value=brToIso(o.data)||o.data||'';
+      if(!pmAllowed('orcsave',t.dataset))pmDeny();
+      else toast('Informe uma data válida para o orçamento.');
+      return;
+    }
+    o.data=fd(t.value);
+    const summary=t.closest('.orc-card')?.querySelector('[data-budget-date-summary]');
+    if(summary)summary.textContent=o.data;
+    save();
+    return;
+  }
   if(t.id==='sales-month'){
     if(!t.validity.valid||!t.value){t.value=view.salesMonth||tdy().slice(0,7);return}
     view.salesMonth=t.value;view.sv='mes';view.vPage=0;render();return;
