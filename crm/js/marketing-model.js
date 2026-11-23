@@ -174,5 +174,5 @@
    roi:investment>0&&attributedReceived!==null?(attributedReceived-investment)/investment:null,
    unlinkedClosed:leads.filter(lead=>normalize(lead.stage)==='fechado'&&!completed.has(lead)).length};
  }
- return {prepare,calculate,origin,expenseOrigin,date};
+ return {prepare,calculate,origin,expenseOrigin,date,budgetLink};
 });
