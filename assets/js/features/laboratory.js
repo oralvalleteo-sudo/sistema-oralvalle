@@ -151,11 +151,26 @@ function form(o={}){
  ${textarea('Instruções para o trabalho','nxlab-instructions',o.instructions)}
  </div><div class="nxlab-actions"><button type="button" data-lab="save">${o.id?'Salvar alterações':'Cadastrar trabalho'}</button><button class="ghost" type="button" data-lab="cancel">Cancelar</button></div></section>`;
 }
+const paymentMethods=['Pix','Dinheiro','Transferência','Cartão','Boleto','Outro'];
+function canPayHistorical(){
+ return cloud()&&!!clinic()&&typeof pmLvl==='function'&&pmLvl('vd')>=2&&
+  (!window.NexoModules||window.NexoModules.isAllowed('finance')===true);
+}
 function historicalCompletion(o){
  if(!canEdit()||['Entregue','Cancelado'].includes(o.status))return '';
+ const id=safe(o.id);
+ const laboratory=['a definir','na clínica','na clinica'].includes(o.laboratory?.trim().toLowerCase())?'':o.laboratory;
+ const payment=canPayHistorical()?`<div class="nxlab-grid">
+ ${input('Valor já pago ao laboratório (R$)','nxlab-paid-amount-'+id,'','number','min="0.01" max="999999999999.99" step="0.01"')}
+ ${input('Laboratório que recebeu','nxlab-paid-lab-'+id,laboratory,'text','maxlength="160"')}
+ ${input('Data real do pagamento','nxlab-paid-date-'+id,'','date','max="'+isoToday()+'"')}
+ ${select('Forma de pagamento','nxlab-paid-method-'+id,['',...paymentMethods],'')}
+ </div><p>Preencha o valor apenas se houve pagamento. A saída entra no caixa na data real informada.</p>`:'';
  return `<details class="nxlab-timeline nxlab-retroactive"><summary>Dar baixa retroativa</summary>
- <p>A data informada será usada como referência para o custo do trabalho. Se já houver uma data de recebimento, ela ficará registrada no histórico. Pagamentos ao laboratório são lançados separadamente.</p>
+ <p>A data informada será usada como referência para o custo do trabalho. Se já houver uma data de recebimento, ela ficará registrada no histórico.</p>
  ${input('Data de referência da baixa','nxlab-completion-'+safe(o.id),'','date','required max="'+isoToday()+'"')}
+ ${payment}
+ <p role="alert" hidden></p>
  <button type="button" data-lab="complete" data-id="${safe(o.id)}">Confirmar baixa retroativa</button></details>`;
 }
 function nextStages(o){
@@ -348,7 +363,7 @@ async function execute(action,id,button){
   }else $id('nxlab-next-'+id).focus();
   return;
  }
- let o,pendingLink;
+ let o,pendingLink,retroPayment;
  if(action==='save'){
   const f=readForm(),where=$id('nxlab-execution')?.value;if(!execution.valid(where)){alert('Escolha o local de execução.');return;}if(where==='clinic'&&!f.laboratory)f.laboratory='Na clínica';if(where==='laboratory'&&!f.laboratory)f.laboratory='A definir';if(!f.patient_id||!f.work_description){alert('Informe o paciente e o trabalho a realizar.');return;}
   if(f.status==='Em observação'&&!f.observation_reason){alert('Informe o motivo da observação.');return;}
@@ -363,6 +378,23 @@ async function execute(action,id,button){
   const field=$id('nxlab-completion-'+id);
   if(!field?.reportValidity())return;
   const reference=field.value;
+  const amount=$id('nxlab-paid-amount-'+id);
+  const paidAt=$id('nxlab-paid-date-'+id);
+  const error=button.closest('details').querySelector('[role="alert"]');
+  error.hidden=true;
+  if(amount?.value||paidAt?.value||$id('nxlab-paid-method-'+id)?.value){
+   const laboratory=$id('nxlab-paid-lab-'+id).value.trim();
+   const method=$id('nxlab-paid-method-'+id).value;
+   if(!canPayHistorical()||!amount.value||!amount.reportValidity()||!paidAt.value||
+     !paidAt.reportValidity()||!laboratory||!paymentMethods.includes(method)){
+    error.textContent='Informe o valor, o laboratório, a data real e a forma de pagamento.';
+    error.hidden=false;
+    return;
+   }
+   retroPayment={p_clinic:clinic(),p_order_id:id,p_revision:old.updated_at??null,
+    p_reference:reference,p_amount:Number(amount.value),p_paid_at:paidAt.value,p_method:method,p_laboratory:laboratory};
+   button.disabled=true;
+  }
   o={...old,stage:'Entregue ao paciente',status:'Entregue',received_at:reference,history:[
    ...(old.history||[]),{at:stamp(),text:'Baixa retroativa. Data de referência: '+reference+(old.received_at&&date(old.received_at)!==reference?' • Recebimento registrado anteriormente: '+date(old.received_at):'')}
   ],updated_at:stamp()};
@@ -378,16 +410,26 @@ async function execute(action,id,button){
   o={...old,comments:[...(old.comments||[]),{at:stamp(),text:txt.slice(0,2000)}],updated_at:stamp()};
  }else return;
  busy=true;
- try{await persist(o);if(action==='save'&&!cloud())saveLink(o.id,pendingLink.tid,pendingLink.cost);publishOrders();if(action==='save')editing=null;renderLab();if(typeof toast==='function')toast('Trabalho de laboratório atualizado.');}
+ try{
+  if(retroPayment){
+   await OralCloud.request('/rest/v1/rpc/nexodent_complete_lab_with_payment',{method:'POST',body:retroPayment});
+   if(clinic()!==retroPayment.p_clinic)return;
+   await fetchOrders(true);
+   if(clinic()!==retroPayment.p_clinic)return;
+   window.dispatchEvent(new CustomEvent('nexodent:lab-payments-updated',{detail:{source:'historical-completion'}}));
+   if(typeof toast==='function')toast('Baixa retroativa e pagamento registrados.');
+   return;
+  }
+  await persist(o);if(action==='save'&&!cloud())saveLink(o.id,pendingLink.tid,pendingLink.cost);publishOrders();if(action==='save')editing=null;renderLab();if(typeof toast==='function')toast('Trabalho de laboratório atualizado.');}
  catch(e){
   const message='Não foi possível salvar: '+(e.message||'Erro de conexão');
-  if(action==='advance-save'){
-   const error=advance.querySelector('[role="alert"]');
+  if(action==='advance-save'||retroPayment){
+   const error=(retroPayment?button.closest('details'):advance).querySelector('[role="alert"]');
    error.textContent=message;
    error.hidden=false;
   }else alert(message);
  }
- finally{if(action==='advance-save')button.disabled=false;busy=false;}
+ finally{if(action==='advance-save'||retroPayment)button.disabled=false;busy=false;}
 }
 function updateExecutionForm(){
  const where=$id('nxlab-execution')?.value,internal=where==='clinic';

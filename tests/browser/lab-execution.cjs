@@ -44,4 +44,29 @@ const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('nod
  assert.equal(historical.treatment_id,'existing-treatment');
  assert.equal(await page.locator('[data-lab="toggle"][data-id="ext"]').count(),0);
  await page.evaluate(()=>{level=1;render()});assert.equal(await page.locator('[data-lab="new"]').count(),0);assert.equal(await page.locator('[data-lab="edit"]').count(),0);await page.locator('#nxlab-execution-filter').selectOption('clinic');assert.equal(await page.locator('.nxlab-card').count(),2);assert.ok(await page.evaluate(()=>posts.every(p=>p.path.startsWith('/rest/v1/nexodent_lab_orders'))));assert.deepEqual(errors,[]);console.log('Local de execução: clínica/laboratório salvo e reaberto, rascunho e custos preservados, etapas internas sem envio, filtro/CSV e falha de gravação sem sucesso fictício.');
+ await page.evaluate(()=>{
+  level=2;
+  const request=OralCloud.request;
+  window.historicalPayment=null;
+  OralCloud.request=(path,opts)=>{
+   if(!path.endsWith('/nexodent_complete_lab_with_payment'))return request(path,opts);
+   const args=structuredClone(opts.body);
+   window.historicalPayment=args;
+   const order=orderData.find(o=>o.id===args.p_order_id);
+   Object.assign(order,{status:'Entregue',stage:'Entregue ao paciente',received_at:args.p_reference,laboratory_cost:args.p_amount,laboratory:args.p_laboratory});
+   return Promise.resolve(null);
+  };
+  render();
+ });
+ await page.locator('[data-lab="toggle"][data-id="internal"]').click();
+ await page.getByText('Dar baixa retroativa',{exact:true}).click();
+ await page.getByLabel('Data de referência da baixa').fill('2025-10-08');
+ await page.getByLabel('Valor já pago ao laboratório').fill('150');
+ await page.getByLabel('Laboratório que recebeu').fill('Lab Exemplo');
+ await page.getByLabel('Data real do pagamento').fill('2025-09-30');
+ await page.getByLabel('Forma de pagamento').selectOption('Pix');
+ await page.getByRole('button',{name:'Confirmar baixa retroativa'}).click();
+ await page.waitForFunction(()=>NexoLabRead.orders.find(o=>o.id==='internal')?.status==='Entregue');
+ const payment=await page.evaluate(()=>historicalPayment);
+ assert.deepEqual(payment,{p_clinic:'one',p_order_id:'internal',p_revision:null,p_reference:'2025-10-08',p_amount:150,p_paid_at:'2025-09-30',p_method:'Pix',p_laboratory:'Lab Exemplo'});
  }finally{await browser.close();}})().catch(error=>{console.error(error);process.exit(1)});

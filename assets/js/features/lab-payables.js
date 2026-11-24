@@ -86,6 +86,6 @@
  root.addEventListener('nexodent:signed-out',()=>{clear();});
  root.addEventListener('nexodent:clinic-data-loaded',()=>{clear();redraw();});
  root.addEventListener('nexodent:lab-orders-updated',()=>{if(loaded&&root.NexoLabRead?.clinicId===loaded&&!payment&&!saving){loaded=null;attempted=null;redraw();}});
- root.addEventListener('nexodent:lab-payments-updated',()=>{if((typeof view==='undefined'?null:view.h)!=='lab'){loaded=null;attempted=null;}});
+ root.addEventListener('nexodent:lab-payments-updated',event=>{if(event.detail?.source==='historical-completion'||(typeof view==='undefined'?null:view.h)!=='lab'){loaded=null;attempted=null;}});
  root.NexoLabPayables={html,load,clear};
 })(typeof window==='undefined'?globalThis:window);
