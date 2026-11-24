@@ -19,7 +19,7 @@ function comHtml(){
       return `<button class="card" data-act="cmdent" data-id="${esc(d.id)}" type="button" style="width:100%;text-align:left;margin:0 0 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px"><span><strong>${esc(d.nome)}</strong>${d.ativo===false?' <span class="badge">arquivado</span>':''}<br><span class="note" style="margin:2px 0 0">${vm.length} procedimento(s) · ${patients} paciente(s) · produção ${brl(production)}</span></span><span style="text-align:right"><strong style="color:var(--ac)">${brl(total)}</strong><br><span class="note" style="margin:2px 0 0">Comissão gerada</span></span></button>`;
     }).join('');
     h+=`</div>`;
-    return h+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">${stat('A pagar agora (todos)',ds.reduce((a,d)=>a+dtTot(d.id,accounting).apagar,0))}${stat('Prevista, aguardando pacientes',ds.reduce((a,d)=>a+dtTot(d.id,accounting).prev,0))}</div>`;
+    return h+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">${stat('A pagar agora (todos)',brl(ds.reduce((a,d)=>a+dtTot(d.id,accounting).apagar,0)))}${stat('Prevista, aguardando pacientes',brl(ds.reduce((a,d)=>a+dtTot(d.id,accounting).prev,0)))}</div>`;
   }
 
   const d=ds.find(x=>x.id===selected);
