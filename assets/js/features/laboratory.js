@@ -158,7 +158,24 @@ function historicalCompletion(o){
  ${input('Data de referência da baixa','nxlab-completion-'+safe(o.id),'','date','required max="'+isoToday()+'"')}
  <button type="button" data-lab="complete" data-id="${safe(o.id)}">Confirmar baixa retroativa</button></details>`;
 }
+function nextStages(o){
+ if(['Entregue','Cancelado'].includes(o.status))return [];
+ const stages=execution.stages(STAGES,execution.get(o));
+ return stages.slice(stages.indexOf(o.stage)+1);
+}
+function advancePanel(o,stages){
+ const id=safe(o.id);
+ return `<div class="nxlab-timeline" id="nxlab-advance-${id}" hidden>
+  <div class="nxlab-grid">
+   ${select('Nova etapa','nxlab-next-'+id,stages,stages[0])}
+   <label class="nxlab-field"><span>Comentário (opcional)</span><textarea id="nxlab-stage-note-${id}" maxlength="500" rows="2"></textarea></label>
+  </div>
+  <p role="alert" hidden></p>
+  <div class="nxlab-actions"><button type="button" class="sm" data-lab="advance-save" data-id="${id}">Confirmar etapa</button><button type="button" class="ghost sm" data-lab="advance-cancel" data-id="${id}">Cancelar</button></div>
+ </div>`;
+}
 function card(o){
+ const stages=canEdit()?nextStages(o):[];
  const events=Array.isArray(o.history)?o.history:[];
  const comments=Array.isArray(o.comments)?o.comments:[];
  const obs=o.status==='Em observação';
@@ -169,7 +186,8 @@ function card(o){
  ${obs?`<p class="nxlab-note"><b>Em observação:</b> ${safe(o.observation_reason||'Motivo não informado')}</p>`:''}
  ${o.instructions?`<p><b>Instruções:</b> ${safe(o.instructions)}</p>`:''}
  ${window.NexoOrthoPhotos&&db.p?.find(p=>String(p.id)===String(o.patient_id))?NexoOrthoPhotos.gallery(db.p.find(p=>String(p.id)===String(o.patient_id)),'lab:'+o.id):''}
- <div class="nxlab-actions"><button class="ghost sm" data-lab="details" data-id="${safe(o.id)}">Histórico e comentários (${events.length+comments.length})</button>${canEdit()?`<button class="ghost sm" data-lab="edit" data-id="${safe(o.id)}">Editar</button><button class="sm" data-lab="advance" data-id="${safe(o.id)}">Avançar etapa →</button><button class="danger sm" data-lab="delete" data-id="${safe(o.id)}">Excluir trabalho</button>`:''}</div>
+ <div class="nxlab-actions"><button class="ghost sm" data-lab="details" data-id="${safe(o.id)}">Histórico e comentários (${events.length+comments.length})</button>${canEdit()?`<button class="ghost sm" data-lab="edit" data-id="${safe(o.id)}">Editar</button>${stages.length?`<button type="button" class="sm" data-lab="advance" data-id="${safe(o.id)}" aria-expanded="false" aria-controls="nxlab-advance-${safe(o.id)}">Avançar etapa →</button>`:''}<button class="danger sm" data-lab="delete" data-id="${safe(o.id)}">Excluir trabalho</button>`:''}</div>
+ ${stages.length?advancePanel(o,stages):''}
  ${historicalCompletion(o)}
  ${view.labDetails===o.id?`<div class="nxlab-timeline">${events.slice().reverse().map(h=>`<div><small>${safe(new Date(h.at).toLocaleString('pt-BR'))}</small> · ${safe(h.text)}</div>`).join('')}${comments.map(c=>`<div><small>${safe(new Date(c.at).toLocaleString('pt-BR'))}</small> · 💬 ${safe(c.text)}</div>`).join('')||'<p>Sem comentários.</p>'}${canEdit()?`<label class="nxlab-field"><span>Novo comentário</span><textarea id="nxlab-comment-${safe(o.id)}" maxlength="2000" rows="2" placeholder="Registre orientações, ajustes, ocorrências..."></textarea></label><button class="sm" data-lab="comment" data-id="${safe(o.id)}">Adicionar comentário</button>`:''}</div>`:''}
  `):''}
@@ -272,7 +290,7 @@ function revealForm(){
  requestAnimationFrame(()=>{const form=document.querySelector('.nxlab-form');if(!form)return;form.focus({preventScroll:true});form.scrollIntoView({block:'start',behavior:'smooth'});});
 }
 document.addEventListener('toggle',event=>{if(event.target.isConnected&&event.target.matches?.('.nxlab-care'))view.labCareOpen=event.target.open;},true);
-async function execute(action,id){
+async function execute(action,id,button){
  if(action==='section-work'||action==='section-money'){if(busy)return;labSection=action==='section-money'?'money':'work';renderLab();return;}
  if(action==='export'){if(allowed())exportCsv();return;}
  if(busy)return;
@@ -311,6 +329,20 @@ async function execute(action,id){
  }
  const old=orders.find(o=>o.id===id);
  if(action!=='save'&&!old)return;
+ const advance=$id('nxlab-advance-'+id);
+ if(action==='advance'||action==='advance-cancel'){
+  if(!advance)return;
+  const opener=advance.closest('.nxlab-card').querySelector('[data-lab="advance"]');
+  advance.hidden=action==='advance-cancel'||!advance.hidden;
+  opener.setAttribute('aria-expanded',String(!advance.hidden));
+  if(advance.hidden){
+   $id('nxlab-next-'+id).selectedIndex=0;
+   $id('nxlab-stage-note-'+id).value='';
+   advance.querySelector('[role="alert"]').hidden=true;
+   opener.focus();
+  }else $id('nxlab-next-'+id).focus();
+  return;
+ }
  let o,pendingLink;
  if(action==='save'){
   const f=readForm(),where=$id('nxlab-execution')?.value;if(!execution.valid(where)){alert('Escolha o local de execução.');return;}if(where==='clinic'&&!f.laboratory)f.laboratory='Na clínica';if(where==='laboratory'&&!f.laboratory)f.laboratory='A definir';if(!f.patient_id||!f.work_description){alert('Informe o paciente e o trabalho a realizar.');return;}
@@ -329,19 +361,28 @@ async function execute(action,id){
   o={...old,stage:'Entregue ao paciente',status:'Entregue',received_at:reference,history:[
    ...(old.history||[]),{at:stamp(),text:'Baixa retroativa. Data de referência: '+reference+(old.received_at&&date(old.received_at)!==reference?' • Recebimento registrado anteriormente: '+date(old.received_at):'')}
   ],updated_at:stamp()};
- }else if(action==='advance'){
-  const stages=execution.stages(STAGES,execution.get(old)),ix=stages.indexOf(old.stage),next=stages[Math.min(ix+1,stages.length-1)];
-  if(ix===stages.length-1){alert('O trabalho já está na última etapa.');return;}
-  const note=prompt(`Avançar para "${next}". Informe um comentário sobre a etapa (opcional):`);if(note===null)return;
-  o={...old,stage:next,status:next==='Recebido na clínica'?'Recebido':next==='Entregue ao paciente'?'Entregue':'Em andamento',received_at:next==='Recebido na clínica'?(old.received_at||new Date().toISOString().slice(0,10)):old.received_at,history:[...(old.history||[]),{at:stamp(),text:`Etapa: ${old.stage} → ${next}${note?' — '+note.slice(0,500):''}`}],updated_at:stamp()};
+ }else if(action==='advance-save'){
+  if(!advance||advance.hidden)return;
+  const next=$id('nxlab-next-'+id).value;
+  if(!nextStages(old).includes(next))return;
+  const note=$id('nxlab-stage-note-'+id).value.trim().slice(0,500);
+  o={...old,stage:next,status:next==='Recebido na clínica'?'Recebido':next==='Entregue ao paciente'?'Entregue':'Em andamento',received_at:next==='Recebido na clínica'?(old.received_at||isoToday()):old.received_at,history:[...(old.history||[]),{at:stamp(),text:`Etapa: ${old.stage} → ${next}${note?' — '+note:''}`}],updated_at:stamp()};
+  button.disabled=true;
  }else if(action==='comment'){
   const txt=($id('nxlab-comment-'+id)?.value||'').trim();if(!txt)return;
   o={...old,comments:[...(old.comments||[]),{at:stamp(),text:txt.slice(0,2000)}],updated_at:stamp()};
  }else return;
  busy=true;
  try{await persist(o);if(action==='save'&&!cloud())saveLink(o.id,pendingLink.tid,pendingLink.cost);publishOrders();if(action==='save')editing=null;renderLab();if(typeof toast==='function')toast('Trabalho de laboratório atualizado.');}
- catch(e){alert('Não foi possível salvar: '+(e.message||'Erro de conexão'));}
- finally{busy=false;}
+ catch(e){
+  const message='Não foi possível salvar: '+(e.message||'Erro de conexão');
+  if(action==='advance-save'){
+   const error=advance.querySelector('[role="alert"]');
+   error.textContent=message;
+   error.hidden=false;
+  }else alert(message);
+ }
+ finally{if(action==='advance-save')button.disabled=false;busy=false;}
 }
 function updateExecutionForm(){
  const where=$id('nxlab-execution')?.value,internal=where==='clinic';
@@ -356,7 +397,7 @@ function labPatientOptions(patients,selected){
  const counts={};patients.forEach(p=>{counts[p.nome]=(counts[p.nome]||0)+1});
  return '<option value="">Selecione o paciente</option>'+patients.slice().sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR')).map(p=>`<option value="${safe(p.id)}"${String(p.id)===String(selected)?' selected':''}>${safe(p.nome)}${counts[p.nome]>1?' · '+safe(p.tel||String(p.id)):''}</option>`).join('');
 }
-document.addEventListener('click',e=>{const btn=e.target.closest('[data-lab]');if(btn){e.preventDefault();execute(btn.dataset.lab,btn.dataset.id);}});
+document.addEventListener('click',e=>{const btn=e.target.closest('[data-lab]');if(btn){e.preventDefault();execute(btn.dataset.lab,btn.dataset.id,btn);}});
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-filter'){filter=e.target.value;renderLab();}if(e.target.id==='nxlab-execution-filter'){executionFilter=e.target.value;renderLab();}if(e.target.id==='nxlab-search'){search=e.target.value;renderLab();}});
 document.addEventListener('keydown',e=>{if(e.target.id==='nxlab-search'&&e.key==='Enter'){search=e.target.value;renderLab();}});
 window.addEventListener('nexodent:signed-out',()=>{orderEpoch++;fetchTask=null;fetchTaskClinic=null;orders=[];loadedClinic=null;loadAttemptedClinic=null;loading=false;editing=null;careDraft=null;labSection='work';executionFilter='all';window.NexoLabRead=null;});
