@@ -39,9 +39,8 @@ async function ovOrthoMaintenance(button, patient){
   const next=patient.orthoProximo>today?patient.orthoProximo:orthoPrazo(today);
   const lastDentist=db.dt.find(d=>d.id===patient.orthoDentista&&d.ativo!==false);
   const financial=canCharge()? `<label>Valor da manutenção (R$)<input type="number" name="amount" min="0.01" max="999999999.99" step="0.01" inputmode="decimal"></label>
-    <label>Recebido hoje (R$)<input type="number" name="received" min="0" max="999999999.99" step="0.01" inputmode="decimal"></label>
     <label>Forma de pagamento<select name="method">${ovFeeOptions('Pix')}</select></label>
-    <p class="note">Informe o valor para lançar em Vendas. Se houver saldo, ele ficará disponível em Pagamentos do paciente.</p>`:'';
+    <p class="note">O valor informado será registrado como recebido integralmente em Vendas. Deixe em branco para registrar apenas a evolução.</p>`:'';
   ovAgDialog('Registrar manutenção ortodôntica',`<p class="ov-ag-modal-note">${esc(patient.nome)} · ${esc(fd(today))}</p>
     <label>Procedimento realizado<input name="procedure" required maxlength="160" value="Manutenção ortodôntica"></label>
     <label>Dentista que realizou<select name="dentist" required>${dentOpts(lastDentist?.id||defDt(),'Selecione o dentista')}</select></label>
@@ -51,14 +50,14 @@ async function ovOrthoMaintenance(button, patient){
     const procedure=String(form.get('procedure')||'').trim();
     const dentist=db.dt.find(d=>d.id===form.get('dentist')&&d.ativo!==false);
     const returnDate=String(form.get('next')||'');
-    const total=Number(form.get('amount')||0),receivedNow=Number(form.get('received')||0);
+    const total=Number(form.get('amount')||0);
     const method=form.get('method');
     if(!procedure||procedure.length>160||!dentist){toast('Informe o procedimento e selecione um dentista ativo.');return false;}
     if(returnDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(returnDate)||returnDate<today)){toast('Informe uma data válida para o próximo retorno.');return false;}
-    if(!Number.isFinite(total)||!Number.isFinite(receivedNow)||total<0||total>999999999.99||receivedNow<0||receivedNow>total||r2(total)!==total||r2(receivedNow)!==receivedNow){
-      toast('Confira o valor da manutenção e o valor recebido.');return false;
+    if(!Number.isFinite(total)||total<0||total>999999999.99||r2(total)!==total){
+      toast('Confira o valor da manutenção.');return false;
     }
-    if(total>0&&(!canCharge()||(receivedNow>0&&!OV_FEE_FORMS.includes(method)))){
+    if(total>0&&(!canCharge()||!OV_FEE_FORMS.includes(method))){
       toast('Confira o acesso financeiro e a forma de pagamento.');return false;
     }
     if(patient.orthoUltimaData===today&&!confirm('Já existe manutenção registrada hoje. Confirmar um novo atendimento?'))return false;
@@ -67,7 +66,7 @@ async function ovOrthoMaintenance(button, patient){
       performedByDentistId:dentist.id,performedByDentistName:dentist.nome};
     if(total>0){
       const amount=r2(total),commission=comCalc(dentist.id,procedure,amount,1);
-      const payments=receivedNow>0?[ovFeeMake(receivedNow,method,today)]:[];
+      const payments=[ovFeeMake(amount,method,today)];
       db.vd.push({id:uid(),pid:patient.id,dt:dentist.id,proc:procedure,valor:amount,mat:commission.mat,
         lab:commission.lab,rep:commission.rep,data:today,pg:payments,orthoEvolutionId:evolution.id});
     }
@@ -78,7 +77,7 @@ async function ovOrthoMaintenance(button, patient){
     patient.orthoProximo=returnDate;
     patient.orthoDentista=dentist.id;
     save();render();
-    toast(total>0?'Manutenção registrada na evolução e em Vendas.':'Manutenção registrada na evolução.');
+    toast(total>0?'Manutenção registrada e recebimento lançado em Vendas.':'Manutenção registrada na evolução.');
   });
 }
 
