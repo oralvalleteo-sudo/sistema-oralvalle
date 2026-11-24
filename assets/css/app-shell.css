@@ -2324,6 +2324,22 @@ html input[type="checkbox"]:checked::after{
 }
 html input[type="checkbox"]:focus-visible{outline:2px solid var(--ac,#F28C28);outline-offset:2px}
 html input[type="checkbox"]:disabled{opacity:.5;cursor:not-allowed}
+
+
+/* Indicadores de acompanhamento da Proposta Financeira. */
+html .pf-followup input[type="checkbox"] {
+  border-color: #768392;
+}
+html .pf-followup input[type="checkbox"]:checked {
+  background-color: #a34700;
+  border-color: #a34700;
+}
+html[data-ov-mode="dark"] .pf-followup input[type="checkbox"]:checked {
+  border-color: #e5985a;
+}
+html .pf-followup input[type="checkbox"]:focus-visible {
+  outline-color: var(--ink, #303943);
+}
 /* theme-mode.css */
 :root { color-scheme: light; }
 /* Aparência: sobrepõe apenas cores, preservando layout e identidade da clínica. */
