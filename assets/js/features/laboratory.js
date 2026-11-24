@@ -151,6 +151,13 @@ function form(o={}){
  ${textarea('Instruções para o trabalho','nxlab-instructions',o.instructions)}
  </div><div class="nxlab-actions"><button type="button" data-lab="save">${o.id?'Salvar alterações':'Cadastrar trabalho'}</button><button class="ghost" type="button" data-lab="cancel">Cancelar</button></div></section>`;
 }
+function historicalCompletion(o){
+ if(!canEdit()||['Entregue','Cancelado'].includes(o.status))return '';
+ return `<details class="nxlab-timeline"><summary>Dar baixa retroativa</summary>
+ <p>A data informada será usada como referência para o custo do trabalho. Se já houver uma data de recebimento, ela ficará registrada no histórico. Pagamentos ao laboratório são lançados separadamente.</p>
+ ${input('Data de referência da baixa','nxlab-completion-'+safe(o.id),'','date','required max="'+isoToday()+'"')}
+ <button type="button" data-lab="complete" data-id="${safe(o.id)}">Confirmar baixa retroativa</button></details>`;
+}
 function card(o){
  const events=Array.isArray(o.history)?o.history:[];
  const comments=Array.isArray(o.comments)?o.comments:[];
@@ -163,6 +170,7 @@ function card(o){
  ${o.instructions?`<p><b>Instruções:</b> ${safe(o.instructions)}</p>`:''}
  ${window.NexoOrthoPhotos&&db.p?.find(p=>String(p.id)===String(o.patient_id))?NexoOrthoPhotos.gallery(db.p.find(p=>String(p.id)===String(o.patient_id)),'lab:'+o.id):''}
  <div class="nxlab-actions"><button class="ghost sm" data-lab="details" data-id="${safe(o.id)}">Histórico e comentários (${events.length+comments.length})</button>${canEdit()?`<button class="ghost sm" data-lab="edit" data-id="${safe(o.id)}">Editar</button><button class="sm" data-lab="advance" data-id="${safe(o.id)}">Avançar etapa →</button><button class="danger sm" data-lab="delete" data-id="${safe(o.id)}">Excluir trabalho</button>`:''}</div>
+ ${historicalCompletion(o)}
  ${view.labDetails===o.id?`<div class="nxlab-timeline">${events.slice().reverse().map(h=>`<div><small>${safe(new Date(h.at).toLocaleString('pt-BR'))}</small> · ${safe(h.text)}</div>`).join('')}${comments.map(c=>`<div><small>${safe(new Date(c.at).toLocaleString('pt-BR'))}</small> · 💬 ${safe(c.text)}</div>`).join('')||'<p>Sem comentários.</p>'}${canEdit()?`<label class="nxlab-field"><span>Novo comentário</span><textarea id="nxlab-comment-${safe(o.id)}" maxlength="2000" rows="2" placeholder="Registre orientações, ajustes, ocorrências..."></textarea></label><button class="sm" data-lab="comment" data-id="${safe(o.id)}">Adicionar comentário</button>`:''}</div>`:''}
  `):''}
  </article>`;
@@ -313,6 +321,14 @@ async function execute(action,id){
   if(!Number.isFinite(pendingLink.cost)||pendingLink.cost<0){alert('Informe um custo laboratorial válido.');return;}
   if(where==='clinic'&&pendingLink.cost>0&&f.laboratory==='Na clínica'){alert('Identifique o laboratório responsável pelo valor a pagar ou deixe esse valor em zero para execução somente interna.');return;}
   o={...(original||{}),...f,...(cloud()?{treatment_id:pendingLink.tid||null,laboratory_cost:pendingLink.cost}:{}),id:original?.id||crypto.randomUUID(),history:[...(original?.history||[]),{at:stamp(),text:(original?'Dados e etapa atualizados':'Trabalho cadastrado')+' • Local: '+execution.label(where),execution_location:where}],comments:original?.comments||[],updated_at:stamp(),_new:!original};
+ }else if(action==='complete'){
+  if(['Entregue','Cancelado'].includes(old.status))return;
+  const field=$id('nxlab-completion-'+id);
+  if(!field?.reportValidity())return;
+  const reference=field.value;
+  o={...old,stage:'Entregue ao paciente',status:'Entregue',received_at:reference,history:[
+   ...(old.history||[]),{at:stamp(),text:'Baixa retroativa. Data de referência: '+reference+(old.received_at&&date(old.received_at)!==reference?' • Recebimento registrado anteriormente: '+date(old.received_at):'')}
+  ],updated_at:stamp()};
  }else if(action==='advance'){
   const stages=execution.stages(STAGES,execution.get(old)),ix=stages.indexOf(old.stage),next=stages[Math.min(ix+1,stages.length-1)];
   if(ix===stages.length-1){alert('O trabalho já está na última etapa.');return;}
