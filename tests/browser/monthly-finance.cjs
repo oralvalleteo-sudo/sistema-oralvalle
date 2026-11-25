@@ -89,11 +89,7 @@ await p.evaluate(()=>{
 await p.waitForFunction(()=>!document.getElementById('app').textContent.includes('Carregando'));
 assert.equal(await annualCard('Laboratórios pagos').innerText(),'750.00');
 assert.equal(await annualCard('Dentistas pagos').innerText(),'255.00');
-await p.getByText('Conferir lançamentos de laboratório em 2026',{exact:true}).click();
-assert.equal(await p.getByRole('heading',{name:'Pagos no ano (3)'}).isVisible(),true);
-assert.equal(await p.getByRole('heading',{name:'Despesas de laboratório a pagar (1)'}).isVisible(),true);
-assert.equal(await p.getByText(/12\/10\/2026 · Prótese anterior/).isVisible(),true);
-assert.equal(await p.getByText(/10\/2026 · Laboratório a pagar/).isVisible(),true);
+assert.equal(await p.getByText(/Conferir lançamentos de laboratório em/).count(),0);
 
 await p.locator('#nx-r-type').selectOption('balancemonthly');
 const monthlyTable=p.locator('.nx-report-table');
