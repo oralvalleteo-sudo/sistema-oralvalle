@@ -87,5 +87,15 @@
  root.addEventListener('nexodent:clinic-data-loaded',()=>{clear();redraw();});
  root.addEventListener('nexodent:lab-orders-updated',()=>{if(loaded&&root.NexoLabRead?.clinicId===loaded&&!payment&&!saving){loaded=null;attempted=null;redraw();}});
  root.addEventListener('nexodent:lab-payments-updated',event=>{if(event.detail?.source==='historical-completion'||(typeof view==='undefined'?null:view.h)!=='lab'){loaded=null;attempted=null;}});
- root.NexoLabPayables={html,load,clear};
+ async function openPayment(orderId){
+  if(!writable()||saving)return;
+  const activeClinic=clinic();
+  await load();
+  if(clinic()!==activeClinic||loaded!==activeClinic||view.h!=='lab'||view.id)return;
+  const order=rows.find(row=>String(row.id)===orderId);
+  if(!order||order.canceled||!order.balance){alert('Este trabalho não tem saldo disponível para pagamento.');return;}
+  payment=orderId;history=null;redraw();
+  $('lab-money-payment')?.scrollIntoView({block:'start'});
+ }
+ root.NexoLabPayables={html,load,clear,openPayment};
 })(typeof window==='undefined'?globalThis:window);
