@@ -10,11 +10,17 @@
   return lower[0].toLocaleUpperCase('pt-BR')+lower.slice(1);
  }
  function categoryKey(s){return categoryLabel(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+ const isLaboratoryCategory=value=>['laboratorio','laboratorios'].includes(categoryKey(value));
+ const isDentistCategory=value=>['dentista','dentistas','repasse dentista','repasse dentistas',
+  'repasse ao dentista','repasse aos dentistas','repasse de dentista','repasse de dentistas',
+  'repasses aos dentistas','repasses de dentistas'].includes(categoryKey(value));
+ const isDentistPayment=row=>row.direction<0&&(row.source==='Dentista'||row.source==='Despesa manual'&&isDentistCategory(row.category));
+ const isLabPayment=row=>row.direction<0&&(row.source==='Laboratório'||row.source==='Despesa manual'&&isLaboratoryCategory(row.category));
  function groupedCategory(label){
   const key=categoryKey(label);
   if(['salario','salarios'].includes(key))return 'Salários';
-  if(['repasse dentista','repasse ao dentista','repasse de dentista','dentista'].includes(key))return 'Dentista';
-  if(['laboratorio','laboratorios'].includes(key))return 'Laboratório';
+  if(isDentistCategory(label))return 'Dentista';
+  if(isLaboratoryCategory(label))return 'Laboratório';
   return label;
  }
  function calculate({sales=[],commissions=[],lab=[],labAccounts=[],expenses=[],from,to,labelForCategory=categoryLabel,today=new Date().toLocaleDateString('en-CA')}){
@@ -33,7 +39,7 @@
    if(match&&value===match.cents&&refs.get(ref)===1){matchedManual.set(match.id,e);if(e.paid_at!==match.date)warnings.push('Datas diferentes no vínculo '+ref+'; considerada a data do pagamento original.');continue;}
    if(ref)warnings.push('Confira o vínculo '+ref+': origem indisponível, repetida ou valor divergente.');
    const category=labelForCategory(e.category);
-   add({id:'EXP-'+e.id,date:e.paid_at,cents:value,direction:-1,source:'Despesa manual',category,reference_month:referenceMonth(e,today),description:e.description,expense:e});
+   add({id:'EXP-'+e.id,date:e.paid_at,cents:value,direction:-1,source:'Despesa manual',category,reference_month:isLaboratoryCategory(e.category)||isDentistCategory(e.category)?null:referenceMonth(e,today),description:e.description,expense:e});
   }
   const rows=all.filter(x=>x.reference_month?(x.reference_month>=from.slice(0,7)&&x.reference_month<=to.slice(0,7)):(x.date>=from&&x.date<=to)).sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id)),income=rows.filter(x=>x.direction>0).reduce((s,x)=>s+x.cents,0),outcome=rows.filter(x=>x.direction<0).reduce((s,x)=>s+x.cents,0);
   const entries=rows.filter(row=>row.direction<0).map(row=>({
@@ -69,5 +75,5 @@
  }
  function billKey(e){const normal=s=>String(s||'').trim().toLowerCase();return JSON.stringify([normal(e.description).replace(/\s+/g,' '),normal(e.category),normal(e.supplier),cents(e.amount),e.due_date||null,referenceMonth(e)]);}
  function reviews(expenses,today){const groups=new Map();for(const e of expenses){if(e.voided_at||e.external_reference||e.paid_at)continue;const key=billKey(e)+JSON.stringify([e.paid_at||null,e.planned_paid_at||null,e.payment_method||null]);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(e);}return [...groups.values()].filter(g=>g.length>1).map(g=>g.sort((a,b)=>String(a.id).localeCompare(String(b.id))));}
- return {calculate,cents,validDate,billKey,reviews,referenceMonth,inReference,categoryKey,categoryLabel};
+ return {calculate,cents,isLabPayment,isLaboratoryCategory,isDentistPayment,isDentistCategory,validDate,billKey,reviews,referenceMonth,inReference,categoryKey,categoryLabel};
 });
