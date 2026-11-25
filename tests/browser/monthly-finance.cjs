@@ -89,6 +89,22 @@ await p.evaluate(()=>{
 await p.waitForFunction(()=>!document.getElementById('app').textContent.includes('Carregando'));
 assert.equal(await annualCard('Laboratórios pagos').innerText(),'750.00');
 assert.equal(await annualCard('Dentistas pagos').innerText(),'255.00');
+await p.getByText('Conferir lançamentos de laboratório em 2026',{exact:true}).click();
+assert.equal(await p.getByRole('heading',{name:'Pagos no ano (3)'}).isVisible(),true);
+assert.equal(await p.getByRole('heading',{name:'Despesas de laboratório a pagar (1)'}).isVisible(),true);
+assert.equal(await p.getByText(/12\/10\/2026 · Prótese anterior/).isVisible(),true);
+assert.equal(await p.getByText(/10\/2026 · Laboratório a pagar/).isVisible(),true);
+
+await p.locator('#nx-r-type').selectOption('balancemonthly');
+const monthlyTable=p.locator('.nx-report-table');
+const headers=await monthlyTable.locator('th').allTextContents();
+const monthlyValue=(month,label)=>monthlyTable.locator('tbody tr').filter({has:p.getByRole('cell',{name:month,exact:true})}).locator('td').nth(headers.indexOf(label)).innerText();
+assert.equal(await monthlyValue('2026-10','Laboratórios pagos'),'200.00');
+assert.equal(await monthlyValue('2026-11','Laboratórios pagos'),'550.00');
+assert.equal(await monthlyValue('2026-10','Dentistas pagos'),'85.00');
+assert.equal(await monthlyValue('2026-11','Dentistas pagos'),'170.00');
+assert.equal(await monthlyValue('TOTAL','Laboratórios pagos'),'750.00');
+assert.equal(await monthlyValue('TOTAL','Dentistas pagos'),'255.00');
 await p.evaluate(()=>{window.NexoLabLoad=async()=>{};view.reportFrom='2026-10-01';view.reportTo='2026-10-31';view.reportType='labpayments';render();});
 await p.getByText('Pagamentos a laboratórios no período:',{exact:false}).waitFor();
 assert.match(await p.getByText('Pagamentos a laboratórios no período:',{exact:false}).innerText(),/200\.00/);
