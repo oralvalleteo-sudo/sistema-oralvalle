@@ -75,5 +75,25 @@ assert.equal(await annualCard('Recebimentos').innerText(),'1150.00');
 await p.evaluate(()=>{window.labAmount=550;window.dispatchEvent(new Event('nexodent:lab-payments-updated'));});
 await p.waitForFunction(()=>!document.getElementById('app').textContent.includes('Carregando'));
 assert.equal(await annualCard('Laboratórios pagos').innerText(),'670.00');
+await p.evaluate(()=>{
+ rows.push(
+  {id:'legacy-lab',description:'Prótese anterior',category:'laboratorios',amount:80,paid_at:'2026-10-12',reference_month:'2025-12-01'},
+  {id:'linked-lab',description:'Coroa conciliada',category:'Laboratório',amount:550,paid_at:'2026-11-04',external_reference:'LABPAY-lab'},
+  {id:'manual-dentist',description:'Repasse antigo',category:'Repasse aos dentistas',amount:85,paid_at:'2026-10-12',reference_month:'2025-12-01'},
+  {id:'linked-dentist',description:'Repasse conciliado',category:'Dentistas',amount:100,paid_at:'2026-11-03',external_reference:'CP-cp'},
+  {id:'unpaid-dentist',description:'Repasse a pagar',category:'Dentista',amount:950,reference_month:'2026-10-01'},
+  {id:'unpaid-lab',description:'Laboratório a pagar',category:'Laboratório',amount:900,reference_month:'2026-10-01'}
+ );
+ window.dispatchEvent(new Event('nexodent:expenses-updated'));
+});
+await p.waitForFunction(()=>!document.getElementById('app').textContent.includes('Carregando'));
+assert.equal(await annualCard('Laboratórios pagos').innerText(),'750.00');
+assert.equal(await annualCard('Dentistas pagos').innerText(),'255.00');
+await p.evaluate(()=>{window.NexoLabLoad=async()=>{};view.reportFrom='2026-10-01';view.reportTo='2026-10-31';view.reportType='labpayments';render();});
+await p.getByText('Pagamentos a laboratórios no período:',{exact:false}).waitFor();
+assert.match(await p.getByText('Pagamentos a laboratórios no período:',{exact:false}).innerText(),/200\.00/);
+await p.getByText('Ver despesas pagas de laboratório (2)',{exact:true}).click();
+assert.equal(await p.getByText(/Prótese anterior/).isVisible(),true);
+assert.equal(await p.getByText(/Laboratório a pagar/).count(),0);
 console.log('Balanço anual carrega automaticamente, preserva fontes disponíveis durante falhas e atualiza com o balanço mensal.');
 assert.deepEqual(errors,[]);console.log('Mensal: referência independente do dia pago, vencimento opcional, categoria livre, totais/gráfico, união de categorias, edição/exclusão auditáveis e atualizações automáticas de laboratório/dentistas.');}finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
