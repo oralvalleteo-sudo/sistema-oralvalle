@@ -15,7 +15,25 @@ await page.route('**/*',async route=>{const url=new URL(route.request().url());i
 if(url.hostname!=='checkup.invalid')return route.fulfill({contentType:'text/javascript',body:''});const file=path.resolve(root,'.'+url.pathname.replace(/^\/sistema-oralvalle\//,'/'));if(!file.startsWith(root+'/')||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:''});return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:fs.readFileSync(file)});});
 await page.goto('https://checkup.invalid/sistema-oralvalle/index.html');await page.locator('.ov-sidebar').first().waitFor({state:'visible'});assert.ok(await page.getByText('Agenda do dia',{exact:true}).isVisible());
 const agendaButtonColor=await page.locator('[data-act="agtoday"]').evaluate(el=>getComputedStyle(el).backgroundColor);
-const menu=page.locator('.ov-sidebar').first();await menu.locator('[data-t="pac"]').click();await page.waitForTimeout(200);assert.equal(await page.locator('.ov-new-patient').evaluate(el=>getComputedStyle(el).backgroundColor),agendaButtonColor);assert.equal(await page.locator('.ov-new-patient').evaluate(el=>getComputedStyle(el).backgroundImage),'none');assert.equal(await page.evaluate(()=>window.injected),undefined);assert.equal(await page.locator('img[src="x"]').count(),0);await page.locator('[data-act="novoPac"]').click();await page.locator('#nn').fill('Novo paciente sintético');await page.locator('#nt').fill('11988887777');await page.locator('#pvAdd').click();try{await page.waitForFunction(()=>db.p.some(p=>p.nome==='Novo paciente sintético'));await page.evaluate(()=>window.OralCloudSync.flush());}catch(e){console.log('STATUS',await page.locator('body').innerText());throw e;}assert.equal(Number((await db.query("select count(*) n from patients where kind='object' and dados->>'nome'=$1",['Novo paciente sintético'])).rows[0].n),1);
+const menu=page.locator('.ov-sidebar').first();
+await menu.locator('[data-t="cfg"]').click();
+await page.getByRole('button',{name:/Aparência/}).click();
+const appearance=page.getByLabel('Tema neste dispositivo');
+assert.equal(await appearance.inputValue(),'light');
+await appearance.selectOption('soft');
+assert.equal(await page.evaluate(()=>localStorage.getItem('nexodent:appearance:device:v1')),'soft');
+await menu.locator('[data-t="ag"]').click();
+assert.equal(await page.locator('.ov-content').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(230, 227, 220)');
+for(const panel of ['.ag-date-panel','.ag-new-form','.ag-rental-panel']){
+ assert.equal(await page.locator(panel).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(242, 239, 232)',panel);
+}
+assert.equal(await page.locator('#agDate').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(245, 242, 235)');
+await menu.locator('[data-t="cfg"]').click();
+if(!await appearance.isVisible())await page.getByRole('button',{name:/Aparência/}).click();
+assert.equal(await appearance.inputValue(),'soft');
+await appearance.selectOption('light');
+assert.equal(await page.locator('html[data-ov-soft]').count(),0);
+await menu.locator('[data-t="pac"]').click();await page.waitForTimeout(200);assert.equal(await page.locator('.ov-new-patient').evaluate(el=>getComputedStyle(el).backgroundColor),agendaButtonColor);assert.equal(await page.locator('.ov-new-patient').evaluate(el=>getComputedStyle(el).backgroundImage),'none');assert.equal(await page.evaluate(()=>window.injected),undefined);assert.equal(await page.locator('img[src="x"]').count(),0);await page.locator('[data-act="novoPac"]').click();await page.locator('#nn').fill('Novo paciente sintético');await page.locator('#nt').fill('11988887777');await page.locator('#pvAdd').click();try{await page.waitForFunction(()=>db.p.some(p=>p.nome==='Novo paciente sintético'));await page.evaluate(()=>window.OralCloudSync.flush());}catch(e){console.log('STATUS',await page.locator('body').innerText());throw e;}assert.equal(Number((await db.query("select count(*) n from patients where kind='object' and dados->>'nome'=$1",['Novo paciente sintético'])).rows[0].n),1);
 await menu.locator('[data-t="ag"]').click();await page.locator('#apn').fill('Novo paciente');await page.locator('[data-act="agpick"]').first().click();await page.locator('#ah').fill('10:00');await page.locator('[data-act="addag"]').click();try{await page.waitForFunction(()=>window.OralCloudSync?.dirty===false);}catch(e){console.log('STATUS',await page.locator('body').innerText());throw e;}assert.equal(Number((await db.query("select count(*) n from appointments where kind='object' and dados->>'hora'='10:00'")).rows[0].n),1);
 assert.equal(await page.locator('.slot-free').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');await page.locator('.slot-free').first().scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/nexo-agenda-standard.png'});
 for(const tab of ['pac','lem','wa','dt','vd','reports','pf','hc','pr','mt','bk','cfg','sigdoc','chat']){const button=menu.locator(`[data-t="${tab}"]`).first();if(await button.count()){await button.click();await page.locator('.ov-content').waitFor({state:'visible'});assert.equal(await page.locator('.ov-sidebar').first().isVisible(),true);}}
@@ -456,21 +474,6 @@ assert.equal(await page.evaluate(date=>db.ag.some(a=>a.data===date&&a.st==='Agen
 await menu.locator('[data-t="cfg"]').click();
 await page.getByRole('button',{name:/Aparência/}).click();
 await page.getByRole('heading',{name:'Som e notificações'}).waitFor();
-const appearance=page.getByLabel('Tema neste dispositivo');
-assert.equal(await appearance.inputValue(),'light');
-await appearance.selectOption('soft');
-assert.equal(await page.evaluate(()=>localStorage.getItem('nexodent:appearance:device:v1')),'soft');
-await menu.locator('[data-t="ag"]').click();
-assert.equal(await page.locator('.ov-content').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(230, 227, 220)');
-for(const panel of ['.ag-date-panel','.ag-new-form','.ag-rental-panel']){
- assert.equal(await page.locator(panel).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(242, 239, 232)',panel);
-}
-assert.equal(await page.locator('#agDate').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(245, 242, 235)');
-await menu.locator('[data-t="cfg"]').click();
-if(!await appearance.isVisible())await page.getByRole('button',{name:/Aparência/}).click();
-assert.equal(await appearance.inputValue(),'soft');
-await appearance.selectOption('light');
-assert.equal(await page.locator('html[data-ov-soft]').count(),0);
 await page.locator('#avsSound').uncheck();
 assert.equal(await page.evaluate(()=>window.NexoNotificationSound.enabled()),false);
 await page.locator('#avsSound').check();

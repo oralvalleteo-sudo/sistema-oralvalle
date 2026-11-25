@@ -253,7 +253,7 @@ html[data-ov-mode="light"][data-ov-soft] {
   --ov-soft-field:#f5f2eb;
 }
 @media screen {
-  html[data-ov-soft] :is(body,#app,.ov-shell,.ov-main,.ov-content,#ov-startup-shell) {
+  html[data-ov-soft] :is(body,#app,.ov-shell,.ov-main,.ov-content,.ov-content-inner,.nexo-agenda-page,.ov-modern-page,.ov-patients-page,#ov-startup-shell) {
     background-color:var(--ov-bg)!important;
   }
   html[data-ov-soft] .ov-top {
@@ -262,8 +262,8 @@ html[data-ov-mode="light"][data-ov-soft] {
   html[data-ov-soft] :is(.ov-content,.nexo-agenda-page) :is(.card,.ov-panel,.nexo-stat,.ag-flow-row) {
     background-color:var(--sf)!important;border-color:var(--ln);
   }
-  html[data-ov-soft] .nexo-agenda-page :is(.ag-date-panel,.ag-new-form,.ag-rental-panel) {
-    background:var(--sf)!important;
+  html[data-ov-mode="light"][data-ov-soft] body .nexo-agenda-page :is(.ag-date-panel,.nexo-agenda-tools > .ag-new-form.card,.nexo-agenda-tools > .ag-rental-panel.card,.ov-agenda-chairs > .card) {
+    background:var(--sf)!important;border-color:var(--ln)!important;
   }
   html[data-ov-soft] .nexo-agenda-page :is(#agDate,#agDent) {
     background-color:var(--ov-soft-field)!important;border-color:#92948c!important;
