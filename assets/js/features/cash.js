@@ -8,7 +8,7 @@
  let clinic=null,epoch=0,loading=false,busy=false,loaded=false,expenses=[],lab=[],labAccounts=[],warnings=[],error='',draft=null,draftId=null,notice='',editOriginal=null;
  let draftRetroactive=false;
  const expandedCategories=new Set();
- let expensesReady=false,expenseFilter='all',expenseListOpen=true;
+ let expensesReady=false,expenseFilter='all',expenseCategory=null,expenseListOpen=true;
  let sourceClinic=window.OralCloud?.clinicId||null;
  const monthEnd=m=>new Date(Date.UTC(Number(m.slice(0,4)),Number(m.slice(5,7)),0)).toISOString().slice(0,10);
  let from=today().slice(0,7)+'-01',to=monthEnd(today().slice(0,7));
@@ -17,7 +17,7 @@
  const writable=()=>allowed()&&pmLvl('vd')>=2;
  const active=()=>typeof view!=='undefined'&&view.h==='cash'&&!view.id;
  const redraw=()=>{if(active()&&typeof render==='function')render()};
- function clear(){expandedCategories.clear();epoch++;clinic=null;loading=false;loaded=false;expenses=[];lab=[];labAccounts=[];warnings=[];error='';draft=null;draftId=null;notice='';editOriginal=null;expensesReady=false;expenseFilter='all';expenseListOpen=true;draftRetroactive=false;}
+ function clear(){expandedCategories.clear();epoch++;clinic=null;loading=false;loaded=false;expenses=[];lab=[];labAccounts=[];warnings=[];error='';draft=null;draftId=null;notice='';editOriginal=null;expensesReady=false;expenseFilter='all';expenseCategory=null;expenseListOpen=true;draftRetroactive=false;}
  async function pages(table,fields,c,order='id'){const rows=[];for(let offset=0;offset<20000;offset+=500){if(id()!==c||!allowed())throw Error('Clínica ou acesso alterado.');const page=await OralCloud.request('/rest/v1/'+table+'?select='+fields+'&clinic_id=eq.'+encodeURIComponent(c)+'&order='+order+'.asc&limit=500&offset='+offset);if(!Array.isArray(page))throw Error('Resposta inválida.');rows.push(...page);if(page.length<500)return rows;}throw Error('Limite de consulta atingido. Totais incompletos.');}
  async function load(){
   if(!allowed()||loading)return;
@@ -120,11 +120,15 @@
  function html(){if(!allowed())return '<section class="card">Conecte-se à clínica e confira o acesso à aba Controle.</section>';if(clinic!==id()){clear();clinic=id();setTimeout(load,0);}else if(!loaded&&!loading)setTimeout(load,0);
   const labels=categoryLabels(),r=report(labels),ready=loaded,known=ready?r.partial?' (parcial)':'':'';
   const pendingOnly=expenseFilter==='pending',paidOnly=expenseFilter==='paid';
-  const entries=(ready||expensesReady?sortedEntries(r.entries):[]).filter(row=>expenseFilter==='all'||row.paid===paidOnly);
+  const categoryOptions=[...r.categories].sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'));
+  const selectedCategory=expenseCategory&&categoryOptions.find(category=>category.key===expenseCategory.key);
+  if(expenseCategory&&!selectedCategory)categoryOptions.push(expenseCategory);
+  const categoryEntries=expenseCategory?(selectedCategory?.entries||[]):r.entries;
+  const entries=(ready||expensesReady?sortedEntries(categoryEntries):[]).filter(row=>expenseFilter==='all'||row.paid===paidOnly);
   const pendingLabel='Contas a pagar do mês',paidLabel='Contas pagas do mês';
   const listTitle=pendingOnly?pendingLabel:paidOnly?paidLabel:'Despesas do mês';
   const listReady=pendingOnly?expensesReady:ready;
-  const emptyMessage=pendingOnly
+  const emptyMessage=expenseCategory&&listReady?'Nenhum lançamento nesta categoria para os filtros selecionados.':pendingOnly
    ? expensesReady?'Nenhuma conta a pagar neste mês.':loaded&&!loading?'Contas a pagar indisponíveis.':'Carregando contas a pagar…'
    : !ready?'Aguardando carregamento.':paidOnly?'Nenhuma conta paga nos dados disponíveis deste mês.':'Nenhuma despesa cadastrada neste mês.';
   const filterButton=(action,label,value,available,caption)=>`<button type="button" class="card nx-cash-filter" data-cash="${action}" aria-controls="nx-cash-expenses" aria-pressed="${expenseFilter===action}"><span>${label}</span><strong>${available?money(value):'—'}</strong><small>${caption} →</small></button>`;
@@ -140,6 +144,10 @@
   </div></section>`:''}
   ${window.NexoCashImport?.html()||''}${reviewHtml()}${form()}
   <details class="card" id="nx-cash-expenses"${expenseListOpen?' open':''}><summary style="color:#243247;font-weight:600;cursor:pointer">${listTitle}</summary>
+  <div class="nx-cash-grid" data-ro-ok><label>Filtrar por categoria<select id="nx-cash-category-filter">
+   <option value="">Todas as categorias</option>
+   ${categoryOptions.map(category=>`<option value="${esc(category.key)}"${category.key===expenseCategory?.key?' selected':''}>${esc(category.label)}</option>`).join('')}
+  </select></label></div>
   ${expenseFilter!=='all'?'<button type="button" class="ghost sm" data-cash="all">Ver todas as despesas</button>':''}
   ${expenseTable(entries,listReady,emptyMessage,pendingOnly?'Total a pagar':paidOnly?'Total pago':'Total da lista')}</details>
   ${categoryDashboard(r,ready,labels)}`;
@@ -179,7 +187,14 @@
  function readExpenseForm(f){const raw=Object.fromEntries(new FormData(f)),custom=raw.category==='__new__',name=String(raw.custom_category||'').trim();delete raw.custom_category;return {...raw,category:custom?name:raw.category,_categoryMode:custom,_categoryCustom:custom?name:''};}
  document.addEventListener('input',e=>{const f=e.target.closest?.('#nx-cash-form');if(f&&draft)draft=readExpenseForm(f);});
  document.addEventListener('change',e=>{if(draftRetroactive&&e.target.name==='paid_at'&&e.target.form?.id==='nx-cash-form'&&model.validDate(e.target.value))e.target.form.elements.reference_month.value=e.target.value.slice(0,7);
-  if(e.target.id==='nx-cash-category-choice'){const custom=e.target.value==='__new__',field=document.getElementById('nx-cash-custom-category-field'),input=field.querySelector('input');field.hidden=!custom;input.disabled=!custom;input.required=custom;if(custom)input.focus();}if(e.target.id==='nx-cash-month'){
+  if(e.target.id==='nx-cash-category-choice'){const custom=e.target.value==='__new__',field=document.getElementById('nx-cash-custom-category-field'),input=field.querySelector('input');field.hidden=!custom;input.disabled=!custom;input.required=custom;if(custom)input.focus();}if(e.target.id==='nx-cash-category-filter'){
+  if(!active()||!allowed())return;
+  const {value,selectedOptions}=e.target;
+  expenseCategory=value?{key:value,label:selectedOptions[0].textContent}:null;
+  redraw();
+  document.getElementById('nx-cash-category-filter')?.focus({preventScroll:true});
+  return;
+ }if(e.target.id==='nx-cash-month'){
   if(!active()||!allowed())return;
   const month=e.target.value;
   if(!model.validDate(month+'-01')){e.target.value=from.slice(0,7);return;}
