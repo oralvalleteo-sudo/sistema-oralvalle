@@ -88,7 +88,7 @@ await p.waitForFunction(()=>!document.getElementById('app').textContent.includes
 assert.equal(await annualCard('Laboratórios pagos').innerText(),'670.00');
 await p.evaluate(()=>{
  rows.push(
-  {id:'legacy-lab',description:'Prótese anterior',category:'laboratorios',amount:80,paid_at:'2026-10-12',reference_month:'2025-12-01'},
+  {id:'legacy-lab',description:'Prótese anterior',category:'PROTETICO',amount:80,paid_at:'2026-10-12',reference_month:'2025-12-01'},
   {id:'linked-lab',description:'Coroa conciliada',category:'Laboratório',amount:550,paid_at:'2026-11-04',external_reference:'LABPAY-lab'},
   {id:'manual-dentist',description:'Repasse antigo',category:'Repasse aos dentistas',amount:85,paid_at:'2026-10-12',reference_month:'2025-12-01'},
   {id:'linked-dentist',description:'Repasse conciliado',category:'Dentistas',amount:100,paid_at:'2026-11-03',external_reference:'CP-cp'},
