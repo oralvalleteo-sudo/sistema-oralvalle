@@ -46,19 +46,41 @@
   if(!clinicReady()||!usesFinancialSources(view.reportType)||!allowed(view.reportType)||state.loading||state.attempted&&!force)return;
   state.loading=true;state.attempted=true;state.errors=[];
   const filter='&clinic_id=eq.'+encodeURIComponent(state.clinic)+'&order=id.asc';
-  const read=(key,label,url)=>fetchAllFinancial(url+filter,state.clinic).then(rows=>{
+  const read=(key,label,request)=>request.then(rows=>{
    if(balanceSources===state)state[key]=rows;
   },error=>{
    if(balanceSources===state){state[key]=null;state.errors.push(label+': '+error.message);}
   });
   Promise.all([
-   read('expenses','Despesas gerais','/rest/v1/nexodent_general_expenses?select=id,description,category,amount,reference_month,created_at,due_date,paid_at,voided_at,external_reference'),
-   read('lab','Laboratório','/rest/v1/nexodent_lab_payment_events?select=id,source_order_id,amount,paid_at,kind')
+   read('expenses','Despesas gerais',fetchAllFinancial('/rest/v1/nexodent_general_expenses?select=id,description,category,amount,reference_month,created_at,due_date,paid_at,voided_at,external_reference'+filter,state.clinic)),
+   read('lab','Laboratório',Promise.all([
+    fetchAllFinancial('/rest/v1/nexodent_lab_payment_events?select=id,source_order_id,amount,paid_at,kind'+filter,state.clinic),
+    fetchAllFinancial('/rest/v1/nexodent_lab_settlements?select=source_order_id,paid_amount,paid_at&clinic_id=eq.'+encodeURIComponent(state.clinic)+'&order=source_order_id.asc',state.clinic)
+   ]).then(([events,settlements])=>labPaymentsWithLegacy(events,settlements)))
   ]).then(()=>{
    if(balanceSources!==state)return;
    state.loading=false;state.loadedAt=Date.now();
    if(view.h==='reports'&&usesFinancialSources(view.reportType))render();
   });
+ }
+ function labPaymentsWithLegacy(events,settlements){
+  const {cents,validDate}=window.NexoCashModel;
+  const openingByOrder=new Map();
+  for(const event of events){
+   if(event.kind!=='opening')continue;
+   const id=String(event.source_order_id);
+   openingByOrder.set(id,(openingByOrder.get(id)||0)+cents(event.amount));
+  }
+  // A abertura espelha o saldo legado. Use a data da quitação original quando ela cobre esse saldo.
+  const datedSettlements=settlements.filter(row=>{
+   const amount=cents(row.paid_amount);
+   return row.source_order_id&&amount>0&&validDate(row.paid_at)
+    &&amount>=(openingByOrder.get(String(row.source_order_id))||0);
+  });
+  return [...events,...datedSettlements.map(row=>({
+   id:'legacy-'+row.source_order_id,source_order_id:row.source_order_id,
+   amount:row.paid_amount,paid_at:row.paid_at
+  }))];
  }
  function ledgerStatus(state){
   if(state.loading)return 'Carregando dados financeiros…';
@@ -524,7 +546,8 @@
   if(!confirmed)return;
   await window.OralCloud.request('/rest/v1/rpc/nexodent_set_lab_payment',{method:'POST',body:{p_clinic:id,p_order_id:String(orderId),p_amount:paid,p_paid_at:paid?date:null,p_method:paid?method:null}});
   if(window.OralCloud.clinicId!==id)return;
-  await loadLabSettlements();await loadLabEvents();if(window.view?.h==='reports')window.render();
+  window.dispatchEvent(new Event('nexodent:lab-payments-updated'));
+  await loadLabSettlements();await loadLabEvents();if(view.h==='reports')render();
  }
  function annualLabDetails(d){
   if(d.lab===null)return '';

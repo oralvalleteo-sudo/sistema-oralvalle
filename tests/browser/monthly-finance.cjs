@@ -111,5 +111,26 @@ assert.match(await p.getByText('Pagamentos a laboratórios no período:',{exact:
 await p.getByText('Ver despesas pagas de laboratório (2)',{exact:true}).click();
 assert.equal(await p.getByText(/Prótese anterior/).isVisible(),true);
 assert.equal(await p.getByText(/Laboratório a pagar/).count(),0);
+await p.evaluate(()=>{
+ const request=OralCloud.request;
+ OralCloud.request=async(path,options)=>{
+  if(path.includes('nexodent_lab_settlements'))return [
+   {source_order_id:'dm-current',paid_amount:600,paid_at:'2026-11-18'},
+   {source_order_id:'dm-previous',paid_amount:300,paid_at:'2025-12-12'}
+  ];
+  if(path.includes('nexodent_lab_payment_events'))return [
+   ...await request(path,options),
+   {id:'opening',kind:'opening',source_order_id:'dm-current',amount:600,paid_at:'2026-11-18'}
+  ];
+  return request(path,options);
+ };
+ view.reportType='balanceannual';
+ view.balanceYear='2026';
+ window.dispatchEvent(new Event('nexodent:lab-payments-updated'));
+});
+await p.waitForFunction(()=>!document.getElementById('app').textContent.includes('Carregando'));
+assert.equal(await annualCard('Laboratórios pagos').innerText(),'1350.00');
+await p.evaluate(()=>{view.balanceYear='2025';render();});
+assert.equal(await annualCard('Laboratórios pagos').innerText(),'300.00');
 console.log('Balanço anual carrega automaticamente, preserva fontes disponíveis durante falhas e atualiza com o balanço mensal.');
 assert.deepEqual(errors,[]);console.log('Mensal: referência independente do dia pago, vencimento opcional, categoria livre, totais/gráfico, união de categorias, edição/exclusão auditáveis e atualizações automáticas de laboratório/dentistas.');}finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
