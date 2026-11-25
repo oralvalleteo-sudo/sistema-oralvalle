@@ -139,5 +139,21 @@ await p.waitForFunction(()=>!document.getElementById('app').textContent.includes
 assert.equal(await annualCard('Laboratórios pagos').innerText(),'1350.00');
 await p.evaluate(()=>{view.balanceYear='2025';render();});
 assert.equal(await annualCard('Laboratórios pagos').innerText(),'300.00');
+await p.evaluate(()=>{
+ view.balanceYear='2026';
+ rows.push(
+  {id:'ads',description:'Anúncios',category:'Marketing',amount:100,paid_at:'2026-09-10',reference_month:'2026-09-01'},
+  {id:'ads-digital',description:'Anúncios digitais',category:'MARKETING DIGITAL',amount:50,paid_at:'2026-10-10',reference_month:'2026-10-01'},
+  {id:'ads-pending',description:'Anúncios em aberto',category:'Marketing digital',amount:1000,reference_month:'2026-10-01'}
+ );
+ db.vd.push({id:'marketing-test-receipt',valor:1000,data:'2026-10-15',pg:[{id:'extra',valor:1000,data:'2026-10-15'}]});
+ for(const sale of db.vd)for(const payment of sale.pg||[])payment.taxaValor=0;
+ window.dispatchEvent(new Event('nexodent:expenses-updated'));
+});
+await p.waitForFunction(()=>!document.getElementById('app').textContent.includes('Carregando'));
+assert.equal(await annualCard('Marketing digital').innerText(),'150.00');
+const annualValue=async label=>Number(await annualCard(label).innerText());
+assert.equal(await annualValue('Resultado operacional'),
+ await annualValue('Recebimentos')-await annualValue('Despesas gerais pagas')-await annualValue('Laboratórios pagos')-await annualValue('Dentistas pagos')-await annualValue('Taxas'));
 console.log('Balanço anual carrega automaticamente, preserva fontes disponíveis durante falhas e atualiza com o balanço mensal.');
 assert.deepEqual(errors,[]);console.log('Mensal: referência independente do dia pago, vencimento opcional, categoria livre, totais/gráfico, união de categorias, edição/exclusão auditáveis e atualizações automáticas de laboratório/dentistas.');}finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
