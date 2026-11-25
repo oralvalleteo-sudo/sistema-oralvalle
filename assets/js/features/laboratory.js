@@ -447,6 +447,22 @@ function labPatientOptions(patients,selected){
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-lab]');if(btn){e.preventDefault();execute(btn.dataset.lab,btn.dataset.id,btn);}});
 document.addEventListener('change',e=>{if(e.target.id==='nxlab-filter'){filter=e.target.value;renderLab();}if(e.target.id==='nxlab-execution-filter'){executionFilter=e.target.value;renderLab();}if(e.target.id==='nxlab-search'){search=e.target.value;renderLab();}});
 document.addEventListener('keydown',e=>{if(e.target.id==='nxlab-search'&&e.key==='Enter'){search=e.target.value;renderLab();}});
+window.NexoLabOpenFromExpense=async(action,orderId)=>{
+ if(!allowed()||busy||(action==='edit'&&!canEdit()))return;
+ const activeClinic=clinic();
+ view.h='lab';view.id=null;
+ labSection=action==='edit'?'work':'money';
+ if(action==='edit'){
+  filter='todos';search='';executionFilter='all';
+  view.labExpanded=orderId;
+ }
+ renderLab();
+ if(action==='pay'){await window.NexoLabPayables?.openPayment(orderId);return;}
+ await fetchOrders(true);
+ if(!isLab()||clinic()!==activeClinic||labSection!=='work')return;
+ if(loadedClinic===(activeClinic||'local')&&orders.some(order=>String(order.id)===orderId)){await execute('edit',orderId);return;}
+ alert('Não foi possível localizar o trabalho para edição.');
+};
 window.addEventListener('nexodent:signed-out',()=>{orderEpoch++;fetchTask=null;fetchTaskClinic=null;orders=[];loadedClinic=null;loadAttemptedClinic=null;loading=false;editing=null;careDraft=null;labSection='work';executionFilter='all';window.NexoLabRead=null;});
 window.addEventListener('nexodent:clinic-data-loaded',()=>{executionFilter='all';loadedClinic=null;loadAttemptedClinic=null;if(isLab())fetchOrders(true);});
 window.addEventListener('focus',()=>{if(isLab())fetchOrders(true);});

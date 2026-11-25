@@ -96,12 +96,20 @@
    const due=e.expense?.due_date;
    const status=e.paid?'Paga em '+dBR(e.date):(due&&due<t?'Vencida':'A pagar')+
     (e.expense?.planned_paid_at?' · previsto em '+dBR(e.expense.planned_paid_at):'');
-   return `<tr><td>${esc(mBR(e.month))}</td><td>${esc(dBR(e.date))}</td><td>${esc(dBR(due))}</td><td>${esc(e.description)}</td><td>${esc(e.category)}</td><td>${money(e.cents)}</td><td>${esc(status)}</td><td>${expenseActions(e.expense)}</td></tr>`;
+   return `<tr><td>${esc(mBR(e.month))}</td><td>${esc(dBR(e.date))}</td><td>${esc(dBR(due))}</td><td>${esc(e.description)}</td><td>${esc(e.category)}</td><td>${money(e.cents)}</td><td>${esc(status)}</td><td>${expenseActions(e)}</td></tr>`;
   }).join('')||'<tr><td colspan="8">'+empty+'</td></tr>'}</tbody>
   <tfoot><tr><th colspan="5">${totalLabel}</th><th>${ready?money(entries.reduce((sum,e)=>sum+e.cents,0)):'—'}</th><th colspan="2"></th></tr></tfoot></table></div>`;
  }
- function expenseActions(expense){
-  if(!expense||!writable())return '—';
+ function expenseActions(entry){
+  const {expense}=entry;
+  if(!expense){
+   if(entry.paid||entry.source!=='Laboratório'||!entry.id.startsWith('LAB-')||!window.NexoLabOpenFromExpense)return '—';
+   const orderId=esc(entry.id.slice(4));
+   const pay=writable()?`<button class="ghost sm" data-cash="lab-pay" data-id="${orderId}">Registrar pagamento</button>`:'';
+   const edit=pmLvl('lab')>=2&&pmLvl('pac')>=2?`<button class="ghost sm" data-cash="lab-edit" data-id="${orderId}">Editar trabalho</button>`:'';
+   return [pay,edit].filter(Boolean).join(' ')||'—';
+  }
+  if(!writable())return '—';
   const id=esc(expense.id),disabled=busy?' disabled':'';
   return `${!expense.paid_at?`<button class="ghost sm" data-cash="pay" data-id="${id}"${disabled}>Registrar pagamento</button> `:''}
    <button class="ghost sm" data-cash="edit" data-id="${id}"${disabled}>Editar</button>
@@ -181,7 +189,7 @@
   return;
  }const f=e.target.closest?.('#nx-cash-form');if(f&&draft)draft=readExpenseForm(f);});
  document.addEventListener('submit',e=>{if(e.target.id==='nx-cash-merge'){e.preventDefault();mergeCategories(e.target);return;}if(e.target.id==='nx-cash-form'){e.preventDefault();save(e.target)}});
- document.addEventListener('click',e=>{const b=e.target.closest('[data-cash]');if(!b||!active()||!allowed())return;const action=b.dataset.cash;if(window.NexoCashImport?.running&&['new','edit','pay','delete','review','import'].includes(action))return;if(action==='import'&&writable()&&!busy){window.NexoCashImport?.open();return;}if(['pending','paid','all'].includes(action)){expenseFilter=action;expenseListOpen=true;redraw();const list=document.getElementById('nx-cash-expenses');list?.querySelector('summary')?.focus({preventScroll:true});list?.scrollIntoView({block:'start'});return;}if(action==='new-category'){openExpense(b.dataset.category);return;}if(action==='refresh'&&!busy)load();if(action==='new'&&writable()&&!busy){if(!draft||editOriginal){draftRetroactive=false;draft={category:'Aluguel',due_date:'',reference_month:from.slice(0,7)};draftId=crypto.randomUUID();editOriginal=null;}redraw();document.getElementById('nx-cash-form')?.scrollIntoView({block:'center'});}if(action==='cancel'&&!busy){draft=null;draftId=null;editOriginal=null;redraw();}if(action==='edit'&&writable()&&!busy){const row=expenses.find(e=>String(e.id)===String(b.dataset.id));if(row){editOriginal={...row};draftId=null;draftRetroactive=false;draft={...row,reference_month:model.referenceMonth(row,today()),amount:String(row.amount),due_date:row.due_date||'',paid_at:row.paid_at||'',planned_paid_at:row.planned_paid_at||'',payment_method:row.payment_method||''};redraw();document.getElementById('nx-cash-form')?.scrollIntoView({block:'center'});}}if(action==='delete')remove(b.dataset.id);if(action==='review')review(b.dataset.id);if(action==='pay')pay(b.dataset.id);if(action==='csv')csv();});
+ document.addEventListener('click',e=>{const b=e.target.closest('[data-cash]');if(!b||!active()||!allowed())return;const action=b.dataset.cash;if(action==='lab-pay'||action==='lab-edit'){if(!busy&&!window.NexoCashImport?.running)window.NexoLabOpenFromExpense?.(action.slice(4),b.dataset.id);return;}if(window.NexoCashImport?.running&&['new','edit','pay','delete','review','import'].includes(action))return;if(action==='import'&&writable()&&!busy){window.NexoCashImport?.open();return;}if(['pending','paid','all'].includes(action)){expenseFilter=action;expenseListOpen=true;redraw();const list=document.getElementById('nx-cash-expenses');list?.querySelector('summary')?.focus({preventScroll:true});list?.scrollIntoView({block:'start'});return;}if(action==='new-category'){openExpense(b.dataset.category);return;}if(action==='refresh'&&!busy)load();if(action==='new'&&writable()&&!busy){if(!draft||editOriginal){draftRetroactive=false;draft={category:'Aluguel',due_date:'',reference_month:from.slice(0,7)};draftId=crypto.randomUUID();editOriginal=null;}redraw();document.getElementById('nx-cash-form')?.scrollIntoView({block:'center'});}if(action==='cancel'&&!busy){draft=null;draftId=null;editOriginal=null;redraw();}if(action==='edit'&&writable()&&!busy){const row=expenses.find(e=>String(e.id)===String(b.dataset.id));if(row){editOriginal={...row};draftId=null;draftRetroactive=false;draft={...row,reference_month:model.referenceMonth(row,today()),amount:String(row.amount),due_date:row.due_date||'',paid_at:row.paid_at||'',planned_paid_at:row.planned_paid_at||'',payment_method:row.payment_method||''};redraw();document.getElementById('nx-cash-form')?.scrollIntoView({block:'center'});}}if(action==='delete')remove(b.dataset.id);if(action==='review')review(b.dataset.id);if(action==='pay')pay(b.dataset.id);if(action==='csv')csv();});
  window.addEventListener('nexodent:signed-out',()=>{sourceClinic=null;clear()});
  window.addEventListener('nexodent:clinic-data-loaded',()=>{sourceClinic=id();if(clinic!==id())clear();if(active())redraw()});
  window.addEventListener('nexodent:modules-updated',()=>{if(!allowed())clear();redraw()});
