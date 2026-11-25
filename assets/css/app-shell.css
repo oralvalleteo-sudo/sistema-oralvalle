@@ -2340,6 +2340,14 @@ html[data-ov-mode="dark"] .pf-followup input[type="checkbox"]:checked {
 html .pf-followup input[type="checkbox"]:focus-visible {
   outline-color: var(--ink, #303943);
 }
+
+
+/* Texto dos cartões e totais de Comissões. */
+html .commission-list .note,
+html .commission-totals .note,
+html .commission-amount {
+  color: var(--ink, #303943);
+}
 /* theme-mode.css */
 :root { color-scheme: light; }
 /* Aparência: sobrepõe apenas cores, preservando layout e identidade da clínica. */
