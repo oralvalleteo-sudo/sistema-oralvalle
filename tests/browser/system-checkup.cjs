@@ -456,6 +456,21 @@ assert.equal(await page.evaluate(date=>db.ag.some(a=>a.data===date&&a.st==='Agen
 await menu.locator('[data-t="cfg"]').click();
 await page.getByRole('button',{name:/Aparência/}).click();
 await page.getByRole('heading',{name:'Som e notificações'}).waitFor();
+const appearance=page.getByLabel('Tema neste dispositivo');
+assert.equal(await appearance.inputValue(),'light');
+await appearance.selectOption('soft');
+assert.equal(await page.evaluate(()=>localStorage.getItem('nexodent:appearance:device:v1')),'soft');
+await menu.locator('[data-t="ag"]').click();
+assert.equal(await page.locator('.ov-content').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(230, 227, 220)');
+for(const panel of ['.ag-date-panel','.ag-new-form','.ag-rental-panel']){
+ assert.equal(await page.locator(panel).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(242, 239, 232)',panel);
+}
+assert.equal(await page.locator('#agDate').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(245, 242, 235)');
+await menu.locator('[data-t="cfg"]').click();
+if(!await appearance.isVisible())await page.getByRole('button',{name:/Aparência/}).click();
+assert.equal(await appearance.inputValue(),'soft');
+await appearance.selectOption('light');
+assert.equal(await page.locator('html[data-ov-soft]').count(),0);
 await page.locator('#avsSound').uncheck();
 assert.equal(await page.evaluate(()=>window.NexoNotificationSound.enabled()),false);
 await page.locator('#avsSound').check();
