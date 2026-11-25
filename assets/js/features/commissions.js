@@ -10,16 +10,16 @@ function comHtml(){
   h+=commissionReview(m,monthly);
   const selected=view.cmDent||'';
   if(!selected){
-    h+=`<div class="card"><h2 style="margin-top:0">Comissões por dentista</h2><p class="note">Clique no nome do dentista para visualizar todos os comissionamentos registrados para ele.</p>`;
+    h+=`<div class="card commission-list"><h2 style="margin-top:0">Comissões por dentista</h2><p class="note">Clique no nome do dentista para visualizar todos os comissionamentos registrados para ele.</p>`;
     h+=ds.map(d=>{
       const vm=monthly.filter(v=>v.dt===d.id);
       const total=sum(vm,'rep');
       const production=sum(vm,'valor');
       const patients=new Set(vm.map(v=>v.pid)).size;
-      return `<button class="card" data-act="cmdent" data-id="${esc(d.id)}" type="button" style="width:100%;text-align:left;margin:0 0 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px"><span><strong>${esc(d.nome)}</strong>${d.ativo===false?' <span class="badge">arquivado</span>':''}<br><span class="note" style="margin:2px 0 0">${vm.length} procedimento(s) · ${patients} paciente(s) · produção ${brl(production)}</span></span><span style="text-align:right"><strong style="color:var(--ac)">${brl(total)}</strong><br><span class="note" style="margin:2px 0 0">Comissão gerada</span></span></button>`;
+      return `<button class="card" data-act="cmdent" data-id="${esc(d.id)}" type="button" style="width:100%;text-align:left;margin:0 0 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px"><span><strong>${esc(d.nome)}</strong>${d.ativo===false?' <span class="badge">arquivado</span>':''}<br><span class="note" style="margin:2px 0 0">${vm.length} procedimento(s) · ${patients} paciente(s) · produção ${brl(production)}</span></span><span style="text-align:right"><strong class="commission-amount">${brl(total)}</strong><br><span class="note" style="margin:2px 0 0">Comissão gerada</span></span></button>`;
     }).join('');
     h+=`</div>`;
-    return h+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">${stat('A pagar agora (todos)',brl(ds.reduce((a,d)=>a+dtTot(d.id,accounting).apagar,0)))}${stat('Prevista, aguardando pacientes',brl(ds.reduce((a,d)=>a+dtTot(d.id,accounting).prev,0)))}</div>`;
+    return h+`<div class="commission-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">${stat('A pagar agora (todos)',brl(ds.reduce((a,d)=>a+dtTot(d.id,accounting).apagar,0)))}${stat('Prevista, aguardando pacientes',brl(ds.reduce((a,d)=>a+dtTot(d.id,accounting).prev,0)))}</div>`;
   }
 
   const d=ds.find(x=>x.id===selected);
@@ -32,7 +32,7 @@ function comHtml(){
   ${rw('Procedimentos no mês',String(vm.length))}${rw('Pacientes atendidos no mês',String(new Set(vm.map(v=>v.pid)).size))}${rw('Produção do mês',brl(sum(vm,'valor')))}${rw('Comissão gerada no mês',brl(sum(vm,'rep')))}${rw('Já liberada (paciente pagou)',brl(liberado))}${rw('Paga no mês',brl(sum(pm,'valor')))}
   <div class="tot" style="font-size:15px;font-weight:600"><span>Prevista, aguardando pacientes (geral)</span><span>${brl(t.prev)}</span></div>
   ${t.exc>0?rw('Pago adiantado (geral)',brl(t.exc)):''}
-  <div class="tot" style="color:var(--ac)"><span>A pagar agora (geral)</span><span>${brl(t.apagar)}</span></div>
+  <div class="tot commission-amount"><span>A pagar agora (geral)</span><span>${brl(t.apagar)}</span></div>
   ${t.apagar>0?`<div class="row" style="margin-top:8px"><input data-cpv="${esc(d.id)}" inputmode="decimal" value="${t.apagar.toFixed(2)}" aria-label="Valor a pagar"><button data-act="cpay" data-id="${esc(d.id)}">Registrar pagamento</button></div>`:'<p class="note" style="margin:8px 0 0">Nada a pagar agora.</p>'}
     ${pmLvl('cm')>=2?`<button type="button" class="ghost sm" data-act="cpayretro" data-id="${esc(d.id)}">Registrar repasse retroativo</button>`:''}
   ${pm.length?pm.map(c=>`<div class="pg"><span>${fd(c.data)} · pagamento${c.obs?' ('+esc(c.obs)+')':''}</span><span>${brl(c.valor)} <button class="danger sm" data-act="rmcp" data-id="${esc(c.id)}" aria-label="Remover pagamento">${delArm===c.id?'Confirmar':'×'}</button></span></div>`).join(''):''}
