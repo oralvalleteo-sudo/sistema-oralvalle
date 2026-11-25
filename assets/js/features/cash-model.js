@@ -10,7 +10,7 @@
   return lower[0].toLocaleUpperCase('pt-BR')+lower.slice(1);
  }
  function categoryKey(s){return categoryLabel(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
- const isLaboratoryCategory=value=>['laboratorio','laboratorios'].includes(categoryKey(value));
+ const isLaboratoryCategory=value=>['laboratorio','laboratorios','protetico','proteticos'].includes(categoryKey(value));
  const isDentistCategory=value=>['dentista','dentistas','repasse dentista','repasse dentistas',
   'repasse ao dentista','repasse aos dentistas','repasse de dentista','repasse de dentistas',
   'repasses aos dentistas','repasses de dentistas'].includes(categoryKey(value));
