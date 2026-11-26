@@ -246,11 +246,11 @@ html[data-ov-mode="light"] .ov-ag-status-options label:focus-within{
 
 /* Tema claro suave, com as mesmas cores de navegação e de situação. */
 html[data-ov-mode="light"][data-ov-soft] {
-  --ov-bg:#e6e3dc;--ov-card:#f2efe8;--ov-text:#26343c;
+  --ov-bg:#eae8e4;--ov-card:#f4f2ef;--ov-text:#26343c;
   --ov-muted:#536169;--ov-line:#b7b7b0;
   --bg:var(--ov-bg);--bg2:#ebe7df;--sf:var(--ov-card);--card:var(--ov-card);
   --ink:var(--ov-text);--mut:var(--ov-muted);--ln:var(--ov-line);
-  --ov-soft-field:#f5f2eb;
+  --ov-soft-field:var(--ov-card);
 }
 @media screen {
   html[data-ov-soft] :is(body,#app,.ov-shell,.ov-main,.ov-content,.ov-content-inner,.nexo-agenda-page,.ov-modern-page,.ov-patients-page,#ov-startup-shell) {

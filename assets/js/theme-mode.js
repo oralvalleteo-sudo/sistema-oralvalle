@@ -26,7 +26,11 @@
     applyAppearance(value);
     try{localStorage.setItem(THEME_KEY,value)}catch(_){}
   };
-  try{applyAppearance(localStorage.getItem(THEME_KEY))}catch(_){}
+  let appearance = 'soft';
+  try {
+    if (localStorage.getItem(THEME_KEY) === 'light') appearance = 'light';
+  } catch (_) {}
+  applyAppearance(appearance);
   enforceLight();
   // Mantém compatibilidade com chamadas antigas, sem permitir ativar o modo escuro.
   window.oralValleApplyTheme=function(){enforceLight()};
