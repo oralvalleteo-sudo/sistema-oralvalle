@@ -63,7 +63,7 @@ assert.equal(await retroForm.locator('[name="category"]').inputValue(),'Laborat√
 await retroForm.locator('[name="description"]').fill('Laborat√≥rio retroativo');
 await retroForm.locator('[name="amount"]').fill('120');
 await retroForm.locator('[name="paid_at"]').fill('2026-10-10');
-await retroForm.locator('[name="payment_method"]').fill('Pix');
+await retroForm.locator('[name="payment_method"]').selectOption('Pix');
 assert.equal(await retroForm.locator('[name="reference_month"]').inputValue(),'2026-10');
 await retroForm.getByRole('button',{name:'Salvar despesa'}).click();
 await retroForm.waitFor({state:'detached'});

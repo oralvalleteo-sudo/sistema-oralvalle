@@ -10,7 +10,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  }else await category.selectOption('Marketing');
  await p.locator('[name="amount"]').fill('100');
  await p.locator('[name="paid_at"]').fill('2026-11-17');
- await p.locator('[name="payment_method"]').fill('Pix');
+ await p.locator('[name="payment_method"]').selectOption('Pix');
  await p.locator('#nx-cash-form button[type="submit"]').click();
  await p.waitForFunction(()=>!document.getElementById('nx-cash-form')&&!document.querySelector('[data-cash="refresh"]').disabled);
 }
