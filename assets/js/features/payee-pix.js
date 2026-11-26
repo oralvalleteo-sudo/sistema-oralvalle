@@ -9,8 +9,45 @@
  };
  function button(type,id,name){
   if(!access(type)||!id)return '';
-  return `<button type="button" class="ghost sm" data-payee-pix="${type}" data-payee-id="${esc(id)}" data-payee-name="${esc(name)}">Chave Pix</button>`;
+  const button = `<button type="button" class="ghost sm" data-payee-pix="${type}" data-payee-id="${esc(id)}" data-payee-name="${esc(name)}">Chave Pix</button>`;
+  return type === 'dentist'
+   ? `<div class="row">${button}<span data-dentist-pix="${esc(id)}" aria-live="polite" style="overflow-wrap:anywhere"></span></div>`
+   : button;
  }
+
+ const views = () => document.querySelectorAll('#app [data-dentist-pix]');
+ const requests = new WeakMap();
+ function showKey(view, key) {
+  const text = key ? 'Chave Pix: ' + key : '';
+  if (view.textContent !== text) view.textContent = text;
+ }
+
+ async function readKey(clinicId, type, id) {
+  const filters = new URLSearchParams({clinic_id:'eq.'+clinicId,payee_type:'eq.'+type,payee_id:'eq.'+id,select:'pix_key'});
+  const rows = await window.OralCloud.request(table+'?'+filters);
+  if (!Array.isArray(rows)) throw Error();
+  return rows[0]?.pix_key || '';
+ }
+
+ function loadDentistKeys() {
+  if (!access('dentist')) return;
+  const clinicId = clinic();
+  for (const view of views()) {
+   if (requests.has(view)) continue;
+   const request = readKey(clinicId, 'dentist', view.dataset.dentistPix);
+   requests.set(view, request);
+   request.then(key => {
+    if (view.isConnected && requests.get(view) === request && clinic() === clinicId && access('dentist')) {
+     showKey(view, key);
+    }
+   }).catch(() => {});
+  }
+ }
+
+ const app = document.getElementById('app');
+ if (app) new MutationObserver(loadDentistKeys).observe(app, {childList:true, subtree:true});
+ loadDentistKeys();
+
  let active;
  function close(){
   if(active)active.close();
@@ -38,12 +75,10 @@
   document.body.append(dialog);
   dialog.showModal();
   const current=()=>dialog.open&&clinic()===clinicId&&access(type);
-  const filters=new URLSearchParams({clinic_id:'eq.'+clinicId,payee_type:'eq.'+type,payee_id:'eq.'+id,select:'pix_key'});
   try{
-   const rows=await window.OralCloud.request(table+'?'+filters);
+   const key=await readKey(clinicId,type,id);
    if(!current())return;
-   if(!Array.isArray(rows))throw Error();
-   field.value=rows[0]?.pix_key||'';
+   field.value=key;
    field.disabled=false;
    field.readOnly=!access(type,true);
    submit.hidden=submit.disabled=field.readOnly;
@@ -64,6 +99,13 @@
     });
     if(!current())return;
     if(!Array.isArray(rows)||rows[0]?.pix_key!==key)throw Error();
+    if (type === 'dentist') {
+     for (const view of views()) {
+      if (view.dataset.dentistPix !== id) continue;
+      requests.set(view, null);
+      showKey(view, key);
+     }
+    }
     field.value=key;status.textContent=key?'Chave Pix salva.':'Chave Pix removida.';
    }catch(_){
     if(current())status.textContent='Não foi possível confirmar a gravação. Confira a chave antes de tentar novamente.';
@@ -72,6 +114,13 @@
    }
   });
  });
- for(const event of ['nexodent:signed-out','nexodent:clinic-data-loaded','nexodent:modules-updated'])window.addEventListener(event,close);
+ for(const event of ['nexodent:signed-out','nexodent:clinic-data-loaded','nexodent:modules-updated'])window.addEventListener(event, () => {
+  close();
+  for (const view of views()) {
+   requests.delete(view);
+   showKey(view, '');
+  }
+  if (event !== 'nexodent:signed-out') loadDentistKeys();
+ });
  window.NexoPayeePix={button};
 })();
