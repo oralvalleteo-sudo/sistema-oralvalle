@@ -1,5 +1,5 @@
 /* CRM NexoDent — adaptação do HTML de prévia aprovado, versão 77 */
-:root{--preview-orange:#f47721;--preview-ink:#17212d;--preview-muted:#75808c;--preview-line:#e8ebef;--preview-bg:var(--nexo-action-primary,#f1f3f5)}
+:root{--preview-orange:#f47721;--preview-ink:#17212d;--preview-muted:#75808c;--preview-line:#e8ebef;--preview-bg:#fff}
 html body{background:var(--preview-bg)!important;color:var(--preview-ink)}
 .crm-sidebar{background:#fff!important;border-right:1px solid var(--preview-line)!important;box-shadow:none!important}
 .crm-sidebar .sidebar-brand{font-size:25px;font-weight:800;letter-spacing:-.7px}
@@ -27,12 +27,12 @@ html body{background:var(--preview-bg)!important;color:var(--preview-ink)}
 .crm-main .board-heading{background:#fff!important;border:1px solid var(--preview-line)!important;border-bottom:0!important;border-radius:14px 14px 0 0!important;padding:20px 20px 8px!important;margin:0!important}
 .crm-main #board{background:#fff!important;border:1px solid var(--preview-line)!important;border-top:0!important;border-radius:0 0 14px 14px!important;padding:14px!important;margin:0 0 18px!important;box-shadow:0 3px 14px #25313b05!important;min-width:0}
 .crm-main #board>*,.crm-main .board .column{border-radius:11px!important}
-.crm-main .board .column{background:#f8f9fa!important;border:1px solid #edf0f2!important}
+.crm-main .board .column{background:var(--preview-bg)!important;border:1px solid #edf0f2!important}
 .crm-main .board .card{background:#fff!important;border:1px solid #e9ecef!important;border-radius:10px!important;box-shadow:0 2px 5px #00000005!important}
 .crm-main .integration{background:#fff!important;border:1px solid var(--preview-line)!important;border-radius:14px!important;box-shadow:0 3px 14px #25313b05!important;margin:16px 0!important;padding:20px!important}
 .crm-main .integration h2{font-size:17px!important;color:var(--preview-ink)!important;letter-spacing:-.3px!important}
 .crm-main .integration p{color:#75808c}
-.crm-main .followup-summary>button,.crm-main .daily-stats>div,.crm-main .goals-stats>div{background:#f8f9fa!important;border:1px solid #edf0f2!important;border-radius:11px!important}
+.crm-main .followup-summary>button,.crm-main .daily-stats>div,.crm-main .goals-stats>div{background:var(--preview-bg)!important;border:1px solid #edf0f2!important;border-radius:11px!important}
 .crm-main .daily-list>*,.crm-main .tasks-list>*{border-radius:10px!important}
 .crm-main [hidden]{display:none!important}
 html.crm-embedded .crm-main{background:var(--preview-bg)!important;padding:24px!important}
@@ -48,6 +48,7 @@ html.crm-embedded .crm-main{background:var(--preview-bg)!important;padding:24px!
 html body main.crm-main,
 html body main.crm-main :is(.bar,.crm-view-tabs,#crm-view-panel,.board-heading,#board,.integration,.crm-analytics,.crm-insights,.crm-marketing),
 html body main.crm-main #board .column,
+html body main.crm-main .crm-marketing-cards > div,
 html body main.crm-main #board .column > h3 {
   background:var(--preview-bg)!important;
 }
