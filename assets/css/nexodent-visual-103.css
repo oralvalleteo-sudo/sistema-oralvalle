@@ -21,7 +21,7 @@
 .nexo-agenda-page input,.nexo-agenda-page select,.ov-modern-page input,.ov-modern-page select,.ov-modern-page textarea{border-radius:12px!important;border-color:#dce4ec!important;background:#fff!important;min-height:40px;box-sizing:border-box}
 .nexo-agenda-page input:focus,.nexo-agenda-page select:focus,.ov-modern-page input:focus,.ov-modern-page select:focus,.ov-modern-page textarea:focus{outline:2px solid #ffdbc2!important;outline-offset:1px}
 .nexo-agenda-page .ag-flow-row{border-bottom:1px solid #edf0f4!important}.nexo-agenda-page .ag-flow-free:hover{background:#fff7f1!important}
-.nexo-agenda-page .ov-agenda-chairs>.card>.ag{background:linear-gradient(110deg,#fff5ec,#fff)!important;border-radius:13px!important;padding:15px!important}
+.nexo-agenda-page .ov-agenda-chairs>.card>.ag{background:var(--nd-header-bg)!important;border:1px solid var(--nd-header-border)!important;border-radius:13px!important;padding:15px!important}
 /* Tratamentos: cada paciente vira um cartão de listagem */
 .ov-modern-page>.ov-modern-list{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
 .ov-modern-page .ov-modern-list>h2{border-left:4px solid #f47719!important;padding-left:14px!important;margin-bottom:19px!important}
