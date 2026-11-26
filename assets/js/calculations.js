@@ -82,11 +82,16 @@ function comCalc(dtId,procNome,valor,q){
   }
   return {rep:r2(rep),mat:mat*q,lab:lab*q,procCusto:r2(procCusto*q),horaClinica:r2(horaClinica*q),custoTotal:r2(custoTotal),baseLiquida:r2(baseLiquida)};
 }
+function dtRepasseExtras(id){
+  const entries=db.dt.find(d=>d.id===id)?.repasseExtras;
+  return Array.isArray(entries)?entries:[];
+}
 function dtTot(id,accounting=salesForAccounting()){
   const s=accounting.filter(x=>x.dt===id),g=sum(s,'rep'),l=s.reduce((a,x)=>a+liberada(x),0),p=sum(db.cp.filter(c=>c.dt===id),'valor');
-  return {g,l,p,apagar:Math.max(0,r2(l-p)),prev:Math.max(0,r2(g-l)),exc:Math.max(0,r2(p-l))};
+  const extra=sum(dtRepasseExtras(id),'valor');
+  return {g,l,p,extra,apagar:Math.max(0,r2(l+extra-p)),prev:Math.max(0,r2(g-l)),exc:Math.max(0,r2(p-l-extra))};
 }
-function dtMoves(id){return db.vd.some(v=>v.dt===id)||db.cp.some(c=>c.dt===id)||db.ag.some(a=>a.dt===id)||db.p.some(p=>p.orcs.some(o=>o.itens.some(i=>i.dt===id)))}
+function dtMoves(id){return dtRepasseExtras(id).length>0||db.vd.some(v=>v.dt===id)||db.cp.some(c=>c.dt===id)||db.ag.some(a=>a.dt===id)||db.p.some(p=>p.orcs.some(o=>o.itens.some(i=>i.dt===id)))}
 function hcFix(h){return num(h.alu)+num(h.eqp)+num(h.luz)+num(h.net)+num(h.fix)}
 function hcCalc(h){
   const hrs=num(h.dias)*num(h.hdia)*4.33*(num(h.occ)/100),fx=num(h.alu)+num(h.eqp)+num(h.luz)+num(h.net)+num(h.fix),pl=num(h.pl);

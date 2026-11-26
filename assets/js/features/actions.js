@@ -686,6 +686,21 @@ const A={
     if(val>t.apagar+0.005){toast('Valor maior que o saldo a pagar ('+brl(t.apagar)+')',3000);return}
     const dI=document.querySelector(`[data-cpd="${esc(d.id)}"]`),oI=document.querySelector(`[data-cpo="${esc(d.id)}"]`);
     db.cp.push({id:uid(),dt:d.id,data:(dI&&dI.value)||tdy(),valor:r2(val),obs:oI?oI.value.trim():''});save();render();toast('Pagamento registrado')},
+  cpayextra:(b,d)=>{
+    const dentist=db.dt.find(item=>String(item.id)===String(d.id));
+    const canAdd=()=>pmLvl('cm')>=2&&pmLvl('dt')>=2;
+    if(!dentist||!canAdd())return;
+    ovAgDialog('Adicionar valor extra',`<label>Valor extra (R$)<input name="amount" type="number" min="0.01" step="0.01" required></label>
+      <label>Motivo<input name="note" maxlength="200" required></label>`,form=>{
+      if(!canAdd()||!db.dt.includes(dentist))return false;
+      const valor=Number(form.get('amount')),obs=String(form.get('note')||'').trim();
+      if(!Number.isSafeInteger(Math.round(valor*100))||r2(valor)<=0||!obs){
+        toast('Informe um valor positivo e o motivo do acréscimo.');return false;
+      }
+      dentist.repasseExtras=[...dtRepasseExtras(dentist.id),{data:tdy(),valor:r2(valor),obs}];
+      save();render();toast('Valor extra adicionado ao saldo a pagar.');
+    });
+  },
   cpayretro:(b,d)=>{
     const dentist=db.dt.find(item=>String(item.id)===String(d.id));
     if(!dentist||pmLvl('cm')<2)return;
