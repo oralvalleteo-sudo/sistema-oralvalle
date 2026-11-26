@@ -2,7 +2,7 @@
    CSS exclusivamente decorativo. Sem alterações em JS, banco, eventos ou layout estrutural.
    Não modifica a página Pacientes já aprovada. */
 :root {
-  --nd-header-bg:#eaf2f4;
+  --nd-header-bg:var(--nexo-action-primary,#f1f3f5);
   --nd-header-border:#d4e3e7;
 }
 html[data-ov-mode="light"] {
