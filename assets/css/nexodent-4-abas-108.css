@@ -217,3 +217,57 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
   .nxlab-workspace .nxlab-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nxlab-workspace .nxlab-filters label:last-child { grid-column: 1 / -1; }
 }
+
+.ov-reminders-page {
+  display:grid;
+  grid-template-columns:minmax(175px, 220px) minmax(0, 1fr);
+  gap:16px;
+  align-items:start;
+}
+.ov-reminder-filters,
+.ov-reminders-page > .ov-reminders-content {
+  min-width:0;
+  padding:16px;
+  border:1px solid #dce2e9;
+  border-radius:12px;
+  background:#fff;
+}
+.ov-reminders-page > .ov-reminders-content { margin:0; }
+.ov-reminder-filters h2 { margin:0 0 12px; font-size:18px; }
+.ov-reminder-filters .lem-tabs { flex-direction:column; }
+.ov-reminder-filters .lem-tabs button { justify-content:space-between; text-align:left; }
+.ov-reminder-filters .lem-tabs button[aria-current] { box-shadow:inset 3px 0 #475569; }
+.ov-reminder-heading { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.ov-reminder-heading h1 { margin:0; font-size:clamp(22px, 3vw, 30px); }
+.ov-reminder-heading .ov-reminder-count {
+  color:#334155;
+  background:#fff;
+  border:1px solid #cbd5e1;
+}
+.ov-reminder-toolbar { justify-content:space-between; }
+.ov-reminder-toolbar .nd-lem-create > summary { margin-left:auto; }
+.ov-reminder-grid .ov-reminder-alerts { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%, 200px),1fr)); }
+.ov-reminder-grid .ov-reminder-alerts button { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; }
+.ov-reminder-alerts strong { font-size:18px; }
+.ov-reminder-grid .ov-reminder-list { gap:0 !important; border:1px solid #dce2e9; border-radius:12px; overflow:hidden; }
+.ov-reminder-list-head,
+.ov-reminder-grid .ov-reminder-item {
+  grid-template-columns:minmax(0, 1fr) minmax(108px, 20%) minmax(150px, 26%);
+  gap:12px;
+  align-items:center;
+}
+.ov-reminder-list-head { display:grid; padding:12px 18px; background:#f1f3f5; font-weight:650; }
+.ov-reminder-list-head span:last-child { text-align:right; }
+.ov-reminder-grid .ov-reminder-item { border:0 !important; border-top:1px solid #dce2e9 !important; border-radius:0 !important; box-shadow:none; }
+.ov-reminder-date { color:#334155; font-size:13px; }
+@media (max-width:1050px) {
+  .ov-reminders-page { grid-template-columns:minmax(0,1fr); }
+  .ov-reminder-filters .lem-tabs { flex-direction:row; }
+  .ov-reminder-filters .lem-tabs button { flex:0 1 auto; }
+}
+@media (max-width:650px) {
+  .ov-reminder-list-head { display:none; }
+  .ov-reminder-grid .ov-reminder-item { grid-template-columns:minmax(0,1fr); }
+  .ov-reminder-grid .ov-reminder-item:first-of-type { border-top:0 !important; }
+  .ov-reminder-date { margin-left:29px; }
+}
