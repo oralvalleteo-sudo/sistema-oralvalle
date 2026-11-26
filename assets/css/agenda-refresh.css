@@ -46,8 +46,8 @@
 .ov-agenda-chairs>.card>.ag{border-radius:12px!important;background:#fff8f2!important;
   border:1px solid #fae8d9!important;padding:12px 14px!important;margin-bottom:12px!important}
 .ov-agenda-chairs>.card>.ag strong{font-size:16px!important;color:#263748!important}
-.ov-agenda-chairs>.card>.ag .badge{background:#fff!important;color:#c76517!important;
-  border:1px solid #f4d5bd!important;border-radius:999px!important;padding:5px 10px!important}
+.ov-agenda-chairs>.card>.ag .badge{background:#fff!important;color:#315b66!important;
+  border:1px solid #b9cfd6!important;border-radius:999px!important;padding:5px 10px!important}
 .ag-flow-list{border:1px solid #edf0f2!important;border-radius:12px!important;overflow:hidden}
 .ag-flow-row{border-bottom:1px solid #edf0f2!important;background:#fff!important}
 .ag-flow-row:last-child{border-bottom:0!important}
@@ -171,7 +171,7 @@
 }
 
 /* NexoDent 250 — cartões da agenda fiéis ao layout visual aprovado. */
-.nexo-agenda-page .ov-agenda-chairs>.card>.ag{border-radius:14px!important;margin:0 0 10px!important;background:linear-gradient(90deg,#fff5ed,#fffaf6)!important;padding:13px 15px!important}
+.nexo-agenda-page .ov-agenda-chairs>.card>.ag{border-radius:14px!important;margin:0 0 10px!important;padding:13px 15px!important}
 .nexo-agenda-page .ag-flow-list .ag-flow-row{grid-template-columns:108px minmax(0,1fr)!important;gap:8px!important;align-items:center!important}
 .nexo-agenda-page .ag-flow-list .ag-flow-time{font-size:12px!important;font-weight:700!important;color:#263347!important;overflow:visible!important;white-space:nowrap!important}
 .nexo-agenda-page .ag-flow-booked .ag-flow-content{width:100%!important}

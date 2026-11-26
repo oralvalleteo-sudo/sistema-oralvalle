@@ -23,7 +23,7 @@
 
 /* NexoDent 90: novo acabamento visual da lista, sem tocar na pesquisa ou eventos. */
 .ov-patients-page{max-width:1320px!important}
-.ov-patients-page .ov-page-head{background:linear-gradient(105deg,#fff 45%,#fff1e6 100%)!important;border:1px solid #f8e9dc!important;padding:26px 28px!important;box-shadow:0 7px 23px rgba(24,37,57,.04)!important}
+.ov-patients-page .ov-page-head{background:var(--nd-header-bg)!important;border:1px solid var(--nd-header-border)!important;padding:26px 28px!important;box-shadow:0 7px 23px rgba(24,37,57,.04)!important}
 .ov-patients-page .ov-page-head h1{font-size:clamp(27px,3vw,38px)!important;font-weight:850!important;color:#101a2e!important}
 .ov-patients-page .ov-page-head .sub{color:#53647b!important;font-size:14px!important}
 .ov-patients-page .ov-patients-panel{background:#fff!important;box-shadow:0 8px 28px rgba(24,37,57,.065)!important;border:1px solid #e8ebf0!important}
@@ -39,7 +39,7 @@
 
 /* NexoDent — atualização visual isolada da lista de pacientes, v99. Sem alterações em eventos ou banco. */
 .ov-patients-page{max-width:1480px!important;width:100%!important}
-.ov-patients-page .nd-patient-hero{display:flex;align-items:center;gap:22px;overflow:hidden;min-height:112px;background:linear-gradient(108deg,#fff 54%,#fff0e7 100%)!important;border:0!important;box-shadow:none!important;padding:20px 18px!important}
+.ov-patients-page .nd-patient-hero{display:flex;align-items:center;gap:22px;overflow:hidden;min-height:112px;box-shadow:none!important;padding:20px 18px!important}
 .nd-patient-hero-icon{width:70px;height:70px;border-radius:18px;background:linear-gradient(135deg,#ff9b2d,#f56600);color:#fff;display:grid;place-items:center;font-size:42px;flex:none;box-shadow:0 8px 16px #ef780028}
 .ov-patients-page .nd-patient-hero .sub{font-size:15px!important;color:#44546b!important}
 .nd-patient-hero-decoration{margin-left:auto;font-size:72px;color:#ffd7bd;opacity:.55}

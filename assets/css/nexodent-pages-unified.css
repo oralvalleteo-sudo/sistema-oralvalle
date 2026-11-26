@@ -1,6 +1,10 @@
 /* NexoDent 100 — identidade visual compartilhada.
    CSS exclusivamente decorativo. Sem alterações em JS, banco, eventos ou layout estrutural.
    Não modifica a página Pacientes já aprovada. */
+:root {
+  --nd-header-bg:#eaf2f4;
+  --nd-header-border:#d4e3e7;
+}
 html[data-ov-mode="light"] {
   --nd-card-border:#e9eaf0;
   --nd-card-shadow:0 7px 23px rgba(31,41,55,.065);
