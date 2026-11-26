@@ -2,7 +2,7 @@
 function dtCommissionDetails(sales){
   const entries = sales.filter(sale => num(sale.rep) !== 0)
     .sort((a,b) => String(b.data||'').localeCompare(String(a.data||'')));
-  return `<details class="dt-pay-history"><summary>Comissões por atendimento (${entries.length})</summary>
+  return `<details class="dt-commission-details"><summary>Comissões por atendimento (${entries.length})</summary>
     ${entries.length ? entries.map(sale => {
       const released = liberada(sale);
       const patient = pmSee('pac') && sale.pid ? db.p.find(p => p.id === sale.pid)?.nome : '';
@@ -14,8 +14,8 @@ function dtCommissionDetails(sales){
   </details>`;
 }
 function dtHtml(){
-  const openCards = new Set([...document.querySelectorAll('.dt-collapsible[data-dentist-id][open]')]
-    .map(card => card.dataset.dentistId));
+  const openCards = new Map([...document.querySelectorAll('.dt-collapsible[data-dentist-id][open]')]
+    .map(card => [card.dataset.dentistId, Boolean(card.querySelector('.dt-pay-history[open]'))]));
   const salesByDentist = new Map();
   for (const sale of salesForAccounting()) {
     if (!salesByDentist.has(sale.dt)) salesByDentist.set(sale.dt, []);
@@ -37,10 +37,10 @@ function dtHtml(){
     <input data-cpo="${esc(d.id)}" placeholder="Observação (opcional): Pix, dinheiro, referente a…" style="margin-top:8px" aria-label="Observação do pagamento">
     <button data-act="cpay" data-id="${esc(d.id)}" style="width:100%;margin-top:8px">Dar baixa no pagamento</button><p class="note" style="margin:6px 0 0">O valor vem preenchido com o saldo; mude se pagou só uma parte.</p>`:'<p class="note" style="margin:8px 0 0">Nada a pagar agora.</p>'}
     ${pmLvl('cm')>=2&&pmLvl('dt')>=2?`<button type="button" class="ghost sm" data-act="cpayextra" data-id="${esc(d.id)}">Adicionar valor extra</button>` : ''}
-    ${t.extra>0?`<details class="dt-pay-history"><summary>Histórico de valores extras</summary>${dtRepasseExtras(d.id).map(extra=>rw(fd(extra.data)+' · '+esc(extra.obs),brl(extra.valor))).join('')}</details>`:''}
+    ${t.extra>0?`<details class="dt-extra-history"><summary>Histórico de valores extras</summary>${dtRepasseExtras(d.id).map(extra=>rw(fd(extra.data)+' · '+esc(extra.obs),brl(extra.valor))).join('')}</details>`:''}
     ${pmLvl('cm')>=2?`<button type="button" class="ghost sm" data-act="cpayretro" data-id="${esc(d.id)}">Registrar repasse retroativo</button>`:''}
-    ${(()=>{const pg=db.cp.filter(c=>c.dt===d.id).sort((a,b)=>String(b.data).localeCompare(String(a.data)));return pg.length?`<details class="dt-pay-history"><summary>Pagamentos registrados (${pg.length}) · ${brl(t.p)}</summary>${pg.map(c=>`<div class="pg"><span>${fd(c.data)}${c.obs?' · '+esc(c.obs):''}</span><span>${brl(c.valor)} <button class="danger sm" data-act="rmcp" data-id="${esc(c.id)}" aria-label="Remover pagamento">${delArm===c.id?'Confirmar':'×'}</button></span></div>`).join('')}</details>`:''})()}</div>
-    <details class="dt-pay-history"><summary>Dados e configurações do dentista</summary>
+    ${(()=>{const pg=db.cp.filter(c=>c.dt===d.id).sort((a,b)=>String(b.data).localeCompare(String(a.data)));return pg.length?`<details class="dt-pay-history"${openCards.get(String(d.id))?' open':''}><summary>Pagamentos registrados (${pg.length}) · ${brl(t.p)}</summary>${pg.map(c=>`<div class="pg"><span>${fd(c.data)}${c.obs?' · '+esc(c.obs):''}</span><span>${brl(c.valor)} <button class="danger sm" data-act="rmcp" data-id="${esc(c.id)}" aria-label="Remover pagamento">${delArm===c.id?'Confirmar':'×'}</button></span></div>`).join('')}</details>`:''})()}</div>
+    <details class="dt-settings"><summary>Dados e configurações do dentista</summary>
     <div class="row" style="align-items:flex-start"><div><label style="margin-top:8px">Nome</label><input data-d="${esc(d.id)}" data-f="nome" value="${esc(d.nome)}"></div><div><label style="margin-top:8px">Percentual (%)</label><input data-d="${esc(d.id)}" data-f="pct" inputmode="decimal" value="${esc(d.pct)}"></div></div>
     <label>CRO (aparece no receituário)</label><input data-d="${esc(d.id)}" data-f="cro" value="${esc(d.cro||'')}" placeholder="Ex.: CRO-MG 12345" autocomplete="off"><label>Como é a comissão</label><select data-d="${esc(d.id)}" data-f="modo">${selOpts(MODOS,d.modo)}</select><label>Base de cálculo do percentual</label><select data-d="${esc(d.id)}" data-f="base">${selOpts(BASES,d.base)}</select>
     ${ME?.admin && window.OralCloud?.enabled && window.OralCloud?.clinicId && d.ativo!==false ? `<div class="card" style="margin-top:12px;border:1px solid var(--ac);padding:12px"><strong>🔐 Vínculo profissional</strong><p class="note">Vincule este dentista à sua própria conta autenticada. Não altera evoluções existentes.</p><button type="button" class="sm" data-nexo-link-self="${esc(d.id)}">Vincular à minha conta</button></div>` : ''}
