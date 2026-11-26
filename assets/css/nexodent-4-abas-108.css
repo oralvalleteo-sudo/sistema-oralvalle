@@ -30,7 +30,6 @@
 .nxlab-top p{color:#52617b!important;font-size:14px!important;}
 .nxlab-metrics{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:12px!important;margin:0 0 21px!important;}
 .nxlab-metrics>div{background:#fff!important;border:1px solid #e9edf4!important;border-radius:16px!important;padding:17px 14px!important;min-height:95px!important;box-shadow:0 6px 18px rgba(20,36,60,.065)!important;}
-.nxlab-metrics>div:first-child{background:var(--nexo-action-primary,#f1f3f5)!important;border-color:var(--nexo-action-primary-border,#cbd5e1)!important;}
 .nxlab-metrics strong{font-size:29px!important;font-weight:800!important;color:#152238!important;}
 .nxlab-metrics span{font-size:12px!important;color:#52617b!important;}
 .nxlab-filters{gap:12px!important;margin-bottom:18px!important;}
@@ -58,8 +57,7 @@ html:not([data-ov-mode="dark"]) body .ov-modern-page .ov-modern-stats > div {
   background-image:none !important;
   border-color:#e5eaf0 !important;
 }
-html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-stat:first-child,
-html:not([data-ov-mode="dark"]) body .nxlab-workspace .nxlab-metrics > div:first-child {
+html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-stat:first-child {
   background:var(--nexo-action-primary,#f1f3f5) !important;
   border-color:var(--nexo-action-primary-border,#cbd5e1) !important;
 }
@@ -101,10 +99,6 @@ html:not([data-ov-mode="dark"]) body :is(.card,.ov-panel,.nexo-page-hero,.nexo-p
   background-image:none !important;
   border-color:#c4ccd5 !important;
   color:#111 !important;
-}
-html:not([data-ov-mode="dark"]) body .nxlab-workspace .nxlab-top {
-  background-color:var(--nd-header-bg) !important;
-  border-color:var(--nd-header-border) !important;
 }
 html:not([data-ov-mode="dark"]) body :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
   background-color:#fff !important;
