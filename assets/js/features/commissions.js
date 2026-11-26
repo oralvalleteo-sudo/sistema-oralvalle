@@ -1,4 +1,18 @@
 /* ===== comissões ===== */
+function dtCommissionDetails(sales){
+  const entries = sales.filter(sale => num(sale.rep) !== 0)
+    .sort((a,b) => String(b.data||'').localeCompare(String(a.data||'')));
+  return `<details class="dt-commission-details"><summary>Comissões por atendimento (${entries.length})</summary>
+    ${entries.length ? entries.map(sale => {
+      const released = liberada(sale);
+      const patient = pmSee('pac') && sale.pid ? db.p.find(p => p.id === sale.pid)?.nome : '';
+      return `<div class="pg" style="flex-wrap:wrap">
+        <span><strong>${esc(sale.proc||'Atendimento')}</strong><br>${esc(fd(sale.data)||'Data não informada')}${patient?' · '+esc(patient):''}</span>
+        <span>Gerada: ${brl(num(sale.rep))} · Liberada: ${brl(released)} · A liberar: ${brl(Math.max(0,r2(num(sale.rep)-released)))}</span>
+      </div>`;
+    }).join('') : '<p class="note">Nenhuma comissão por atendimento registrada.</p>'}
+  </details>`;
+}
 function comHtml(){
   const m=view.cm||tdy().slice(0,7);
   const ds=db.dt.filter(d=>d.ativo!==false||dtMoves(d.id));
@@ -24,19 +38,29 @@ function comHtml(){
 
   const d=ds.find(x=>x.id===selected);
   if(!d){view.cmDent='';return comHtml()}
-  const t=dtTot(d.id,accounting);
+  const sales = accounting.filter(sale => sale.dt === d.id);
+  const t = dtTot(d.id,sales);
+  const previous = document.querySelector('[data-commission-dentist]');
+  const historyOpen = previous?.dataset.commissionDentist === String(d.id) && previous.querySelector('.dt-pay-history[open]');
   const vm=monthly.filter(v=>v.dt===d.id);
   const pm=db.cp.filter(c=>c.dt===d.id&&c.data.slice(0,7)===m);
   const liberado=vm.reduce((a,x)=>a+liberada(x),0);
   h+=`<div class="card"><div class="row" style="justify-content:space-between;align-items:center"><div><h2 style="margin:0">${esc(d.nome)}</h2>${d.ativo===false?' <span class="badge">arquivado</span>':''}</div><button class="ghost sm" data-act="cmback">Voltar aos dentistas</button></div>
   ${rw('Procedimentos no mês',String(vm.length))}${rw('Pacientes atendidos no mês',String(new Set(vm.map(v=>v.pid)).size))}${rw('Produção do mês',brl(sum(vm,'valor')))}${rw('Comissão gerada no mês',brl(sum(vm,'rep')))}${rw('Já liberada (paciente pagou)',brl(liberado))}${rw('Paga no mês',brl(sum(pm,'valor')))}
-  <div class="tot" style="font-size:15px;font-weight:600"><span>Prevista, aguardando pacientes (geral)</span><span>${brl(t.prev)}</span></div>
-  ${t.exc>0?rw('Pago adiantado (geral)',brl(t.exc)):''}
-  <div class="tot commission-amount"><span>A pagar agora (geral)</span><span>${brl(t.apagar)}</span></div>
-  ${t.apagar>0?`<div class="row" style="margin-top:8px"><input data-cpv="${esc(d.id)}" inputmode="decimal" value="${t.apagar.toFixed(2)}" aria-label="Valor a pagar"><button data-act="cpay" data-id="${esc(d.id)}">Registrar pagamento</button></div>`:'<p class="note" style="margin:8px 0 0">Nada a pagar agora.</p>'}
+    <div class="dt-pay commission-repasse" data-commission-dentist="${esc(d.id)}"><h3>Pagamento ao dentista</h3>${window.NexoPayeePix?.button('dentist',d.id,d.nome)||''}${rw('Comissão gerada',brl(t.g))}${rw('Liberada (paciente já pagou)',brl(t.l))}${rw('A liberar (aguardando recebimento)',brl(t.prev))}
+    ${rw('Acréscimos ao saldo',brl(t.extra))}
+    ${rw('Já pago ao dentista',brl(t.p))}${t.exc>0?rw('Pago adiantado',brl(t.exc)):''}
+    <div class="tot dt-pay-balance commission-amount"><span>A pagar agora (geral)</span><span>${brl(t.apagar)}</span></div>
+    <p class="note">O saldo usa a comissão liberada, soma os acréscimos e desconta os repasses já pagos.</p>
+    ${dtCommissionDetails(sales)}
+    ${t.apagar>0?`<div class="row" style="margin-top:10px;align-items:flex-end"><div><label style="margin-top:0" for="cpv_${d.id}">Valor pago (R$)</label><input id="cpv_${d.id}" data-cpv="${esc(d.id)}" inputmode="decimal" value="${t.apagar.toFixed(2)}"></div><div><label style="margin-top:0" for="cpd_${d.id}">Data</label><input id="cpd_${d.id}" type="date" data-cpd="${esc(d.id)}" value="${tdy()}"></div></div>
+    <input data-cpo="${esc(d.id)}" placeholder="Observação (opcional): Pix, dinheiro, referente a…" style="margin-top:8px" aria-label="Observação do pagamento">
+    <button data-act="cpay" data-id="${esc(d.id)}" style="width:100%;margin-top:8px">Dar baixa no pagamento</button><p class="note" style="margin:6px 0 0">O valor vem preenchido com o saldo; mude se pagou só uma parte.</p>`:'<p class="note" style="margin:8px 0 0">Nada a pagar agora.</p>'}
+    ${pmLvl('cm')>=2&&pmLvl('dt')>=2?`<button type="button" class="ghost sm" data-act="cpayextra" data-id="${esc(d.id)}">Adicionar valor extra</button>` : ''}
+    ${t.extra>0?`<details class="dt-extra-history"><summary>Histórico de valores extras</summary>${dtRepasseExtras(d.id).map(extra=>rw(fd(extra.data)+' · '+esc(extra.obs),brl(extra.valor))).join('')}</details>`:''}
     ${pmLvl('cm')>=2?`<button type="button" class="ghost sm" data-act="cpayretro" data-id="${esc(d.id)}">Registrar repasse retroativo</button>`:''}
-  ${pm.length?pm.map(c=>`<div class="pg"><span>${fd(c.data)} · pagamento${c.obs?' ('+esc(c.obs)+')':''}</span><span>${brl(c.valor)} <button class="danger sm" data-act="rmcp" data-id="${esc(c.id)}" aria-label="Remover pagamento">${delArm===c.id?'Confirmar':'×'}</button></span></div>`).join(''):''}
-  <details open><summary>Comissionamentos do mês (${vm.length})</summary>${vm.length?vm.map(v=>`<div class="pg"><span>${fd(v.data)} · ${esc(pName(v.pid))}<br>${esc(v.proc||'Atendimento')} · ${brl(v.valor)} · ${esc(dName(v.dt))}</span><span style="text-align:right"><strong>${brl(v.rep)}</strong><br>${Math.round(Math.min(1,recebido(v)/(num(v.valor)||1))*100)}% recebido</span></div>`).join(''):'<p class="note" style="margin:0">Nenhum comissionamento neste mês.</p>'}</details></div>`;
+    ${(()=>{const pg=db.cp.filter(c=>c.dt===d.id).sort((a,b)=>String(b.data).localeCompare(String(a.data)));return pg.length?`<details class="dt-pay-history"${historyOpen?' open':''}><summary>Pagamentos registrados (${pg.length}) · ${brl(t.p)}</summary>${pg.map(c=>`<div class="pg"><span>${fd(c.data)}${c.obs?' · '+esc(c.obs):''}</span><span>${brl(c.valor)} <button class="danger sm" data-act="rmcp" data-id="${esc(c.id)}" aria-label="Remover pagamento">${delArm===c.id?'Confirmar':'×'}</button></span></div>`).join('')}</details>`:''})()}</div>
+  <details class="commission-month-details" open><summary>Comissionamentos do mês (${vm.length})</summary>${vm.length?vm.map(v=>`<div class="pg"><span>${fd(v.data)} · ${esc(pName(v.pid))}<br>${esc(v.proc||'Atendimento')} · ${brl(v.valor)} · ${esc(dName(v.dt))}</span><span style="text-align:right"><strong>${brl(v.rep)}</strong><br>${Math.round(Math.min(1,recebido(v)/(num(v.valor)||1))*100)}% recebido</span></div>`).join(''):'<p class="note" style="margin:0">Nenhum comissionamento neste mês.</p>'}</details></div>`;
   return h;
 }
 
