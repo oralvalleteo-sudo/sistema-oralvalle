@@ -39,7 +39,7 @@
 .ag-new-form h2{font-size:19px!important;letter-spacing:-.03em;color:#243342;margin:0 0 18px!important}
 .ag-new-form label,.ag-rental-panel label,.ag-date-panel label{font-size:12px!important;font-weight:700;color:#657487!important}
 .ag-new-form .row,.ag-rental-panel .row{gap:12px!important}
-.ag-new-form button[data-act="addag"]{border-radius:11px!important;min-height:44px;font-weight:700;box-shadow:0 4px 12px rgba(234,112,0,.13)}
+.ag-new-form button[data-act="addag"]{border-radius:11px!important;min-height:44px;font-weight:700;box-shadow:none}
 .ag-rental-head strong{font-size:17px;color:#293747}
 .ov-agenda-chairs{gap:18px!important}
 .ov-agenda-chairs>.card{overflow:hidden;padding:16px!important}
