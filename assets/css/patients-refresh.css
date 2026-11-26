@@ -45,7 +45,7 @@
 .nd-patient-hero-decoration{margin-left:auto;font-size:72px;color:#ffd7bd;opacity:.55}
 .nd-patient-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:12px 0 24px}
 .nd-patient-stat{display:flex;align-items:center;gap:18px;min-width:0;min-height:98px;border:1px solid #e7eaf0;border-radius:18px;background:#fff;padding:18px 22px;box-shadow:0 5px 16px #15233912;box-sizing:border-box}
-.nd-patient-stat-main{background:#fff4ec;border-color:#ffe3d2}
+.nd-patient-stat-main{background:var(--nexo-action-primary,#f1f3f5);border-color:var(--nexo-action-primary-border,#cbd5e1)}
 .nd-stat-icon{font-size:34px;color:#f97316;flex:none}
 .nd-patient-stat>div{display:flex;flex-direction:column;gap:4px;min-width:0}
 .nd-patient-stat strong{font-size:28px;line-height:1.1;color:#10192c}
