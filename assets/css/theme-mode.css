@@ -1,6 +1,6 @@
 :root { color-scheme: light; }
 /* Aparência: sobrepõe apenas cores, preservando layout e identidade da clínica. */
-html[data-ov-mode="light"]{color-scheme:light;--bg:#f5f5f5;--sf:#fff;--ink:#303943;--mut:#687481;--ln:#dfe3e7;--acf:#fff;}
+html[data-ov-mode="light"]{color-scheme:light;--bg:#f5f5f5;--sf:#fff;--ink:#17212d;--mut:#334155;--ln:#dfe3e7;--acf:#fff;}
 html[data-ov-mode="dark"]{color-scheme:dark;--bg:#171a1c;--sf:#202426;--ink:#f1f2f3;--mut:#b5bdc4;--ln:#3b4145;--acf:#fff;}
 html[data-ov-mode] body{background:var(--bg);color:var(--ink)}
 html[data-ov-mode] .card,html[data-ov-mode] .pt,html[data-ov-mode] .chk,html[data-ov-mode] .ob-pay{background:var(--sf);color:var(--ink);border-color:var(--ln)}
@@ -14,10 +14,10 @@ html[data-ov-mode="dark"] #ov-startup-shell{background:#171a1c;color:#b5bdc4}
 /* Nexodent 076: aparência controla a superfície completa do aplicativo.
    A identidade laranja e as cores de status permanecem intactas. */
 html[data-ov-mode="light"] {
-  --ov-bg:#f6f7f9;--ov-card:#ffffff;--ov-text:#303943;
-  --ov-muted:#687481;--ov-line:#dfe3e7;
+  --ov-bg:#f6f7f9;--ov-card:#ffffff;--ov-text:#17212d;
+  --ov-muted:#334155;--ov-line:#dfe3e7;
   --bg:#f6f7f9;--bg2:#eef1f4;--sf:#ffffff;
-  --card:#ffffff;--ink:#303943;--mut:#687481;--ln:#dfe3e7;
+  --card:#ffffff;--ink:#17212d;--mut:#334155;--ln:#dfe3e7;
 }
 html[data-ov-mode="dark"] {
   --ov-bg:#171a1c;--ov-card:#202426;--ov-text:#f1f2f3;
@@ -50,11 +50,11 @@ html[data-ov-mode="light"] .dt-card,
 html[data-ov-mode="light"] .oitem {background:#fff;color:var(--ink)}
 html[data-ov-mode="light"] .ov-mt-table,
 html[data-ov-mode="light"] .ov-mt-table th,
-html[data-ov-mode="light"] .ov-mt-table td {background:#fff;color:#303943;border-color:#dfe3e7}
+html[data-ov-mode="light"] .ov-mt-table td {background:#fff;color:#17212d;border-color:#dfe3e7}
 html[data-ov-mode="light"] .ov-mt-table tbody tr:nth-child(even) td {background:#f6f7f9}
 html[data-ov-mode="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
 html[data-ov-mode="light"] select,
-html[data-ov-mode="light"] textarea {background:#fff;color:#303943;border-color:#cbd2d9;color-scheme:light}
+html[data-ov-mode="light"] textarea {background:#fff;color:#17212d;border-color:#cbd2d9;color-scheme:light}
 html[data-ov-mode="light"] input::placeholder,
 html[data-ov-mode="light"] textarea::placeholder {color:#87919c}
 html[data-ov-mode="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
@@ -80,15 +80,15 @@ html[data-ov-mode="light"] .ov-mobile-nav {
 }
 /* Contraste dos textos diretamente sobre os fundos brancos. */
 html[data-ov-mode="light"] .ov-page-head h1 {
-  color:#303943;
+  color:#17212d;
 }
 
 /* NexoDent 155: reforço da aparência clara, inclusive controles nativos. */
 :root,html,body { color-scheme:only light !important; }
 html[data-ov-mode="light"] { color-scheme:only light !important; }
-html[data-ov-mode="light"] .ov-ag-modal { background:#fff !important; color:#303943 !important; border-color:#dfe3e7 !important; }
-html[data-ov-mode="light"] .ov-ag-modal-form>label>input { background:#fff !important; color:#303943 !important; border-color:#cbd2d9 !important; color-scheme:only light !important; }
-html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact:not(.ag-compact-green):not(.ag-compact-red) { background:#f6f7f9 !important; color:#303943 !important; border-color:#dfe3e7 !important; }
+html[data-ov-mode="light"] .ov-ag-modal { background:#fff !important; color:#17212d !important; border-color:#dfe3e7 !important; }
+html[data-ov-mode="light"] .ov-ag-modal-form>label>input { background:#fff !important; color:#17212d !important; border-color:#cbd2d9 !important; color-scheme:only light !important; }
+html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact:not(.ag-compact-green):not(.ag-compact-red) { background:#f6f7f9 !important; color:#17212d !important; border-color:#dfe3e7 !important; }
 
 /* NexoDent 158 — contraste da baixa e indicadores da agenda em modo claro. */
 html[data-ov-mode="light"] .ov-ag-modal,
@@ -102,16 +102,16 @@ html[data-ov-mode="light"] .ov-ag-status-options label {background:#fff !importa
 html[data-ov-mode="light"] .ov-ag-status-options label:hover {background:#fff7ee !important;}
 html[data-ov-mode="light"] .ov-ag-status-options input[type="radio"] {appearance:auto !important;-webkit-appearance:radio !important;accent-color:#e87500 !important;opacity:1 !important;}
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-red,
-html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-green {background:#fff !important;border-color:#d3dce4 !important;color:#303943 !important;}
+html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-green {background:#fff !important;border-color:#d3dce4 !important;color:#17212d !important;}
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-red .ag-patient,
-html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-green .ag-patient {color:#303943 !important;}
+html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-green .ag-patient {color:#17212d !important;}
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-red .ag-compact-dot {background-color:#dc3545 !important;opacity:1 !important;box-shadow:0 0 0 1px #b72a37 !important;}
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-green .ag-compact-dot {background-color:#159657 !important;opacity:1 !important;box-shadow:0 0 0 1px #107a46 !important;}
 
 /* NexoDent 160 — contraste da agenda clara e status distintos. */
 html[data-ov-mode="light"] .ag-flow-list .ag-flow-row {border-bottom:1px solid #dce2e7!important;color:#26313b!important}
-html[data-ov-mode="light"] .ag-flow-list .ag-flow-time {color:#475569!important;opacity:1!important}
-html[data-ov-mode="light"] .ag-flow-list .ag-flow-free,html[data-ov-mode="light"] .ag-flow-list .ag-flow-free * {color:#586675!important;opacity:1!important}
+html[data-ov-mode="light"] .ag-flow-list .ag-flow-time {color:#334155!important;opacity:1!important}
+html[data-ov-mode="light"] .ag-flow-list .ag-flow-free,html[data-ov-mode="light"] .ag-flow-list .ag-flow-free * {color:#334155!important;opacity:1!important}
 html[data-ov-mode="light"] .ag-flow-list .ag-flow-booked .ag-flow-time {color:#c45b00!important}
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact,
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-red,
@@ -123,7 +123,7 @@ html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact .ag-compact-iden
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-red .ag-compact-dot {background:#dc3545!important;box-shadow:0 0 0 1px #b52a38!important;opacity:1!important}
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-yellow .ag-compact-dot {background:#eab308!important;box-shadow:0 0 0 1px #b88b00!important;opacity:1!important}
 html[data-ov-mode="light"] .ag-block .ag-appointment.ag-compact.ag-compact-orange .ag-compact-dot {background:#f07800!important;box-shadow:0 0 0 1px #bd5e00!important;opacity:1!important}
-html[data-ov-mode="light"] .ag-date-panel,html[data-ov-mode="light"] .ag-date-panel .note,html[data-ov-mode="light"] .ag-rental-panel .note {color:#586675!important}
+html[data-ov-mode="light"] .ag-date-panel,html[data-ov-mode="light"] .ag-date-panel .note,html[data-ov-mode="light"] .ag-rental-panel .note {color:#334155!important}
 html[data-ov-mode="light"] .ag-date-panel h1,html[data-ov-mode="light"] .ag-date-panel label,html[data-ov-mode="light"] .ag-rental-panel strong {color:#26313b!important}
 html[data-ov-mode="light"] .ov-ag-status-options label:has(input[value="Compareceu"]) input {accent-color:#f07800!important}
 html[data-ov-mode="light"] .ov-ag-status-options label:has(input[value="Faltou"]) input {accent-color:#dc3545!important}
@@ -275,3 +275,6 @@ html[data-ov-mode="light"][data-ov-soft] {
     color:var(--mut)!important;opacity:1;
   }
 }
+
+html[data-ov-mode="light"] .ov-content :is(input,textarea)::placeholder { color:#475569; opacity:1; }
+html[data-ov-mode="light"] .ov-content { font-weight:500; }
