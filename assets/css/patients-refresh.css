@@ -23,7 +23,7 @@
 
 /* NexoDent 90: novo acabamento visual da lista, sem tocar na pesquisa ou eventos. */
 .ov-patients-page{max-width:1320px!important}
-.ov-patients-page .ov-page-head{background:var(--nd-header-bg)!important;border:1px solid var(--nd-header-border)!important;padding:26px 28px!important;box-shadow:0 7px 23px rgba(24,37,57,.04)!important}
+.ov-patients-page .ov-page-head{background:#fff!important;border:1px solid var(--nd-header-border)!important;padding:26px 28px!important;box-shadow:0 7px 23px rgba(24,37,57,.04)!important}
 .ov-patients-page .ov-page-head h1{font-size:clamp(27px,3vw,38px)!important;font-weight:850!important;color:#101a2e!important}
 .ov-patients-page .ov-page-head .sub{color:#53647b!important;font-size:14px!important}
 .ov-patients-page .ov-patients-panel{background:#fff!important;box-shadow:0 8px 28px rgba(24,37,57,.065)!important;border:1px solid #e8ebf0!important}
@@ -45,7 +45,6 @@
 .nd-patient-hero-decoration{margin-left:auto;font-size:72px;color:#ffd7bd;opacity:.55}
 .nd-patient-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:12px 0 24px}
 .nd-patient-stat{display:flex;align-items:center;gap:18px;min-width:0;min-height:98px;border:1px solid #e7eaf0;border-radius:18px;background:#fff;padding:18px 22px;box-shadow:0 5px 16px #15233912;box-sizing:border-box}
-.nd-patient-stat-main{background:var(--nexo-action-primary,#f1f3f5);border-color:var(--nexo-action-primary-border,#cbd5e1)}
 .nd-stat-icon{font-size:34px;color:#f97316;flex:none}
 .nd-patient-stat>div{display:flex;flex-direction:column;gap:4px;min-width:0}
 .nd-patient-stat strong{font-size:28px;line-height:1.1;color:#10192c}

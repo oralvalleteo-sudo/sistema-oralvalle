@@ -8,7 +8,6 @@
 .ov-modern-page .ov-modern-title .sub{font-size:14px!important;color:#53617a!important;line-height:1.5!important;margin:0!important;}
 .ov-modern-page .ov-modern-stats{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important;margin:0!important;}
 .ov-modern-page .ov-modern-stats>div{background:#fff!important;border:1px solid #e9edf4!important;border-radius:17px!important;min-height:94px!important;padding:17px 19px!important;box-shadow:0 6px 17px rgba(20,36,60,.065)!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:5px!important;min-width:0!important;}
-.ov-modern-page .ov-modern-stats>div:first-child{background:var(--nexo-action-primary,#f1f3f5)!important;border-color:var(--nexo-action-primary-border,#cbd5e1)!important;}
 .ov-modern-page .ov-modern-stats strong{font-size:30px!important;line-height:1.1!important;font-weight:850!important;color:#111c30!important;}
 .ov-modern-page .ov-modern-stats span{font-size:12px!important;line-height:1.4!important;color:#42526c!important;font-weight:600!important;}
 .ov-modern-page>.ov-modern-list{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
@@ -60,7 +59,6 @@ html:not([data-ov-mode="dark"]) body .ov-modern-page .ov-modern-stats > div {
   border-color:#e5eaf0 !important;
 }
 html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-stat:first-child,
-html:not([data-ov-mode="dark"]) body .ov-modern-page .ov-modern-stats > div:first-child,
 html:not([data-ov-mode="dark"]) body .nxlab-workspace .nxlab-metrics > div:first-child {
   background:var(--nexo-action-primary,#f1f3f5) !important;
   border-color:var(--nexo-action-primary-border,#cbd5e1) !important;
@@ -104,7 +102,7 @@ html:not([data-ov-mode="dark"]) body :is(.card,.ov-panel,.nexo-page-hero,.nexo-p
   border-color:#c4ccd5 !important;
   color:#111 !important;
 }
-html:not([data-ov-mode="dark"]) body :is(.ov-modern-page > .ov-modern-head,.nxlab-workspace .nxlab-top) {
+html:not([data-ov-mode="dark"]) body .nxlab-workspace .nxlab-top {
   background-color:var(--nd-header-bg) !important;
   border-color:var(--nd-header-border) !important;
 }
