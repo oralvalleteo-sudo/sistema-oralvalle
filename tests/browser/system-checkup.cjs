@@ -485,7 +485,12 @@ console.log('Agenda abre no dia, reagendamento funciona em Lembretes e o som é 
 await menu.locator('[data-t="dt"]').first().click();
 const dentistCard=page.locator('.dt-collapsible').filter({hasText:'Dentista sintético'});
 await dentistCard.locator('summary').first().click();
-await dentistCard.getByRole('button',{name:'Registrar repasse retroativo'}).click();
+assert.equal(await dentistCard.locator('[data-f="nome"]').isVisible(),true);
+assert.equal(await dentistCard.getByText('Pagamento ao dentista',{exact:true}).count(),0);
+await page.locator('.ov-content [data-t="cm"]').click();
+await page.getByRole('button',{name:/Dentista sintético/}).click();
+const dentistRepasse=page.locator('[data-commission-dentist]');
+await dentistRepasse.getByRole('button',{name:'Registrar repasse retroativo'}).click();
 const retroDentist=page.getByRole('dialog',{name:'Registrar repasse retroativo'});
 await retroDentist.getByLabel('Data em que foi pago').fill('2025-09-19');
 await retroDentist.getByLabel('Valor pago (R$)').fill('45');
@@ -495,11 +500,10 @@ const retroRows=(await db.query("select dados from commission_payments where dad
 assert.equal(retroRows.length,1);
 assert.equal(retroRows[0].dados.valor,45);
 assert.equal(retroRows[0].dados.data,'2025-09-19');
-assert.equal(await dentistCard.evaluate(card=>card.open),true);
-const dentistHistory=dentistCard.locator('.dt-pay-history');
+const dentistHistory=dentistRepasse.locator('.dt-pay-history');
 await dentistHistory.locator('summary').click();
 assert.equal(await dentistHistory.getByText('19/09/2025',{exact:true}).isVisible(),true);
-await dentistCard.evaluate(()=>render());
+await dentistRepasse.evaluate(()=>render());
 assert.equal(await dentistHistory.evaluate(history=>history.open),true);
 assert.equal(await dentistHistory.getByText('19/09/2025',{exact:true}).isVisible(),true);
 await page.locator('[data-act="logout"]').first().click();await page.locator('#cloudEmail').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>window.OralCloud.session),null);assert.equal(await page.locator('.ov-sidebar').count(),0);assert.deepEqual(errors,[]);console.log('Aplicação real: entrada, cadastro e persistência de paciente, agendamento, navegação de módulos, central interna e saída sem dados clínicos visíveis.');

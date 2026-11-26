@@ -1047,3 +1047,10 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 .dt-card .dt-pay-history > summary::before { content:'▸'; }
 .dt-card .dt-pay-history[open] > summary::before { content:'▾'; }
 .dt-card .dt-pay-history .pg { color:var(--ink); }
+
+.commission-repasse details > summary,
+.commission-month-details > summary {
+  color: var(--ink, #303943) !important;
+  -webkit-text-fill-color: currentColor !important;
+  opacity: 1;
+}
