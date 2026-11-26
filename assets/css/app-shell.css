@@ -1916,7 +1916,7 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 
 /* NexoDent 90: novo acabamento visual da lista, sem tocar na pesquisa ou eventos. */
 .ov-patients-page{max-width:1320px!important}
-.ov-patients-page .ov-page-head{background:var(--nd-header-bg)!important;border:1px solid var(--nd-header-border)!important;padding:26px 28px!important;box-shadow:0 7px 23px rgba(24,37,57,.04)!important}
+.ov-patients-page .ov-page-head{background:#fff!important;border:1px solid var(--nd-header-border)!important;padding:26px 28px!important;box-shadow:0 7px 23px rgba(24,37,57,.04)!important}
 .ov-patients-page .ov-page-head h1{font-size:clamp(27px,3vw,38px)!important;font-weight:850!important;color:#101a2e!important}
 .ov-patients-page .ov-page-head .sub{color:#53647b!important;font-size:14px!important}
 .ov-patients-page .ov-patients-panel{background:#fff!important;box-shadow:0 8px 28px rgba(24,37,57,.065)!important;border:1px solid #e8ebf0!important}
@@ -1938,7 +1938,6 @@ body,button,input,select,textarea,summary{font-family:Figtree,system-ui,-apple-s
 .nd-patient-hero-decoration{margin-left:auto;font-size:72px;color:#ffd7bd;opacity:.55}
 .nd-patient-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:12px 0 24px}
 .nd-patient-stat{display:flex;align-items:center;gap:18px;min-width:0;min-height:98px;border:1px solid #e7eaf0;border-radius:18px;background:#fff;padding:18px 22px;box-shadow:0 5px 16px #15233912;box-sizing:border-box}
-.nd-patient-stat-main{background:var(--nexo-action-primary,#f1f3f5);border-color:var(--nexo-action-primary-border,#cbd5e1)}
 .nd-stat-icon{font-size:34px;color:#f97316;flex:none}
 .nd-patient-stat>div{display:flex;flex-direction:column;gap:4px;min-width:0}
 .nd-patient-stat strong{font-size:28px;line-height:1.1;color:#10192c}
@@ -2720,7 +2719,6 @@ button[data-act="atsave"]:hover {
 .ov-modern-title .sub{margin:0;color:#657083}
 .ov-modern-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .ov-modern-stats>div{min-height:76px;display:flex;flex-direction:column;justify-content:center;padding:14px 18px;border:1px solid #e4e8ee;background:#fff;border-radius:14px;box-shadow:0 3px 10px #18283b0b}
-.ov-modern-stats>div:first-child{background:var(--nexo-action-primary,#f1f3f5);border-color:var(--nexo-action-primary-border,#cbd5e1)}
 .ov-modern-stats strong{font-size:26px;line-height:1.15;color:#1f2937}
 .ov-modern-stats span{font-size:12px;color:#657083;margin-top:5px}
 .ov-modern-list{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
@@ -2833,7 +2831,7 @@ html[data-ov-mode="light"] .ov-content :is(button,a,input,select,textarea):focus
 /* Indicadores com números e labels claramente visíveis */
 .nexo-agenda-page .nexo-page-stats,.ov-modern-page .ov-modern-stats{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:15px!important;margin:0 0 26px!important}
 .nexo-agenda-page .nexo-stat,.ov-modern-page .ov-modern-stats>div{background:#fff!important;border:1px solid #e5eaf0!important;border-radius:19px!important;box-shadow:0 7px 22px #1b2a4110!important;padding:19px 21px!important;min-height:106px!important;box-sizing:border-box}
-.nexo-agenda-page .nexo-stat:first-child,.ov-modern-page .ov-modern-stats>div:first-child{background:var(--nexo-action-primary,#f1f3f5)!important;border-color:var(--nexo-action-primary-border,#cbd5e1)!important}
+.nexo-agenda-page .nexo-stat:first-child{background:var(--nexo-action-primary,#f1f3f5)!important;border-color:var(--nexo-action-primary-border,#cbd5e1)!important}
 .nexo-agenda-page .nexo-stat strong,.ov-modern-page .ov-modern-stats strong{font-size:32px!important;color:#172238!important;font-weight:800!important;line-height:1.35!important}
 .nexo-agenda-page .nexo-stat>span,.ov-modern-page .ov-modern-stats span{font-size:13px!important;color:#526176!important;font-weight:650!important}
 /* O bloco de indicadores de tratamento está dentro do hero: retira o encaixe antigo */
@@ -2892,7 +2890,6 @@ html[data-ov-mode="light"] .ov-content :is(button,a,input,select,textarea):focus
 .ov-modern-page .ov-modern-title .sub{font-size:14px!important;color:#53617a!important;line-height:1.5!important;margin:0!important;}
 .ov-modern-page .ov-modern-stats{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important;margin:0!important;}
 .ov-modern-page .ov-modern-stats>div{background:#fff!important;border:1px solid #e9edf4!important;border-radius:17px!important;min-height:94px!important;padding:17px 19px!important;box-shadow:0 6px 17px rgba(20,36,60,.065)!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:5px!important;min-width:0!important;}
-.ov-modern-page .ov-modern-stats>div:first-child{background:var(--nexo-action-primary,#f1f3f5)!important;border-color:var(--nexo-action-primary-border,#cbd5e1)!important;}
 .ov-modern-page .ov-modern-stats strong{font-size:30px!important;line-height:1.1!important;font-weight:850!important;color:#111c30!important;}
 .ov-modern-page .ov-modern-stats span{font-size:12px!important;line-height:1.4!important;color:#42526c!important;font-weight:600!important;}
 .ov-modern-page>.ov-modern-list{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
@@ -2944,7 +2941,6 @@ html:not([data-ov-mode="dark"]) body .ov-modern-page .ov-modern-stats > div {
   border-color:#e5eaf0 !important;
 }
 html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-stat:first-child,
-html:not([data-ov-mode="dark"]) body .ov-modern-page .ov-modern-stats > div:first-child,
 html:not([data-ov-mode="dark"]) body .nxlab-workspace .nxlab-metrics > div:first-child {
   background:var(--nexo-action-primary,#f1f3f5) !important;
   border-color:var(--nexo-action-primary-border,#cbd5e1) !important;
@@ -2988,7 +2984,7 @@ html:not([data-ov-mode="dark"]) body :is(.card,.ov-panel,.nexo-page-hero,.nexo-p
   border-color:#c4ccd5 !important;
   color:#111 !important;
 }
-html:not([data-ov-mode="dark"]) body :is(.ov-modern-page > .ov-modern-head,.nxlab-workspace .nxlab-top) {
+html:not([data-ov-mode="dark"]) body .nxlab-workspace .nxlab-top {
   background-color:var(--nd-header-bg) !important;
   border-color:var(--nd-header-border) !important;
 }
