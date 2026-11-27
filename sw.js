@@ -47,3 +47,29 @@ self.addEventListener('fetch',event=>{
   return response;
  })());
 });
+
+
+// Fase 1: abertura segura sem rede. Não inicia o banco legado nem autenticação
+// local quando o servidor está indisponível; nenhum prontuário é armazenado.
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  const url = new URL(req.url);
+  const scope = new URL(self.registration.scope);
+  if (req.method !== 'GET' || req.mode !== 'navigate' ||
+      url.origin !== scope.origin ||
+      ![scope.pathname, scope.pathname + 'index.html'].includes(url.pathname)) return;
+  event.respondWith((async () => {
+    try { return await fetch(req); }
+    catch (_) {
+      return new Response(`<!doctype html><html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff"><title>NexoDent — Sem conexão</title>
+<style>body{margin:0;background:#fff;color:#26343c;font:16px system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}main{max-width:360px;padding:28px;text-align:center}h1{font-size:30px;margin:0}h2{font-size:20px}p{line-height:1.6;color:#536169}button{background:#e66b18;color:white;border:0;border-radius:10px;padding:13px 24px;font:inherit;cursor:pointer}</style></head>
+<body><main><h1>NexoDent</h1><h2>Sem conexão com a internet</h2><p>O sistema está disponível para abertura, mas o acesso aos dados da clínica precisa de conexão nesta versão. Nenhum dado foi alterado.</p><button id="retry">Tentar novamente</button><p id="status" role="status"></p></main>
+<script>document.getElementById('retry').onclick=()=>location.reload();window.addEventListener('online',()=>{document.getElementById('status').textContent='Conexão detectada. Toque em Tentar novamente.'});</script></body></html>`, {
+        status: 200,
+        headers: {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}
+      });
+    }
+  })());
+});
