@@ -9,6 +9,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Nexodent" />
+    <meta name="theme-color" content="#ffffff" media="(max-width: 760px) and (pointer: coarse)" />
     <meta name="theme-color" content="#263f49" media="not (display-mode: window-controls-overlay)" />
     <meta name="theme-color" content="#f3f6f8" media="(display-mode: window-controls-overlay)" />
     <meta name="format-detection" content="telephone=no" />
@@ -34,7 +35,20 @@
       @media(prefers-reduced-motion:reduce){.ov-splash-logo{animation:none}}
       @media(max-width:600px){.ov-splash-logo{width:88px;height:88px}.ov-splash-caption{text-align:center;font-size:11px}}
     </style>
-  <link rel="stylesheet" href="assets/css/nexodent-crm-embed.css?build=362"><link rel="stylesheet" href="./assets/css/header-notifications.css?build=377"><link rel="stylesheet" href="./assets/css/button-contrast.css?build=296"><link rel="stylesheet" href="assets/css/mobile-layout.css?build=298"><link rel="stylesheet" href="./assets/css/lab-payables.css?build=301"><link rel="stylesheet" href="./assets/css/whatsapp-center.css?build=433"><link rel="stylesheet" href="./assets/css/whatsapp-direct.css?build=433"><link rel="stylesheet" href="./assets/css/pending-procedures.css?build=312"><link rel="stylesheet" href="./assets/css/pricing-overview.css?build=433"><link rel="stylesheet" href="./assets/css/procedure-catalog.css?build=433"><script defer src="./assets/js/form-input-policy.js?build=330"></script></head>
+  <link rel="stylesheet" href="assets/css/nexodent-crm-embed.css?build=362"><link rel="stylesheet" href="./assets/css/header-notifications.css?build=377"><link rel="stylesheet" href="./assets/css/button-contrast.css?build=296"><link rel="stylesheet" href="assets/css/mobile-layout.css?build=298"><link rel="stylesheet" href="./assets/css/lab-payables.css?build=301"><link rel="stylesheet" href="./assets/css/whatsapp-center.css?build=433"><link rel="stylesheet" href="./assets/css/whatsapp-direct.css?build=433"><link rel="stylesheet" href="./assets/css/pending-procedures.css?build=312"><link rel="stylesheet" href="./assets/css/pricing-overview.css?build=433"><link rel="stylesheet" href="./assets/css/procedure-catalog.css?build=433"><script defer src="./assets/js/form-input-policy.js?build=330"></script><style id="nexo-mobile-white-background">
+@media screen and (max-width: 760px) and (pointer: coarse) {
+  html[data-ov-mode], html[data-ov-mode][data-ov-soft] {
+    --ov-bg:#fff; --bg:#fff; --bg2:#fff; --ov-card:#fff;
+    --sf:#fff; --card:#fff; --ov-soft-field:#fff;
+  }
+  html, html[data-ov-mode] :is(body,#app,.ov-shell,.ov-main,.ov-content,.ov-content-inner,.nexo-agenda-page,.ov-modern-page,.ov-patients-page,.nexo-crm-embed,#ov-startup-shell,.ov-top),
+  html[data-ov-mode][data-ov-soft] :is(body,#app,.ov-shell,.ov-main,.ov-content,.ov-content-inner,.nexo-agenda-page,.ov-modern-page,.ov-patients-page,.nexo-crm-embed,#ov-startup-shell,.ov-top) {
+    background-color:#fff !important;
+    background-image:none !important;
+  }
+}
+</style>
+</head>
   <body>
     <!-- Tela neutra de abertura: somente a marca, sem informações clínicas. -->
     <div id="ov-startup-shell" role="status" aria-live="polite" aria-label="Carregando Nexodent">
