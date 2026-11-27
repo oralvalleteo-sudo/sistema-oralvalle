@@ -14,6 +14,19 @@ await page.addInitScript(({U})=>sessionStorage.setItem('oralvalle_cloud_session'
 await page.route('**/*',async route=>{const url=new URL(route.request().url());if(url.hostname.endsWith('.supabase.co')){let result;try{if(url.pathname==='/auth/v1/user')result={id:U,email:'synthetic@example.invalid'};else if(url.pathname.startsWith('/rest/v1/rpc/')){const name=url.pathname.split('/').at(-1);if(!/^[a-z_]+$/.test(name))throw Error('Invalid RPC');result=await rpc({name,data:route.request().postDataJSON()});}else if(url.pathname.startsWith('/auth/v1/logout'))result={};else throw Object.assign(Error('Serviço não instalado no banco de teste'),{code:'42P01'});return route.fulfill({contentType:'application/json',body:JSON.stringify(result)});}catch(e){console.log('RPC',url.pathname,e.code,e.message);return route.fulfill({status:e.code==='42501'?403:400,contentType:'application/json',body:JSON.stringify({code:e.code||'test',message:e.message})});}}
 if(url.hostname!=='checkup.invalid')return route.fulfill({contentType:'text/javascript',body:''});const file=path.resolve(root,'.'+url.pathname.replace(/^\/sistema-oralvalle\//,'/'));if(!file.startsWith(root+'/')||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:''});return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:fs.readFileSync(file)});});
 await page.goto('https://checkup.invalid/sistema-oralvalle/index.html');await page.locator('.ov-sidebar').first().waitFor({state:'visible'});assert.ok(await page.getByText('Agenda do dia',{exact:true}).isVisible());
+const toolbar = page.locator('.ov-top-bar');
+const toolbarColor = await toolbar.evaluate(el => getComputedStyle(el).backgroundColor);
+const sidebarColor = await page.locator('.ov-sidebar').first().evaluate(el => getComputedStyle(el).backgroundColor);
+assert.equal(toolbarColor, 'rgb(243, 246, 248)');
+await page.setViewportSize({width:390,height:844});
+assert.equal(await page.locator('.ov-top').evaluate(el => getComputedStyle(el).backgroundColor), toolbarColor);
+assert.equal(await page.locator('.ov-top').evaluate(el => getComputedStyle(el).backgroundImage), 'none');
+await page.getByRole('button', {name:'Abrir menu'}).click();
+const mobileSidebar = page.locator('.ov-mobile-nav .ov-sidebar');
+await mobileSidebar.waitFor({state:'visible'});
+assert.equal(await mobileSidebar.evaluate(el => getComputedStyle(el).backgroundColor), sidebarColor);
+await mobileSidebar.locator('[data-t="ag"]').click();
+await page.setViewportSize({width:1366,height:900});
 assert.equal(await page.locator('.ov-content').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(234, 232, 228)');
 const agendaButtonColor=await page.locator('[data-act="agtoday"]').evaluate(el=>getComputedStyle(el).backgroundColor);
 const menu=page.locator('.ov-sidebar').first();
