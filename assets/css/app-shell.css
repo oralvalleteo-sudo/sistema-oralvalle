@@ -3151,6 +3151,11 @@ html:not([data-ov-mode="dark"]) body .nexo-agenda-page .nexo-agenda-tools .ag-re
 .ov-reminder-list-head span:last-child { text-align:right; }
 .ov-reminder-grid .ov-reminder-item { border:0 !important; border-top:1px solid #dce2e9 !important; border-radius:0 !important; box-shadow:none; }
 .ov-reminder-date { color:#334155; font-size:13px; }
+@media (width > 1050px) {
+  .ov-content:has(> .ov-content-inner > .ov-reminders-page) { padding-bottom:20px; }
+  .ov-content-inner:has(> .ov-reminders-page) { display:grid; min-height:100%; }
+  .ov-reminders-page { align-items:stretch; }
+}
 @media (max-width:1050px) {
   .ov-reminders-page { grid-template-columns:minmax(0,1fr); }
   .ov-reminder-filters .lem-tabs { flex-direction:row; }
