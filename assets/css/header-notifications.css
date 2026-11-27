@@ -94,6 +94,13 @@
   --nexo-header-gray: #f3f6f8;
 }
 
+@media (max-width: 760px) {
+  html .ov-shell > .ov-top {
+    background: var(--nexo-header-gray) !important;
+    border-bottom: 1px solid #e4e9ee;
+  }
+}
+
 @media (min-width: 761px) {
   .ov-shell > .ov-top {
     background: var(--ov-sidebar-bg, #263f49) !important;
