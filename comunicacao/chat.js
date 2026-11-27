@@ -66,7 +66,11 @@ async function changeClinic(){
  if(state.busy)return;if(state.clinic&&!confirmDiscard()){$('clinic').value=state.clinic;return;}
  if($('room-dialog').open)$('room-dialog').close();state.version++;const version=state.version;state.clinic=$('clinic').value;document.documentElement.classList.remove('has-chat-room');document.querySelector('header>a').href='../index.html?clinic_id='+encodeURIComponent(state.clinic);state.active=null;state.rooms=[];state.messages.clear();state.roomOffset=0;state.roomHasMore=false;state.lastRead=null;clearComposer();$('messages').replaceChildren();$('composer').hidden=true;$('manage').hidden=true;$('participants').textContent='';$('title').textContent='Escolha uma conversa';$('older').hidden=true;renderRooms();
  try{const result=await rpc('people');if(version!==state.version)return;state.user=result.user_id;state.people=result.people||[];state.canWrite=result.can_write;
- if(embedded)window.parent.postMessage({type:'nexodent:chat-context',clinic_id:state.clinic,user_id:state.user,clinic_name:$('clinic').selectedOptions[0]?.textContent},location.origin);$('new').disabled=!state.canWrite||state.people.filter(p=>p.id!==state.user).length===0;$('workspace').hidden=false;await rooms();status(state.people.length>1?'Equipe carregada. Conversas e arquivos ficam restritos aos participantes.':'Só você está disponível nesta clínica. Cadastre ou libere o acesso dos colegas para conversar.');}
+ if(embedded)window.parent.postMessage({type:'nexodent:chat-context',clinic_id:state.clinic,user_id:state.user,clinic_name:$('clinic').selectedOptions[0]?.textContent},location.origin);$('new').disabled=!state.canWrite||state.people.filter(p=>p.id!==state.user).length===0;$('workspace').hidden=false;
+ await rooms();
+ if(version!==state.version)return;
+ if(!compact&&state.rooms.length){await selectRoom(state.rooms[0]);return;}
+ status(state.people.length>1?'Equipe carregada. Conversas e arquivos ficam restritos aos participantes.':'Só você está disponível nesta clínica. Cadastre ou libere o acesso dos colegas para conversar.');}
  catch(error){if(version===state.version){$('workspace').hidden=true;status(/42883|PGRST202/.test(error.code||'')?'A comunicação ainda precisa ser instalada no servidor. Solicite a ativação ao administrador.':error.message)}}
 }
 function renderPeople(selected=[]){
