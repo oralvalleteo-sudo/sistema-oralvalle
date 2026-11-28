@@ -29,13 +29,21 @@ Para usar o comportamento local anterior, defina `enabled: false` explicitamente
 
 O frontend atual exige a [migration de leitura paginada](supabase/migrations/202610200002_bounded_clinic_reads.sql), alem das anteriores. A leitura inicial foi otimizada para buscar tabelas independentes em paralelo, com limite de quatro requisições simultâneas; a atualização das solicitações de acesso do administrador ocorre em segundo plano para não atrasar a abertura da primeira tela. O código continua separado por responsabilidade em `features/`, `supabase/`, `storage.js`, `auth.js` e `app.js`. O login nao chama mais `clinic_load` nem baixa anexos: dados clinicos sao lidos por paginas com revisao consistente, e arquivos/assinaturas ficam sob demanda. A primeira otimizacao isolada nao resolve todos os volumes. Antes de publicar, siga [backup manual gratuito, limites, validacao e publicacao](supabase/README.md#leitura-paginada). Publicar na Vercel nao executa migrations no Supabase. Volumes grandes de backup/restauracao exigem o caminho administrativo documentado, sem exportacao parcial silenciosa.
 
+## Acesso offline no Supabase
+
+Em **Minha conta → Meu acesso → Configurar ou abrir cópia offline**, faça a primeira sincronização com internet e guarde o código gerado para o aparelho. Depois, **Acesso offline** na tela de entrada desbloqueia a cópia da conta e da clínica por até 12 horas desde a autorização online. Agenda, cadastro, prontuário estruturado, odontograma, orçamentos e registros de pagamentos usam essa cópia. A revalidação da conta e do vínculo antecede o reenvio. Anexos, assinatura digital, comunicação, alteração de acessos e operações que dependem de serviços externos exigem conexão.
+
+O indicador mostra quando há alterações pendentes. Em caso de conflito, a revisão remota é preservada e a cópia local permanece criptografada. No aviso de conflito, a cópia pode ser baixada para recuperação técnica. A sincronização verifica a revisão e usa o identificador de cada lote para que a perda da resposta do servidor não gere uma segunda gravação. Enquanto o aparelho está sem rede, revogações feitas no servidor só podem ser detectadas na reconexão ou no vencimento da autorização local.
+
+A publicação depende de aplicar a migration `202611270027_offline_write_receipts.sql` em homologação, validar as permissões por perfil e os cenários de reconexão e verificar o fluxo em aparelhos reais. O teste `tests/browser/offline-clinic.cjs` usa pacientes fictícios e PostgreSQL isolado.
+
 ## Modo local
 
 Dados e contas continuam no navegador, em `localStorage` e `sessionStorage`. Faça backups pela aplicação. O login local controla a interface: não é autenticação de servidor e não oferece compartilhamento entre aparelhos.
 
 O comportamento do armazenamento ao abrir arquivos locais depende do navegador. Prefira um endereço HTTPS estável para uso contínuo. Mudar o endereço, navegador ou aparelho não transfere os dados: exporte o backup antes e importe no destino. Não publique backups nem dados reais de pacientes no GitHub.
 
-A fonte Figtree é carregada do Google Fonts, como no original. Sem conexão, o navegador usa as fontes alternativas já definidas. Notificações nativas, área de transferência e impressão dependem das permissões e dos recursos do navegador. Não há service worker nem promessa de instalação/offline PWA.
+A fonte Figtree é carregada do Google Fonts, como no original. Sem conexão, o navegador usa as fontes alternativas já definidas. Notificações nativas, área de transferência e impressão dependem das permissões e dos recursos do navegador. A versão hospedada usa um service worker para abrir a interface sem rede.
 
 ## GitHub Pages
 

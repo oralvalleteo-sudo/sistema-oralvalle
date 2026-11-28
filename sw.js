@@ -26,50 +26,82 @@ self.addEventListener('notificationclick', (event) => {
   })());
 });
 
-// Somente arquivos públicos versionados. Nunca interceptar HTML, API ou anexos.
-const STATIC_CACHE='nexodent-public-static-409';
-self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
+// O shell contém apenas arquivos públicos. Respostas clínicas nunca entram no Cache Storage.
+const STATIC_CACHE = 'nexodent-public-static-435';
+const SHELL_CACHE = 'nexodent-public-shell-435';
+const publicPath = /^(?:assets\/|legal\/)[a-zA-Z0-9_./-]+\.(?:js|css|woff2?|png|webp|svg|ico|mp3|wav)$|^(?:favicon[^/]*|apple-touch-icon\.png|icon-(?:192|512)\.png|manifest\.webmanifest)$/;
+function shellAsset(value, base) {
+  const url = new URL(value, base);
+  return url.origin === base.origin && url.pathname.startsWith(base.pathname) &&
+    publicPath.test(url.pathname.slice(base.pathname.length)) && !url.username && !url.password &&
+    [...url.searchParams].every(([key, value]) => ['build', 'v'].includes(key) && /^\d+$/.test(value));
+}
+async function installShell() {
+  const base = new URL(self.registration.scope);
+  const index = new URL('index.html', base).href;
+  const request = { cache: 'reload', credentials: 'omit', redirect: 'error' };
+  const html = await fetch(index, request);
+  if (!html.ok || !html.headers.get('content-type')?.includes('text/html')) throw new Error('Shell indisponível.');
+  const markup = await html.clone().text();
+  const assets = new Set();
+  for (const match of markup.matchAll(/(?:src|href)=["']([^"'\s]+)["']/g)) {
+    if (shellAsset(match[1], base)) assets.add(new URL(match[1], base).href);
+  }
+  const cache = await caches.open(SHELL_CACHE);
+  for (const url of assets) {
+    const response = await fetch(url, request);
+    if (!response.ok || /private|no-store/i.test(response.headers.get('cache-control') || ''))
+      throw new Error('Recurso público indisponível para abrir offline.');
+    await cache.put(url, response);
+  }
+  await cache.put(index, html);
+}
+self.addEventListener('install', event => event.waitUntil(installShell().then(() => self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
- for(const name of await caches.keys())if(name.startsWith('nexodent-public-static-')&&name!==STATIC_CACHE)await caches.delete(name);
+ for(const name of await caches.keys())if((name.startsWith('nexodent-public-static-')&&name!==STATIC_CACHE)||(name.startsWith('nexodent-public-shell-')&&name!==SHELL_CACHE))await caches.delete(name);
  await self.clients.claim();
 })()));
 self.addEventListener('fetch',event=>{
- const request=event.request,url=new URL(request.url),scope=new URL(self.registration.scope);
- if(request.method!=='GET'||url.origin!==scope.origin||!url.pathname.startsWith(scope.pathname+'assets/')||!(/\.(?:js|css|woff2?|png|webp|svg|ico)$/.test(url.pathname))||!(url.searchParams.has('build')||url.searchParams.has('v'))||request.headers.has('authorization')||request.headers.has('range'))return;
- event.respondWith((async()=>{
-  const cache=await caches.open(STATIC_CACHE),hit=await cache.match(request);
-  if(hit)return hit;
-  const response=await fetch(request);
-  if(response.ok&&response.type!=='opaque'&&!response.redirected){
-   const control=response.headers.get('cache-control')||'';
-   if(!/no-store|private/i.test(control))await cache.put(request,response.clone());
-  }
-  return response;
+ const request = event.request;
+ const url = new URL(request.url);
+ const scope = new URL(self.registration.scope);
+ if (request.method !== 'GET' || url.origin !== scope.origin ||
+     request.headers.has('authorization') || request.headers.has('range')) return;
+ if (request.mode === 'navigate' && [scope.pathname, scope.pathname + 'index.html'].includes(url.pathname)) {
+   event.respondWith((async () => {
+     try {
+       const response = await fetch(request);
+       if (response.status < 500) return response;
+     } catch (_) {}
+     const shell = await caches.open(SHELL_CACHE);
+     return await shell.match(new URL('index.html', scope).href) || Response.error();
+   })());
+   return;
+ }
+ if (!shellAsset(url.href, scope)) return;
+ const versioned = url.searchParams.has('build') || url.searchParams.has('v');
+ const asset = url.pathname.startsWith(scope.pathname + 'assets/');
+ // Non-asset and unversioned URLs are served only if they were part of the installed shell.
+ if (!asset || !versioned) {
+   if (request.destination === '') return;
+   event.respondWith((async () => {
+     const cache = await caches.open(SHELL_CACHE);
+     return await cache.match(request) || fetch(request);
+   })());
+   return;
+ }
+ event.respondWith((async () => {
+   const cache = await caches.open(STATIC_CACHE);
+   const hit = await cache.match(request);
+   if (hit) return hit;
+   const shell = await caches.open(SHELL_CACHE);
+   const installed = await shell.match(request);
+   if (installed) return installed;
+   const response = await fetch(request, { credentials: 'omit' });
+   if (response.ok && response.type !== 'opaque' && !response.redirected &&
+       !/no-store|private/i.test(response.headers.get('cache-control') || '')) {
+     await cache.put(request, response.clone());
+   }
+   return response;
  })());
-});
-
-
-// Fase 1: abertura segura sem rede. Não inicia o banco legado nem autenticação
-// local quando o servidor está indisponível; nenhum prontuário é armazenado.
-self.addEventListener('fetch', event => {
-  const req = event.request;
-  const url = new URL(req.url);
-  const scope = new URL(self.registration.scope);
-  if (req.method !== 'GET' || req.mode !== 'navigate' ||
-      url.origin !== scope.origin ||
-      ![scope.pathname, scope.pathname + 'index.html'].includes(url.pathname)) return;
-  event.respondWith((async () => {
-    try { return await fetch(req); }
-    catch (_) {
-      return new Response(`<!doctype html><html lang="pt-BR"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#ffffff"><title>NexoDent — Sem conexão</title>
-<style>body{margin:0;background:#fff;color:#26343c;font:16px system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}main{max-width:360px;padding:28px;text-align:center}h1{font-size:30px;margin:0}h2{font-size:20px}p{line-height:1.6;color:#536169}button{background:#e66b18;color:white;border:0;border-radius:10px;padding:13px 24px;font:inherit;cursor:pointer}</style></head>
-<body><main><h1>NexoDent</h1><h2>Sem conexão com a internet</h2><p>O sistema está disponível para abertura, mas o acesso aos dados da clínica precisa de conexão nesta versão. Nenhum dado foi alterado.</p><button id="retry">Tentar novamente</button><p id="status" role="status"></p></main>
-<script>document.getElementById('retry').onclick=()=>location.reload();window.addEventListener('online',()=>{document.getElementById('status').textContent='Conexão detectada. Toque em Tentar novamente.'});</script></body></html>`, {
-        status: 200,
-        headers: {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}
-      });
-    }
-  })());
 });

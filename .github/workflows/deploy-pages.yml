@@ -37,12 +37,18 @@ jobs:
         run: npm test
         env:
           PGLITE_MODULE: '@electric-sql/pglite'
-      - name: Preparar Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Preparar Chromium e WebKit
+        run: npx playwright install --with-deps chromium webkit
       - name: Informar caminho do Chromium
         run: node -e "require('fs').appendFileSync(process.env.GITHUB_ENV,'CHROMIUM_BIN='+require('playwright').chromium.executablePath()+'\n')"
       - name: Reproduzir os fluxos no navegador
         run: npm run test:browser
+        env:
+          PGLITE_MODULE: '@electric-sql/pglite'
+      - name: Verificar acesso offline com perfis móveis
+        run: |
+          NEXODENT_BROWSER=android node tests/browser/offline-clinic.cjs
+          NEXODENT_BROWSER=webkit node tests/browser/offline-clinic.cjs
         env:
           PGLITE_MODULE: '@electric-sql/pglite'
   publish:

@@ -63,7 +63,7 @@ function sanitizeView(){
 }
 function pmAllowed(act,d){
   const u=pmUser();if(!u||u.admin)return true;
-  if(act==='logout'||act==='acpw'||act==='actab')return true;
+  if(['logout','acpw','actab','offlineenable','offlinedisable'].includes(act))return true;
   if(act==='nav')return d.t==='inicio'||d.t==='conta'||pmLvl(d.t)>=1;
   if(['orthonav','implnav','protnav'].includes(act))return pmSee({orthonav:'ortho',implnav:'impl',protnav:'prot'}[act]);
   if(act==='open')return pmLvl('pac')>=1;

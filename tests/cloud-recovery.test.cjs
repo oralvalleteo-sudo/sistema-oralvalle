@@ -393,6 +393,7 @@ test('revision checks are spread out, back off on failure, and pause when hidden
     console: { warn() {} },
     LOCKED: false,
     disposed: false,
+    vault: null,
     OralCloudData: { currentRevision: () => '1' },
     OralCloud: { clinicId: 'clinic', async request() {
       calls++;

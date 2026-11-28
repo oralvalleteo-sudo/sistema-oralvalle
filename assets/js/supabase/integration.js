@@ -14,6 +14,235 @@
   let accessError = '';
   let accessLoading = false;
   let pendingFiles = [];
+  let vault = null;
+  let localWrite = Promise.resolve();
+  let localWrites = 0;
+  let offlineSession = false;
+  let offlineExpiry = null;
+  let reconnecting = null;
+  const OFFLINE_LEASE = 12 * 60 * 60 * 1000;
+  const configuredClinic = () => new URLSearchParams(location.search).get('clinic_id') || OralCloud.config.clinicId;
+  const networkFailure = error => Boolean(error) && (!navigator.onLine || (error instanceof TypeError && !error.status));
+  const denied = error => [401, 403].includes(error.status) || error.code === '42501';
+
+  function updateConnection() {
+    let indicator = $('nexoOfflineStatus');
+    if (LOCKED || !vault) { indicator?.remove(); return; }
+    if (!indicator) {
+      indicator = document.createElement('aside');
+      indicator.id = 'nexoOfflineStatus';
+      indicator.setAttribute('role', 'status');
+      indicator.style.cssText = 'position:fixed;bottom:max(8px,env(safe-area-inset-bottom));left:8px;z-index:60;padding:6px 10px;border-radius:8px;background:#263f49;color:white;font-size:12px';
+      document.body.appendChild(indicator);
+    }
+    const queued = localWrites || vault.record?.dirty || vault.record?.job;
+    const label = running ? 'Sincronizando' : !navigator.onLine ? 'Sem conexão'
+      : offlineSession ? 'Sessão offline' : 'Conectado';
+    const message = label + (queued ? ' · alterações pendentes' : ' · sem alterações pendentes');
+    if (indicator.textContent !== message) indicator.textContent = message;
+  }
+
+  function startLease() {
+    clearTimeout(offlineExpiry);
+    offlineExpiry = setTimeout(() => doLogout('A autorização offline expirou. Entre online para renovar.'),
+      Math.max(0, vault.record.expires - Date.now()));
+  }
+
+  async function unlockOffline(email, secret) {
+    const clinicId = await NexoOfflineVault.clinic(email, configuredClinic());
+    const candidate = await NexoOfflineVault.open(email, clinicId, secret);
+    const record = candidate.record;
+    if (record.expires <= Date.now() || record.issued > Date.now()) {
+      candidate.close();
+      throw new Error('A autorização offline expirou. Entre online e desbloqueie a cópia para renovar.');
+    }
+    vault = candidate;
+    disposed = false;
+    offlineSession = true;
+    OralCloud.clinicId = clinicId;
+    OralCloud.bindActor(record.member.id);
+    OralCloudData.restoreCheckpoint(record.base);
+    db = migrate(copy(record.data));
+    pending = record.dirty ? copy(record.data) : null;
+    failure = null;
+    AUTH = { users: [record.member], rec: null };
+    unlock(record.member, false);
+    startLease();
+    updateConnection();
+    startSync(clinicId);
+    reconnect().catch(() => {});
+  }
+
+  async function verifyVaultSession() {
+    const expected = vault.record;
+    const clinicId = expected.base.clinic;
+    const identity = OralCloud.session?.user?.id ? OralCloud.session.user : (await OralCloud.restoreSession())?.user;
+    if (identity?.id !== expected.member.id) throw Object.assign(new Error('Entre no Supabase com a conta que criou a cópia offline.'), { reauthenticate: true });
+    const clinics = await OralCloud.request('/rest/v1/rpc/clinic_list', { method: 'POST', body: {} });
+    if (!clinics.some(clinic => clinic.clinic_id === clinicId && clinic.user_id === identity.id))
+      throw Object.assign(new Error('Seu acesso a esta clínica foi revogado.'), { status: 403 });
+    const members = await OralCloudData.members();
+    const member = members.find(value => value.id === identity.id && value.active);
+    if (!member || member.admin !== expected.member.admin || JSON.stringify(member.perms) !== JSON.stringify(expected.member.perms))
+      throw Object.assign(new Error('As permissões da clínica mudaram. A cópia pendente foi preservada.'), { status: 403 });
+    AUTH = { users: members.filter(value => value.active), rec: null };
+    memberBaseline = copy(AUTH.users);
+  }
+
+  function reconnect() {
+    if (!vault || !navigator.onLine || LOCKED) return Promise.resolve();
+    if (reconnecting) return reconnecting;
+    const activeVault = vault;
+    reconnecting = (async () => {
+      try {
+        if (offlineSession) {
+          await verifyVaultSession();
+          if (vault !== activeVault || LOCKED) return;
+          offlineSession = false;
+        }
+        if (networkFailure(failure)) failure = null;
+        await flush();
+      } catch (error) {
+        if (vault !== activeVault) return;
+        if (denied(error) || error.reauthenticate) {
+          await lockVault(denied(error) ? error.message : 'Entre no Supabase e depois desbloqueie a cópia na tela Meu acesso.');
+        }
+      } finally { updateConnection(); }
+    })().finally(() => { reconnecting = null; });
+    return reconnecting;
+  }
+
+  async function lockVault(message) {
+    LOCKED = true;
+    $('app').inert = true;
+    await localWrite.catch(() => {});
+    if (running) await running.catch(() => {});
+    vault?.close();
+    vault = null;
+    clearTimeout(offlineExpiry);
+    offlineSession = false;
+    pending = null;
+    failure = null;
+    disposed = true;
+    stopSync();
+    OralCloudData.reset();
+    OralCloud.clinicId = null;
+    OralCloud.bindActor(null);
+    window.OralCloudFiles?.reset();
+    AUTH = { users: [], rec: null };
+    ME = null;
+    db = migrate({});
+    view.id = null;
+    delArm = null;
+    $('printarea')?.replaceChildren();
+    $('cloudStatus')?.remove();
+    cloudLock('login', message);
+    $('app').inert = false;
+    updateConnection();
+  }
+
+  function askOfflineCode(generated) {
+    const dialog = document.createElement('dialog');
+    dialog.style.maxWidth = 'min(440px, calc(100% - 32px))';
+    dialog.innerHTML = `<form method="dialog">
+      ${generated ? '<p>Guarde este código em um gerenciador de senhas. Você precisará dele para abrir a clínica sem internet.</p>' : ''}
+      <label for="nexoVaultCode">Código offline desta clínica</label>
+      <input id="nexoVaultCode" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+      <div class="row"><button value="unlock">${generated ? 'Ativar cópia offline' : 'Desbloquear'}</button>
+      <button value="cancel" class="ghost" formnovalidate>Cancelar</button></div></form>`;
+    const input = dialog.querySelector('input');
+    if (generated) {
+      input.value = generated;
+      input.readOnly = true;
+    } else input.type = 'password';
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    return new Promise(resolve => dialog.addEventListener('close', () => {
+      const code = dialog.returnValue === 'unlock' ? input.value.trim() : null;
+      dialog.remove();
+      resolve(code);
+    }, { once: true }));
+  }
+
+  async function enableOffline() {
+    if (!navigator.onLine || !OralCloud.session?.user?.id || vault || pending || running || failure || syncBusy || membersPending)
+      throw new Error('Conclua as alterações e conecte-se antes de configurar o acesso offline.');
+    const clinicId = OralCloud.clinicId;
+    const email = OralCloud.session.user.email;
+    const actor = OralCloud.session.user.id;
+    const previous = OralCloudData.checkpoint();
+    const protocol = await OralCloud.request('/rest/v1/rpc/clinic_offline_capabilities', {
+      method: 'POST', body: { p_clinic: clinicId }
+    }).catch(error => {
+      if (error.status === 404 || error.code === 'PGRST202')
+        throw new Error('A sincronização offline ainda não está disponível no servidor.');
+      throw error;
+    });
+    if (protocol !== 1) throw new Error('Protocolo de sincronização offline indisponível.');
+    const existing = await NexoOfflineVault.exists(email, clinicId);
+    if (clinicId !== OralCloud.clinicId || LOCKED || pending || running || syncBusy || membersPending) return;
+    const generated = existing ? null : NexoOfflineVault.code();
+    const secret = await askOfflineCode(generated);
+    if (!secret) return;
+    if (generated && secret !== generated) throw new Error('Confirme o código gerado pelo NexoDent.');
+    if (clinicId !== OralCloud.clinicId || LOCKED || pending || running || syncBusy || membersPending) return;
+    $('app').inert = true;
+    stopSync();
+    try {
+      const members = await OralCloudData.members();
+      const member = members.find(value => value.id === actor && value.active);
+      if (!member) throw new Error('Sua conta não tem acesso ativo a esta clínica.');
+      if (existing) {
+        const savedVault = await NexoOfflineVault.open(email, clinicId, secret.trim());
+        const record = savedVault.record;
+        const permissionsChanged = record.member.admin !== member.admin ||
+          JSON.stringify(record.member.perms) !== JSON.stringify(member.perms);
+        if (record.member.id !== member.id || (record.dirty || record.job) && permissionsChanged) {
+          savedVault.close();
+          throw new Error('As permissões ou a conta mudaram. A cópia criptografada foi preservada.');
+        }
+        if (record.dirty || record.job) {
+          vault = savedVault;
+          OralCloudData.restoreCheckpoint(record.base);
+          db = migrate(copy(record.data));
+          pending = copy(record.data);
+          await vault.write(value => ({ ...value, issued: Date.now(), expires: Date.now() + OFFLINE_LEASE }));
+        } else {
+          try {
+            const raw = migrate(await OralCloudData.load({ full: true }));
+            OralCloudData.prepareDefaults(raw);
+            const issued = Date.now();
+            await savedVault.write(() => ({ member, issued, expires: issued + OFFLINE_LEASE,
+              base: OralCloudData.checkpoint(), data: OralCloudData.snapshot(raw), dirty: false, job: null }));
+            db = raw;
+            vault = savedVault;
+          } catch (error) { savedVault.close(); throw error; }
+        }
+      } else {
+        const raw = migrate(await OralCloudData.load({ full: true }));
+        OralCloudData.prepareDefaults(raw);
+        const issued = Date.now();
+        vault = await NexoOfflineVault.create(email, clinicId, secret.trim(), { member, issued, expires: issued + OFFLINE_LEASE,
+          base: OralCloudData.checkpoint(), data: OralCloudData.snapshot(raw), dirty: false, job: null });
+        db = raw;
+      }
+      OralCloud.bindActor(member.id);
+      AUTH = { users: members.filter(value => value.active), rec: null };
+      memberBaseline = copy(AUTH.users);
+      ME = { ...member, keep: false };
+      startLease();
+      idleReset();
+      render();
+      reconnect().catch(() => {});
+    } catch (error) {
+      if (!vault) OralCloudData.restoreCheckpoint(previous);
+      throw error;
+    } finally {
+      $('app').inert = false;
+      startSync(clinicId);
+      updateConnection();
+    }
+  }
   // Sincronização entre abas e aparelhos: consulta apenas a revisão, sem baixar
   // os dados completos a cada ciclo. Nunca substitui um formulário em edição.
   let syncTimer = null;
@@ -63,12 +292,18 @@
   }
   async function syncTick() {
     if (syncBusy || disposed || LOCKED || !syncClinic || syncClinic !== OralCloud.clinicId || document.hidden) return;
+    if (vault && (offlineSession || pending || vault.record.dirty || vault.record.job) && !failure) {
+      await reconnect();
+      return;
+    }
+    if (vault && (!navigator.onLine || failure)) return;
     syncBusy = true;
     syncLastCheck = Date.now();
     let failed = false;
     const clinicId = OralCloud.clinicId;
     const session = syncSession;
     try {
+      if (vault) await verifyVaultSession();
       const meta = await OralCloud.request('/rest/v1/rpc/clinic_load_start', {
         method: 'POST', body: { p_clinic: clinicId }
       });
@@ -90,11 +325,26 @@
         return;
       }
       // Mostrar a marca apenas durante a atualização efetiva, sem bloquear a edição.
-      const raw = await OralCloudData.load();
+      const previous = OralCloudData.checkpoint();
+      const raw = await OralCloudData.load({ full: Boolean(vault) });
       if (session !== syncSession || clinicId !== OralCloud.clinicId || LOCKED || disposed) return;
       // O usuário pode começar a editar enquanto os dados são baixados.
-      if (pending || running || failure || membersRunning || membersPending || editing() || view.id) return;
-      db = migrate(raw);
+      if (pending || running || failure || membersRunning || membersPending || editing() || view.id) {
+        OralCloudData.restoreCheckpoint(previous);
+        return;
+      }
+      const fresh = migrate(raw);
+      OralCloudData.prepareDefaults(fresh);
+      if (vault) {
+        $('app').inert = true;
+        try {
+          await vault.write(record => ({ ...record, base: OralCloudData.checkpoint(), data: OralCloudData.snapshot(fresh) }));
+        } catch (error) {
+          OralCloudData.restoreCheckpoint(previous);
+          throw error;
+        } finally { $('app').inert = false; }
+      }
+      db = fresh;
       OralCloudData.prepareDefaults(db);
       window.dispatchEvent(new CustomEvent('nexodent:clinic-data-loaded', { detail: { clinicId: OralCloud.clinicId } }));
       syncRevision = meta.revision;
@@ -103,6 +353,7 @@
     } catch (error) {
       // A conexão pode oscilar: manter a tela e os dados atuais intactos.
       failed = true;
+      if (vault && denied(error)) await lockVault(error.message);
       console.warn('[Oral Valle] Sincronização adiada:', error);
     } finally {
       if (session === syncSession) syncFailures = failed ? Math.min(3, syncFailures + 1) : 0;
@@ -127,6 +378,11 @@
   }
 
   const copy = value => JSON.parse(JSON.stringify(value));
+  window.addEventListener('offline', () => {
+    if (vault) offlineSession = true;
+    updateConnection();
+  });
+  window.addEventListener('online', () => { updateConnection(); reconnect().catch(() => {}); });
   const localToast = toast;
   const localPermissionCard = pmCardHtml;
 
@@ -164,6 +420,29 @@
     const text = document.createElement('span');
     text.textContent = message;
     panel.appendChild(text);
+    if (error && vault) {
+      const retry = document.createElement('button');
+      retry.className = 'sm';
+      retry.textContent = 'Sincronizar novamente';
+      retry.onclick = () => {
+        if (!requiresReload(failure)) { failure = null; reconnect().catch(() => {}); }
+      };
+      if (!requiresReload(failure)) panel.append(retry);
+      const recovery = document.createElement('button');
+      recovery.className = 'ghost sm';
+      recovery.textContent = 'Baixar cópia criptografada';
+      recovery.onclick = () => vault?.export().then(file => {
+        const url = URL.createObjectURL(new Blob([file], { type: 'application/json' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'nexodent-copia-offline-' + tdy() + '.json';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }).catch(problem => localToast(problem.message, 4500));
+      panel.append(recovery);
+      panel.hidden = false;
+      return;
+    }
     if (error) {
       const backup = document.createElement('button');
       backup.className = 'ghost sm';
@@ -210,29 +489,51 @@
     clearTimeout(timer);
     if (membersRunning) return memberQueue.then(() => flush());
     if (running) return running;
+    if (vault && (!navigator.onLine || offlineSession)) return;
     if (failure) throw failure;
     running = (async () => {
-      while (pending && !disposed) {
+      while ((pending || vault?.record.dirty || vault?.record.job) && !disposed && !LOCKED) {
         const snapshot = pending;
         pending = null;
         try {
-          const revision = await OralCloudData.save(snapshot);
+          let revision;
+          if (vault) {
+            await localWrite;
+            const activeVault = vault;
+            const record = await activeVault.write(value => value.job ? value : ({
+              ...value, job: { id: crypto.randomUUID(), data: value.data }
+            }));
+            OralCloudData.restoreCheckpoint(record.base);
+            revision = await OralCloudData.save(record.job.data, record.job.id);
+            const base = OralCloudData.checkpoint();
+            const committed = await activeVault.write(value => ({
+              ...value, base, job: null, dirty: JSON.stringify(value.data) !== JSON.stringify(record.job.data)
+            }));
+            pending = committed.dirty ? copy(committed.data) : pending;
+          } else {
+            revision = await OralCloudData.save(snapshot);
+          }
           syncRevision = revision;
           if (!pending) saved();
         } catch (error) {
           if (!pending) pending = snapshot;
+          if (vault && networkFailure(error)) {
+            offlineSession = true;
+            updateConnection();
+            return;
+          }
           failure = error;
           status(isFinalizedEvolutionConflict(error)
-            ? 'O Supabase protegeu uma evolução finalizada e recusou a gravação. Baixe as alterações pendentes antes de recarregar os dados.'
+            ? 'O Supabase protegeu uma evolução finalizada e recusou a gravação. Suas alterações pendentes foram preservadas.'
             : isRevisionConflict(error)
-            ? 'Outro usuário alterou a clínica. Suas alterações não foram sobrescritas: baixe o backup e recarregue.'
+            ? (vault ? 'Há um conflito com outra alteração da clínica. Sua cópia criptografada foi preservada.' : 'Outro usuário alterou a clínica. Suas alterações não foram sobrescritas: baixe o backup e recarregue.')
             : isEvolutionDentistReference(error)
             ? 'O vínculo com o dentista impediu a exclusão. Baixe as alterações pendentes, recarregue e use Cancelar manutenção no prontuário.'
             : 'Não foi possível gravar no Supabase: ' + error.message, true);
           throw error;
         }
       }
-    })().finally(() => { running = null; updSaveStat(); });
+    })().finally(() => { running = null; updSaveStat(); updateConnection(); });
     return running;
   }
 
@@ -242,6 +543,17 @@
       return;
     }
     pending = OralCloudData.snapshot(db);
+    if (vault) {
+      const latest = pending;
+      localWrites++;
+      localWrite = vault.write(record => ({ ...record, data: latest, dirty: true })).catch(error => {
+        failure = error;
+        status('Alterações ainda não gravadas neste aparelho: ' + error.message, true);
+        throw error;
+      }).finally(() => { localWrites--; updateConnection(); });
+      localWrite.catch(() => {});
+      updateConnection();
+    }
     lastSaved = null;
     updSaveStat();
     if (!failure) status('Gravando alterações no Supabase…');
@@ -250,7 +562,8 @@
   };
 
   saveStatText = function (patient) {
-    if (failure) return '⚠ Alterações não gravadas no Supabase';
+    if (failure) return '⚠ Alterações pendentes';
+    if (vault && (pending || running)) return localWrites ? 'Gravando neste aparelho…' : 'Salvo neste aparelho · sincronização pendente';
     if (pending || running) return '⏳ Aguardando confirmação do Supabase';
     return patient && lastSaved && lastSavedPid === patient.id
       ? '✓ Tudo salvo às ' + hhmm(lastSaved) : '✓ Dados carregados do Supabase';
@@ -281,7 +594,7 @@
     const clinics = await OralCloud.request('/rest/v1/rpc/clinic_list', { method: 'POST', body: {} });
     if (!Array.isArray(clinics) || !clinics.length)
       throw new Error('Sua conta ainda não tem acesso à clínica. Confirme seu e-mail e peça ao administrador Ricardo Silva que aprove seu cadastro em Configurações → Acessos.');
-    const configured = new URLSearchParams(location.search).get('clinic_id') || OralCloud.config.clinicId;
+    const configured = configuredClinic();
     const clinic = configured ? clinics.find(item => item.clinic_id === configured) : clinics.length === 1 ? clinics[0] : null;
     if (!clinic) throw new Error('Defina clinicId no arquivo de configuração: há mais de uma clínica ou o vínculo não corresponde.');
     OralCloud.clinicId = clinic.clinic_id;
@@ -364,7 +677,8 @@
     else if (mode === 'signup') body = `<h1>Criar conta</h1><p class="lk-t">Cadastre seu acesso. O administrador precisará autorizar sua entrada na clínica.</p>${warning}${legalNotice}<label for="cloudName">Nome completo</label><input id="cloudName" autocomplete="name" required>${email}<label for="cloudPassword">Senha (mínimo 6 caracteres)</label><input id="cloudPassword" type="password" autocomplete="new-password" minlength="6" required><label for="cloudRepeat">Repita a senha</label><input id="cloudRepeat" type="password" autocomplete="new-password" minlength="6" required><button type="submit">Cadastrar</button><button type="button" class="lk-link" data-cloud-back>Já tenho conta. Entrar</button>`;
     else if (mode === 'recover') body = `<h1>Redefinir senha</h1><p class="lk-t">Enviaremos um link para o e-mail cadastrado no Supabase.</p>${warning}${email}<button type="submit">Enviar link</button><button type="button" class="lk-link" data-cloud-back>Voltar</button>`;
     else if (mode === 'password') body = `<h1>Definir senha</h1>${warning}<label for="cloudPassword">Nova senha</label><input id="cloudPassword" type="password" autocomplete="new-password" minlength="6" required><label for="cloudRepeat">Repita a senha</label><input id="cloudRepeat" type="password" autocomplete="new-password" minlength="6" required><button type="submit">Salvar senha</button>`;
-    else body = `<h1>Entrar</h1><p class="lk-t">Entre com seu acesso da clínica no Supabase.</p>${warning}${email}<label for="cloudPassword">Senha</label><input id="cloudPassword" type="password" autocomplete="current-password" required><label class="lk-chk"><input id="cloudKeep" type="checkbox"> Manter conectado neste aparelho</label><button type="submit">Entrar</button><button type="button" class="lk-link" data-cloud-signup>Criar conta</button><button type="button" class="lk-link" data-cloud-forgot>Esqueci a senha</button>`;
+    else if (mode === 'offline') body = `<h1>Desbloquear acesso offline</h1>${warning}${email}<label for="cloudPassword">Código offline</label><input id="cloudPassword" type="password" autocomplete="off" required><button type="submit">Desbloquear</button><button type="button" class="lk-link" data-cloud-back>Voltar</button>`;
+    else body = `<h1>Entrar</h1><p class="lk-t">Entre com seu acesso da clínica no Supabase.</p>${warning}${email}<label for="cloudPassword">Senha</label><input id="cloudPassword" type="password" autocomplete="current-password" required><label class="lk-chk"><input id="cloudKeep" type="checkbox"> Manter conectado neste aparelho</label><button type="submit">Entrar</button><button type="button" class="lk-link" data-cloud-signup>Criar conta</button><button type="button" class="lk-link" data-cloud-forgot>Esqueci a senha</button><button type="button" class="lk-link" data-cloud-offline>Acesso offline</button>`;
     lock.innerHTML = `<div class="lk-box"><div class="lk-brand"><strong>${esc(clinic.marca)}</strong><span>${esc(clinic.sub)}</span></div><form>${body}</form>${legalLinks}</div>`;
     // Controle visual de senha: não interfere na autenticação nem no valor digitado.
     lock.querySelectorAll('input[type="password"]').forEach(input => {
@@ -396,13 +710,16 @@
       if (location.hash === '#cadastro') history.replaceState(null, '', location.pathname + location.search);
       cloudLock('login');
     });
+    lock.querySelector('[data-cloud-offline]')?.addEventListener('click', () => cloudLock('offline'));
     lock.querySelector('[data-cloud-forgot]')?.addEventListener('click', () => cloudLock('recover'));
     lock.querySelector('form').onsubmit = async event => {
       event.preventDefault();
       const button = lock.querySelector('[type="submit"]');
       button.disabled = true;
       try {
-        if (mode === 'load') {
+        if (mode === 'offline') {
+          await unlockOffline($('cloudEmail').value.trim(), $('cloudPassword').value.trim());
+        } else if (mode === 'load') {
           await openClinic(OralCloud.keep);
         } else if (mode === 'signup') {
           const nome = $('cloudName').value.trim();
@@ -458,6 +775,7 @@
       document.getElementById('ov-startup-shell')?.removeAttribute('hidden');
     }
     try {
+      if (!navigator.onLine) { cloudLock('offline'); return; }
       const restored = await OralCloud.restoreSession();
       if (restored?.recovery) cloudLock('password');
       else if (restored) await openClinic(restored.keep);
@@ -472,6 +790,13 @@
   });
 
   doLogout = async function (message) {
+    if (vault) {
+      try { await localWrite; }
+      catch (error) { if (!message) { localToast(error.message, 5000); return; } }
+      await lockVault(message);
+      try { await OralCloud.logout(); } catch (_) {}
+      return;
+    }
     try {
       await memberQueue;
       await flush();
@@ -495,15 +820,29 @@
 
   acHtml = function () {
     if (!ME) return '';
-    return `<section class="card"><h2>Meu acesso</h2><p>Conectado como <strong>${esc(ME.nome)}</strong> (${esc(ME.login)}).</p><p class="note">Dados compartilhados no Supabase. Novas contas são criadas na tela de cadastro e aprovadas pelo administrador em Configurações → Acessos, onde também são ajustadas as permissões.</p><button class="ghost" data-act="logout">Sair do sistema</button><h2 style="margin-top:18px">Alterar minha senha</h2><label for="acp0">Senha atual</label><input id="acp0" type="password" autocomplete="current-password"><label for="acp1">Nova senha</label><input id="acp1" type="password" autocomplete="new-password"><label for="acp2">Repita a nova senha</label><input id="acp2" type="password" autocomplete="new-password"><button data-act="acpw" style="margin-top:12px">Alterar senha</button></section>`;
+    return `<section class="card"><h2>Meu acesso</h2><p>Conectado como <strong>${esc(ME.nome)}</strong> (${esc(ME.login)}).</p><p class="note">Dados compartilhados no Supabase. Novas contas são criadas na tela de cadastro e aprovadas pelo administrador em Configurações → Acessos, onde também são ajustadas as permissões.</p><button class="ghost" data-act="logout">Sair do sistema</button>${!vault ? ' <button class="ghost" data-act="offlineenable">Configurar ou abrir cópia offline</button>' : ' <button class="ghost" data-act="offlinedisable">Fechar cópia offline</button>'}<h2 style="margin-top:18px">Alterar minha senha</h2><label for="acp0">Senha atual</label><input id="acp0" type="password" autocomplete="current-password"><label for="acp1">Nova senha</label><input id="acp1" type="password" autocomplete="new-password"><label for="acp2">Repita a nova senha</label><input id="acp2" type="password" autocomplete="new-password"><button data-act="acpw" style="margin-top:12px">Alterar senha</button></section>`;
+  };
+  A.offlineenable = () => enableOffline().catch(error => localToast(error.message, 6000));
+  A.offlinedisable = async () => {
+    try {
+      await localWrite;
+      await lockVault('Cópia offline bloqueada neste aparelho.');
+      if (navigator.onLine && OralCloud.session?.user) await openClinic(OralCloud.keep);
+    } catch (error) { localToast(error.message, 4500); }
   };
   pmCardHtml = function () {
+    if (vault) return '<section class="card"><p>Feche a cópia offline em Meu acesso para administrar permissões.</p></section>';
     const html = localPermissionCard();
     if (!html) return '';
     return accessRequestsHtml() + html.split('<h3 class="up-h" style="margin-top:20px">')[0] + '<p class="note">Novos usuários aparecem nas solicitações após confirmar o e-mail. Remover um usuário revoga o acesso à clínica, sem apagar sua conta de autenticação.</p></section>';
   };
 
   aSave = function () {
+    if (vault) {
+      AUTH.users = copy(memberBaseline);
+      localToast('Bloqueie a cópia offline antes de alterar permissões.', 4500);
+      return false;
+    }
     const captured = copy(AUTH.users);
     membersPending++;
     memberQueue = memberQueue.catch(() => {}).then(async () => {
@@ -543,6 +882,10 @@
   };
 
   A.acpw = async function () {
+    if (vault && (offlineSession || !navigator.onLine)) {
+      localToast('Conecte-se antes de alterar a senha do Supabase.', 4500);
+      return;
+    }
     const password = $('acp1').value;
     const error = pwOk(password, $('acp2').value);
     if (error) return localToast(error, 3500);
@@ -555,7 +898,7 @@
   A.acadd = () => localToast('Peça ao usuário que crie a conta na tela de cadastro e confirme o e-mail. Depois, aprove a solicitação em Acessos.', 5000);
   // A promoção administrativa é exclusiva do Supabase: nunca salvar somente no navegador.
   A.acadmin = (button, data) => {
-    if (!ME?.admin || membersPending || membersRunning || !data?.id || data.id === ME.id) return;
+    if (vault || !ME?.admin || membersPending || membersRunning || !data?.id || data.id === ME.id) return;
     const target = AUTH.users.find(user => String(user.id) === String(data.id));
     if (!target || !target.active) return;
     const makeAdmin = !target.admin;
@@ -605,7 +948,7 @@
     if (ME?.admin && !LOCKED) render();
   };
   function decideAccess(button, userId, approve) {
-    if (!ME?.admin || membersPending) return;
+    if (vault || !ME?.admin || membersPending) return;
     const requested = accessRequests.find(user => user.id === userId);
     if (!requested) return;
     if (!confirm((approve ? 'Aprovar o acesso de ' : 'Rejeitar a solicitação de ') + requested.email + '?')) return;
@@ -647,9 +990,12 @@
   bkHtml = () => localBackupView().replace('guardados neste navegador. Se limpar o navegador ou trocar de aparelho, tudo se perde.', 'compartilhados no Supabase. Faça backup antes de restaurar ou importar dados.');
 
   window.addEventListener('beforeunload', event => {
-    if (pending || running || failure || membersPending || pendingFiles.length) { event.preventDefault(); event.returnValue = ''; }
+    if ((vault ? localWrites || failure && !requiresReload(failure) : pending || running || failure) || membersPending || pendingFiles.length) { event.preventDefault(); event.returnValue = ''; }
   });
   async function fileOperation(patientId, operation, data) {
+    if (vault && (offlineSession || !navigator.onLine || pending || running))
+      throw new Error('Conecte-se e sincronize as alterações antes de alterar arquivos.');
+
     const intent = copy({ patientId, operation, data });
     pendingFiles.push(intent);
     membersPending++;
@@ -661,6 +1007,10 @@
       try {
         const revision = await OralCloudData.changeFile(patientId, operation, intent.data);
         pendingFiles = pendingFiles.filter(value => value !== intent);
+        if (vault) {
+          const base = OralCloudData.checkpoint();
+          await vault.write(record => ({ ...record, base }));
+        }
         saved();
         return revision;
       } catch (error) {

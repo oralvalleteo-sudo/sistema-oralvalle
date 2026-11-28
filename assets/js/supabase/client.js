@@ -7,6 +7,7 @@
   let refreshing = null;
   let recovery = false;
   let sessionEpoch = 0;
+  let requiredActor = null;
 
   function storeSession(value, persistent) {
     if (value && !value.expires_at) value.expires_at = Math.floor(Date.now() / 1000) + Number(value.expires_in || 3600);
@@ -64,6 +65,8 @@
   async function request(path, options = {}) {
     if (!session) throw new Error('Sessão Supabase não iniciada.');
     if (!session.expires_at || session.expires_at * 1000 < Date.now() + 60000) await refresh();
+    if (requiredActor && session.user?.id !== requiredActor && path !== '/auth/v1/user')
+      throw Object.assign(new Error('Sessão de outra conta.'), { status: 403 });
     return send(path, options, session.access_token);
   }
 
@@ -139,6 +142,7 @@
   const cloud = global.OralCloud = {
     enabled: Boolean(config?.enabled), clinicId: null, request, login, signup, logout,
     restoreSession, recover, password, config,
+    bindActor(userId) { requiredActor = userId; },
     get session() { return session; },
     get keep() { return keep; },
   };

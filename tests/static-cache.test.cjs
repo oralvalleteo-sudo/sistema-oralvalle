@@ -20,19 +20,24 @@ test('a versão carregada coincide com a versão anunciada na publicação', () 
   assert.equal(loaded, published);
 });
 
-test('abertura sem rede responde somente na navegação inicial e não grava HTML no cache',async()=>{
+test('abertura sem rede recupera somente o shell público previamente instalado',async()=>{
  const handlers=[];
  const ctx=vm.createContext({URL,Response,fetch:async()=>{throw new TypeError('offline')},
-  caches:{open:async()=>assert.fail('HTML não deve acessar o cache de assets')},
+  caches:{open:async name=>{
+   assert.match(name,/^nexodent-public-shell-/);
+   return {match:async url=>{
+    assert.equal(url,'https://app.invalid/sistema-oralvalle/index.html');
+    return new Response('Shell público');
+   }};
+  }},
   self:{registration:{scope:'https://app.invalid/sistema-oralvalle/'},addEventListener:(type,handler)=>{if(type==='fetch')handlers.push(handler)}}});
  vm.runInContext(fs.readFileSync('sw.js','utf8'),ctx);
  let result;
- const event={request:{url:'https://app.invalid/sistema-oralvalle/',method:'GET',mode:'navigate'},respondWith(response){
+ const event={request:{url:'https://app.invalid/sistema-oralvalle/',method:'GET',mode:'navigate',headers:new Headers()},respondWith(response){
   assert.equal(result,undefined,'somente um handler pode responder à navegação');
   result=response;
  }};
  for(const handler of handlers)handler(event);
  const response=await result;
- assert.equal(response.headers.get('Cache-Control'),'no-store');
- assert.match(await response.text(),/Sem conexão com a internet/);
+ assert.equal(await response.text(),'Shell público');
 });

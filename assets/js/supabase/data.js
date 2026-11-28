@@ -203,17 +203,17 @@
     return results;
   }
 
-  async function load() {
+  async function load({ full = false } = {}) {
     const clinic = cloud().clinicId;
     return enqueue(async () => {
       const c = cloud();
       if (c.clinicId !== clinic) throw fail('CLINIC_CHANGED', 'A clínica mudou antes da leitura.');
-      state = null;
+      if (!full) state = null;
       const payload = await rpc('clinic_load_start', { p_clinic: clinic });
       if (payload?.protocol !== 2 || !object(payload.access) || typeof payload.revision !== 'string')
         throw fail('INVALID_RESPONSE', 'Protocolo de leitura indisponível. Aplique a migration de leitura paginada.');
       payload.tables = {};
-      const readableTables = tables.filter(name => name !== 'patient_files' && !deferredPatientTables.has(name));
+      const readableTables = tables.filter(name => name !== 'patient_files' && (full || !deferredPatientTables.has(name)));
       await mapWithConcurrency(readableTables, 4, async table => {
         const rows = payload.access[table]?.read
           ? await pages('clinic_load_page', { p_clinic: clinic,
@@ -231,8 +231,8 @@
       // Detached JSON is essential: migrate mutates cl/hc/anam maps in place.
       const patients = new Map((payload.tables.patients || []).filter(row => row.kind === 'object')
         .map(row => [JSON.stringify(row.dados.id), row.id]));
-      state = { clinic, revision: payload.revision, baseline: flatten(snapshot(data)), access: payload.access,
-        patients, loadedPatientRoots: new Set() };
+      state = { clinic, full, revision: payload.revision, baseline: flatten(snapshot(data)), access: payload.access,
+        patients, loadedPatientRoots: new Set(full ? patients.values() : []) };
       return data;
     });
   }
@@ -240,6 +240,11 @@
     const byId = new Map();
     rows.forEach(value => byId.set(value.id, value));
     const rootIds = new Set(currentState.patients.values());
+    if (currentState.full) {
+      rows.forEach(value => {
+        if (value.table === 'patients' && value.row.kind === 'object') rootIds.add(value.id);
+      });
+    }
     const cache = new Map();
     function owner(value) {
       if (cache.has(value.id)) return cache.get(value.id);
@@ -260,13 +265,13 @@
   function deferredRowAllowed(value, ownerOf, currentState) {
     if (!deferredPatientTables.has(value.table)) return true;
     const owner = ownerOf(value);
-    return !!owner && currentState.loadedPatientRoots.has(owner);
+    return !!owner && (currentState.full || currentState.loadedPatientRoots.has(owner));
   }
 
   function patientLoaded(patientId) {
     if (!state) return false;
     const rootId = state.patients.get(JSON.stringify(patientId));
-    return !!rootId && state.loadedPatientRoots.has(rootId);
+    return state.full || !!rootId && state.loadedPatientRoots.has(rootId);
   }
 
   // O servidor devolve só a linha do paciente aberto, sem a linha "marcadora" da lista.
@@ -317,7 +322,7 @@
     });
   }
 
-  async function save(snapshot) {
+  async function save(snapshot, operationId) {
     // Capture synchronously: subsequent edits to the caller's db must not alter this save.
     const captured = global.OralCloudData.snapshot(snapshot);
     const clinic = cloud().clinicId;
@@ -359,10 +364,12 @@
       const writeBody = { p_clinic: clinic, p_revision: state.revision, p_changes: changes };
       let result;
       try {
-        result = await rpc('clinic_apply', writeBody);
+        result = operationId
+          ? await rpc('clinic_apply_offline', { ...writeBody, p_operation: operationId })
+          : await rpc('clinic_apply', writeBody);
       } catch (error) {
         const conflict = error.code === '40001' || /CLOUD_CONFLICT/i.test(error.message);
-        if (!conflict || !changes.length || reminderBaseline.size !== changes.length || cloud().clinicId !== clinic) throw error;
+        if (operationId || !conflict || !changes.length || reminderBaseline.size !== changes.length || cloud().clinicId !== clinic) throw error;
         try {
           result = await rpc('clinic_apply_independent_reminders', {
             ...writeBody, p_expected: Object.fromEntries(reminderBaseline)
@@ -602,6 +609,18 @@
     return queryPage({ ...options, table: 'sales', from, to, limit: options.limit || 100 });
   }
   function currentRevision() { return state?.revision || null; }
+  function checkpoint() {
+    const current = loaded(cloud().clinicId);
+    return copy({ ...current, baseline: [...current.baseline], patients: [...current.patients],
+      loadedPatientRoots: [...current.loadedPatientRoots] });
+  }
+
+  function restoreCheckpoint(value) {
+    if (cloud().clinicId !== value.clinic) throw fail('CLINIC_CHANGED', 'A cópia pertence a outra clínica.');
+    state = { ...copy(value), baseline: new Map(copy(value.baseline)), patients: new Map(value.patients),
+      loadedPatientRoots: new Set(value.loadedPatientRoots) };
+  }
+
   function reset() { state = null; }
   async function members() {
     const c = cloud(), clinic = c.clinicId;
@@ -650,5 +669,5 @@
   }
   global.OralCloudData = Object.freeze({ load, loadPatient, patientLoaded, save, prepareDefaults, members, updateMember, pendingUsers, decideUser,
     snapshot, files, file, changeFile, exportData, exportToWritable, restoreData, queryPage, searchPatients,
-    appointmentsForRange, salesForPeriod, currentRevision, reset });
+    appointmentsForRange, salesForPeriod, currentRevision, checkpoint, restoreCheckpoint, reset });
 })(window);
