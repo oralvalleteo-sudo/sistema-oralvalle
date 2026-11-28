@@ -15,7 +15,7 @@ return [...queue,item];
 async function flush(queue,identity,send,persist){
 let current=queue.slice();
 for(const item of queue){
-if(item.status!=='pending')continue;
+if(item.status!=='pending')break;
 if(item.user!==identity.user||item.clinic!==identity.clinic)throw new Error('Scope mismatch');
 let result;try{result=await send(JSON.parse(JSON.stringify(item)));}catch(e){break;}
 if(!result||result.id!==item.id)break;
